@@ -1,5 +1,24 @@
 [
   // This file supports comments
+  "CrispStrobe/ev3dev_py_transpile",
+  "CrispStrobe/ev3_lms_transpile",
+  "CrispStrobe/legoboost_universal",
+  "CrispStrobe/legonxt_transpile_universal",
+  "CrispStrobe/legospike_turbowarp_transpile",
+  "CrispStrobe/lego_poweredup",
+  "CrispStrobe/lego_wedo2_universal",
+
+  "CrispStrobe/legospikeprime_btc_scratchlink",
+  "CrispStrobe/legospike_ble",
+  "CrispStrobe/legospike_bridge",
+  "CrispStrobe/legospikeprime_ble",
+  "CrispStrobe/ev3_universal",
+  "CrispStrobe/ev3_direct",
+
+  "CrispStrobe/arrays",
+  "CrispStrobe/csp",
+  "CrispStrobe/gamepad",
+  "CrispStrobe/planetemaths",
   "lab/text",
   "lab/face-sensing",
   "stretch",
