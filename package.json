@@ -10,7 +10,7 @@
     "start": "node development/server.js",
     "dev": "node development/server.js",
     "build": "node development/build-production.js",
-    "deploy": "gh-pages -d build",
+    "deploy": "npx gh-pages -d build",
     "validate": "node development/validate.js",
     "lint": "eslint development extensions --max-warnings=0",
     "format": "prettier . --write",
@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@transifex/api": "^7.1.5",
+    "gh-pages": "^6.3.0",
     "prettier": "^3.6.0",
     "spdx-expression-parse": "^4.0.0",
     "typescript": "^5.9.3"

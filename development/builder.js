@@ -791,9 +791,10 @@ class Builder {
 
     /** @type {Record<string, ExtensionFile>} */
     const extensionFiles = {};
-    for (const [filename, absolutePath] of await recursiveReadDirectory(
+    for (const [filenameRaw, absolutePath] of await recursiveReadDirectory(
       this.extensionsRoot
     )) {
+      const filename = filenameRaw.replace(/\\/g, "/");
       if (!filename.endsWith(".js")) {
         continue;
       }
@@ -812,9 +813,10 @@ class Builder {
 
     /** @type {Record<string, ImageFile>} */
     const extensionImages = {};
-    for (const [filename, absolutePath] of await recursiveReadDirectory(
+    for (const [filenameRaw, absolutePath] of await recursiveReadDirectory(
       this.imagesRoot
     )) {
+      const filename = filenameRaw.replace(/\\/g, "/");
       const extension = pathUtil.extname(filename);
       const ImageFileClass = IMAGE_FORMATS.get(extension);
       if (!ImageFileClass) {
