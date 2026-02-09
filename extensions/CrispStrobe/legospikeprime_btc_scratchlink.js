@@ -1,5 +1,5 @@
 // Name: LEGO Spike Prime (Legacy)
-// ID: CrispStrobe/legospikeprime_btc_scratchlink
+// ID: spikeprimeBTC
 // Description: Control Spike Prime via Scratch Link (Old Firmware/BTC).
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0
@@ -1338,7 +1338,7 @@ continuous_sensor_loop()
 
     getInfo() {
       return {
-        id: "spikeprime",
+        id: "spikeprimeBTC",
         name: t("extensionName"),
         blockIconURI: iconURI,
         showStatusButton: true,

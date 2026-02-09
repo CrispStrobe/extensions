@@ -1,5 +1,5 @@
 // Name: CSP Solver
-// ID: CrispStrobe/csp
+// ID: csp
 // Description: Simple Constraint-Satisfaction-Problem solver.
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0

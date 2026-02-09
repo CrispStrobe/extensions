@@ -1,5 +1,5 @@
 // Name: LEGO Spike Prime (BLE)
-// ID: CrispStrobe/legospike_ble
+// ID: spikeprimeble
 // Description: Control Spike Prime via Bluetooth Low Energy (New Firmware).
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0

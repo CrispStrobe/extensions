@@ -1,5 +1,5 @@
 // Name: LEGO Spike Bridge
-// ID: CrispStrobe/legospike_bridge
+// ID: spikeprimeBridge
 // Description: Bridge connection utility for LEGO Spike.
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0

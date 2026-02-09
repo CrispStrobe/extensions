@@ -1,5 +1,5 @@
 // Name: LEGO EV3Dev Python
-// ID: CrispStrobe/ev3dev_py_transpile
+// ID: scratchtoev3
 // Description: Control EV3Dev via Live Streaming or generate/run Python code on the brick.
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0

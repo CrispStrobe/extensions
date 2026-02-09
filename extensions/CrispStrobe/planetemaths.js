@@ -1,5 +1,5 @@
 // Name: Planète Maths
-// ID: CrispStrobe/planetemaths
+// ID: planetemaths
 // Description: Additional advanced math operations.
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0

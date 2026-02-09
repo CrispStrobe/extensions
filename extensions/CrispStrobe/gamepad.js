@@ -1,5 +1,5 @@
 // Name: Gamepad
-// ID: CrispStrobe/gamepad
+// ID: universalgamepad
 // Description: Use game controllers to control your project.
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0

@@ -1,5 +1,5 @@
 // Name: LEGO EV3 Direct
-// ID: CrispStrobe/ev3_direct
+// ID: legoev3direct
 // Description: Direct control connection for LEGO EV3 (Streaming only).
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0

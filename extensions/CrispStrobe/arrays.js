@@ -1,5 +1,5 @@
 // Name: Arrays & Vectors
-// ID: CrispStrobe/arrays
+// ID: arrays
 // Description: Advanced manipulation of arrays, vectors, and tensors.
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0

@@ -1,5 +1,5 @@
 // Name: LEGO Spike Transpiler
-// ID: CrispStrobe/legospike_turbowarp_transpile
+// ID: spikeprime
 // Description: Control Spike Prime via Live Streaming or transpile blocks to Python.
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0

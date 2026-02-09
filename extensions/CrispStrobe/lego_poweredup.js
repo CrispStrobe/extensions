@@ -1,5 +1,5 @@
 // Name: LEGO Powered Up
-// ID: CrispStrobe/lego_poweredup
+// ID: legopoweredup
 // Description: Control LEGO Powered Up hubs and motors.
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0
