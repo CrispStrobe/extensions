@@ -36,15 +36,12 @@ import base64
 import argparse
 import traceback
 import signal
-import queue
 from datetime import datetime
 import ssl
-from pathlib import Path
 
 # EV3 imports
 from ev3dev2.motor import (
     Motor,
-    LargeMotor,
     MediumMotor,
     OUTPUT_A,
     OUTPUT_B,
@@ -53,7 +50,6 @@ from ev3dev2.motor import (
     SpeedPercent,
     ServoMotor,
     DcMotor,
-    MoveTank,
     MoveSteering,
 )
 from ev3dev2.sensor import INPUT_1, INPUT_2, INPUT_3, INPUT_4
@@ -100,9 +96,9 @@ os.makedirs(SOUNDS_DIR, exist_ok=True)
 # GLOBAL STATE
 # ============================================================================
 
-# Hardware Cache
-motors = {}
-sensors = {}
+# Hardware Cache — keyed by port char (or "DC_A", "M_A", "SERVO_A" for motor variants).
+motors: dict = {}
+sensors: dict = {}
 display = Display()
 sound = Sound()
 buttons = Button()
@@ -120,10 +116,10 @@ motor_config = {
 }
 
 # Script management
-running_scripts = {}
+running_scripts: dict = {}
 script_counter = 0
 script_lock = threading.Lock()
-script_list = []  # List of available scripts
+script_list: list = []  # List of available scripts
 script_list_lock = threading.Lock()
 current_menu_index = 0
 menu_scroll_offset = 0
@@ -154,7 +150,7 @@ def signal_handler(sig, frame):
     for script_id, script_info in list(running_scripts.items()):
         try:
             script_info["process"].terminate()
-        except:
+        except Exception:
             pass
 
     # Stop all motors
@@ -163,9 +159,9 @@ def signal_handler(sig, frame):
             if motor:
                 try:
                     motor.stop()
-                except:
+                except Exception:
                     pass
-    except:
+    except Exception:
         pass
 
     print("Shutdown complete")
@@ -273,7 +269,7 @@ class ScriptManager:
 
     def run_script(self, script_name):
         """Run a script with bounded log capture"""
-        global script_counter, script_lock, running_scripts
+        global script_counter
 
         script_path = os.path.join(self.scripts_dir, script_name)
 
@@ -344,7 +340,6 @@ class ScriptManager:
     def stop_script(self, script_id):
         """Stop a running script with comprehensive error handling."""
         import time
-        global script_lock, running_scripts
 
         start_time = time.time()
 
@@ -433,8 +428,6 @@ class ScriptManager:
 
     def get_script_log(self, script_id, max_lines=100):
         """Get recent log lines for a script"""
-        global script_lock, running_scripts
-
         with script_lock:
             if script_id not in running_scripts:
                 log_file = "/tmp/ev3_script_{0}.log".format(script_id)
@@ -503,7 +496,7 @@ def get_motor(port_char):
             try:
                 if motor.connected:
                     return motor
-            except:
+            except Exception:
                 pass
             log("Motor {0} disconnected".format(port_char))
             motors[port_char] = None
@@ -629,7 +622,6 @@ class BridgeHandler(http.server.BaseHTTPRequestHandler):
 
     def check_authentication(self):
         """Check Basic Auth credentials. Returns True if OK."""
-        global AUTH_HEADER_EXPECTED
         if AUTH_HEADER_EXPECTED is None:
             return True
         auth_header = self.headers.get("Authorization")
@@ -641,7 +633,6 @@ class BridgeHandler(http.server.BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
         """Log ALL HTTP requests"""
-        global connection_counter
         with connection_lock:
             conn_id = connection_counter
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
@@ -718,7 +709,7 @@ class BridgeHandler(http.server.BaseHTTPRequestHandler):
                 try:
                     try:
                         sound_data = base64.b64decode(sound_data_b64, validate=True)
-                    except:
+                    except Exception:
                         self._send_json({"status": "error", "msg": "Invalid base64"}, 400)
                         return
                     if len(sound_data) > 10 * 1024 * 1024:
@@ -1613,7 +1604,7 @@ class BridgeHandler(http.server.BaseHTTPRequestHandler):
 
 def draw_script_menu():
     """Draw the script selection menu"""
-    global current_menu_index, menu_scroll_offset
+    global menu_scroll_offset
     display.clear()
     display.text_pixels("SCRIPT MENU", x=30, y=2)
     display.text_pixels("=" * 26, x=2, y=15)
@@ -1709,7 +1700,7 @@ def draw_status_screen():
         percentage = max(0, min(100, ((voltage - 7.4) / (9.0 - 7.4)) * 100))
         display.text_pixels("Battery: {0:.1f}V ({1:.0f}%)".format(
             voltage, percentage), x=2, y=105)
-    except:
+    except Exception:
         pass
     display.text_pixels("UP=Menu  BACK=Exit", x=15, y=118, font="helvB08")
     display.update()
@@ -1815,7 +1806,7 @@ def generate_self_signed_cert(cert_file="ev3.crt", key_file="ev3.key"):
             log("Existing certificate is invalid, regenerating...")
             os.remove(cert_file)
             os.remove(key_file)
-        except:
+        except Exception:
             pass
 
     try:
@@ -1885,7 +1876,6 @@ DNS.4 = ev3dev
 
 def run_server_on_port(port, use_ssl=False):
     """Start server on the given port with optional SSL."""
-    global connection_counter
     protocol = "HTTPS" if use_ssl else "HTTP"
     log("Initializing {0} server on port {1}...".format(protocol, port))
 
@@ -1907,7 +1897,7 @@ def run_server_on_port(port, use_ssl=False):
                 context.verify_mode = ssl.CERT_NONE
                 try:
                     context.set_ciphers('HIGH:!aNULL:!MD5')
-                except:
+                except Exception:
                     pass
                 server.socket = context.wrap_socket(
                     server.socket, server_side=True, do_handshake_on_connect=True,
@@ -1989,7 +1979,7 @@ def _ip_refresh_loop():
 
 
 def main():
-    global VERBOSE, PORT, USE_SSL, SSL_CERT, SSL_KEY, AUTH_HEADER_EXPECTED
+    global VERBOSE, SSL_CERT, SSL_KEY, AUTH_HEADER_EXPECTED
     global SERVER_IP, SERVER_HOSTNAME, HTTP_PORT_RUNNING, HTTPS_PORT_RUNNING
 
     parser = argparse.ArgumentParser(description="EV3 Bridge Server v2.3")

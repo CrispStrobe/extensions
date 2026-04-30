@@ -226,7 +226,6 @@
       setEV3IP: "setze EV3 IP auf [IP]",
       setCredentials: "Anmeldedaten Benutzer [USER] Passwort [PASS]", // for htpasswd
       enableStreaming: "Streaming-Modus aktivieren",
-      enableStreaming: "Streaming-Modus aktivieren",
       disableStreaming: "Streaming-Modus deaktivieren",
       testConnection: "EV3 Verbindung testen",
 
@@ -4540,7 +4539,7 @@
         this.indentLevel++;
         this.addLine("motor.on(SpeedPercent(" + speed + "))");
         this.indentLevel--;
-      } else if (opcode === "scratchtoev3_ev3MotorRunFor") {
+      } else if (block.opcode === "scratchtoev3_ev3MotorRunFor") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
           "",
@@ -4558,7 +4557,7 @@
             ")",
         );
         this.indentLevel--;
-      } else if (opcode === "scratchtoev3_ev3MotorRunDegrees") {
+      } else if (block.opcode === "scratchtoev3_ev3MotorRunDegrees") {
         const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
         const degrees = this.getInputValue(block, "DEGREES", blocks);
         const speed = this.getInputValue(block, "SPEED", blocks);
@@ -4570,7 +4569,7 @@
         this.indentLevel--;
       } 
       
-      else if (opcode === "scratchtoev3_ev3MotorRunTimed") {
+      else if (block.opcode === "scratchtoev3_ev3MotorRunTimed") {
         const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
         const seconds = this.getInputValue(block, "SECONDS", blocks);
         const speed = this.getInputValue(block, "SPEED", blocks);
@@ -4581,7 +4580,7 @@
         this.indentLevel--;
       } 
       
-      else if (opcode === "scratchtoev3_ev3MotorRunToAbsPos") {
+      else if (block.opcode === "scratchtoev3_ev3MotorRunToAbsPos") {
         const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
         const pos = this.getInputValue(block, "POS", blocks);
         const speed = this.getInputValue(block, "SPEED", blocks);
@@ -4591,7 +4590,7 @@
         // on_to_position speed must be positive in Python
         this.addLine(`motor.on_to_position(SpeedPercent(abs(${speed})), ${pos}, block=False)`);
         this.indentLevel--;
-      } else if (opcode === "scratchtoev3_servoRunToPosition") {
+      } else if (block.opcode === "scratchtoev3_servoRunToPosition") {
         const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
         const pos = this.getInputValue(block, "POS", blocks);
         const speed = this.getInputValue(block, "SPEED", blocks);
@@ -4606,7 +4605,7 @@
         this.addLine(`s.run_to_abs_pos(position_sp=${pos}, speed_sp=SpeedPercent(${speed}))`);
         this.indentLevel--;
       }
-      else if (opcode === "scratchtoev3_servoStop") {
+      else if (block.opcode === "scratchtoev3_servoStop") {
         const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
         this.addLine(`from ev3dev2.motor import ServoMotor`);
         this.addLine(`s = ServoMotor(OUTPUT_${port})`);
@@ -4615,7 +4614,7 @@
       
       
       
-      else if (opcode === "scratchtoev3_ev3MotorStop") {
+      else if (block.opcode === "scratchtoev3_ev3MotorStop") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
           "",
@@ -4629,7 +4628,7 @@
         this.indentLevel++;
         this.addLine('motor.stop(stop_action="' + brake + '")');
         this.indentLevel--;
-      } else if (opcode === "scratchtoev3_ev3MotorSetRamping") {
+      } else if (block.opcode === "scratchtoev3_ev3MotorSetRamping") {
         const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
         const ms = this.getInputValue(block, "MS", blocks);
         this.addLine(`motor = get_motor("${port}")`);
@@ -4640,7 +4639,7 @@
         this.indentLevel--;
       }
       
-      else if (opcode === "scratchtoev3_ev3TankDrive") {
+      else if (block.opcode === "scratchtoev3_ev3TankDrive") {
         const left = this.getInputValue(block, "LEFT", blocks);
         const right = this.getInputValue(block, "RIGHT", blocks);
         const rotations = this.getInputValue(block, "ROTATIONS", blocks);
@@ -4663,7 +4662,7 @@
             ", block=True)",
         );
         this.indentLevel--;
-      } else if (opcode === "scratchtoev3_ev3DcMotorRun") {
+      } else if (block.opcode === "scratchtoev3_ev3DcMotorRun") {
         const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
         const speed = this.getInputValue(block, "SPEED", blocks);
         this.addLine(`from ev3dev2.motor import DcMotor`); // Ensure import
@@ -4674,17 +4673,17 @@
         this.addLine(`m.run_direct()`);
         this.indentLevel--;
       } 
-      else if (opcode === "scratchtoev3_ev3DcMotorStop") {
+      else if (block.opcode === "scratchtoev3_ev3DcMotorStop") {
         const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
         this.addLine(`m = DcMotor(OUTPUT_${port})`);
         this.addLine(`if m: m.stop()`);
       }
 
       // EV3 Display blocks
-      else if (opcode === "scratchtoev3_ev3ScreenClear") {
+      else if (block.opcode === "scratchtoev3_ev3ScreenClear") {
         this.addLine("display.clear()");
         this.addLine("display.update()");
-      } else if (opcode === "scratchtoev3_ev3ScreenText") {
+      } else if (block.opcode === "scratchtoev3_ev3ScreenText") {
         const text = this.getInputValue(block, "TEXT", blocks);
         const x = this.getInputValue(block, "X", blocks);
         const y = this.getInputValue(block, "Y", blocks);
@@ -4692,7 +4691,7 @@
           "display.text_pixels(str(" + text + "), x=" + x + ", y=" + y + ")",
         );
         this.addLine("display.update()");
-      } else if (opcode === "scratchtoev3_ev3DrawCircle") {
+      } else if (block.opcode === "scratchtoev3_ev3DrawCircle") {
         const x = this.getInputValue(block, "X", blocks);
         const y = this.getInputValue(block, "Y", blocks);
         const r = this.getInputValue(block, "R", blocks);
@@ -4702,7 +4701,7 @@
           `draw.ellipse((${x}-${r}, ${y}-${r}, ${x}+${r}, ${y}+${r}), outline='black')`,
         );
         this.addLine("display.update()");
-      } else if (opcode === "scratchtoev3_ev3DrawRectangle") {
+      } else if (block.opcode === "scratchtoev3_ev3DrawRectangle") {
         const x1 = this.getInputValue(block, "X1", blocks);
         const y1 = this.getInputValue(block, "Y1", blocks);
         const x2 = this.getInputValue(block, "X2", blocks);
@@ -4713,7 +4712,7 @@
           `draw.rectangle((${x1}, ${y1}, ${x2}, ${y2}), outline='black')`,
         );
         this.addLine("display.update()");
-      } else if (opcode === "scratchtoev3_ev3DrawLine") {
+      } else if (block.opcode === "scratchtoev3_ev3DrawLine") {
         const x1 = this.getInputValue(block, "X1", blocks);
         const y1 = this.getInputValue(block, "Y1", blocks);
         const x2 = this.getInputValue(block, "X2", blocks);
@@ -4722,7 +4721,7 @@
         this.addLine("draw = ImageDraw.Draw(display.image)");
         this.addLine(`draw.line((${x1}, ${y1}, ${x2}, ${y2}), fill='black')`);
         this.addLine("display.update()");
-      } else if (opcode === "scratchtoev3_ev3Speak") {
+      } else if (block.opcode === "scratchtoev3_ev3Speak") {
         const text = this.getInputValue(block, "TEXT", blocks);
         // Use German voice if extension language is German
         if (currentLang === "de") {
@@ -4732,13 +4731,13 @@
         } else {
           this.addLine("sound.speak(str(" + text + "))");
         }
-      } else if (opcode === "scratchtoev3_ev3Beep") {
+      } else if (block.opcode === "scratchtoev3_ev3Beep") {
         const freq = this.getInputValue(block, "FREQUENCY", blocks);
         const duration = this.getInputValue(block, "DURATION", blocks);
         this.addLine(
           "sound.play_tone(" + freq + ", " + duration + " / 1000.0)",
         );
-      } else if (opcode === "scratchtoev3_ev3SetLED") {
+      } else if (block.opcode === "scratchtoev3_ev3SetLED") {
         const color = this.getInputValue(block, "COLOR", blocks).replace(
           /"/g,
           "",
@@ -4747,14 +4746,14 @@
         const ev3Color = color === "OFF" ? "BLACK" : color;
         this.addLine('leds.set_color("LEFT", "' + ev3Color + '")');
         this.addLine('leds.set_color("RIGHT", "' + ev3Color + '")');
-      } else if (opcode === "scratchtoev3_ev3ColorIsColor") {
+      } else if (block.opcode === "scratchtoev3_ev3ColorIsColor") {
           const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
           const targetColor = this.getInputValue(block, "COLOR", blocks);
           
           return `(get_sensor("${port}", "color").color == ${targetColor} if get_sensor("${port}", "color") else False)`;
       }
       
-      else if (opcode === "scratchtoev3_ev3SetLEDSide") {
+      else if (block.opcode === "scratchtoev3_ev3SetLEDSide") {
         const side = this.getInputValue(block, "SIDE", blocks).replace(
           /"/g,
           "",
@@ -4765,11 +4764,11 @@
         );
         const ev3Color = color === "OFF" ? "BLACK" : color;
         this.addLine('leds.set_color("' + side + '", "' + ev3Color + '")');
-      } else if (opcode === "scratchtoev3_ev3LEDAllOff") {
+      } else if (block.opcode === "scratchtoev3_ev3LEDAllOff") {
         this.addLine("leds.all_off()");
-      } else if (opcode === "scratchtoev3_ev3LEDReset") {
+      } else if (block.opcode === "scratchtoev3_ev3LEDReset") {
         this.addLine("leds.reset()");
-      } else if (opcode === "scratchtoev3_ev3LEDAnimate") {
+      } else if (block.opcode === "scratchtoev3_ev3LEDAnimate") {
         const animation = this.getInputValue(
           block,
           "ANIMATION",
@@ -4832,26 +4831,26 @@
               ", block=False)",
           );
         }
-      } else if (opcode === "scratchtoev3_ev3SetVolume") {
+      } else if (block.opcode === "scratchtoev3_ev3SetVolume") {
         const volume = this.getInputValue(block, "VOLUME", blocks);
         this.addLine("sound.set_volume(" + volume + ")");
-      } else if (opcode === "scratchtoev3_ev3PlayTone") {
+      } else if (block.opcode === "scratchtoev3_ev3PlayTone") {
         const note = this.getInputValue(block, "NOTE", blocks).replace(
           /"/g,
           "",
         );
         const duration = this.getInputValue(block, "DURATION", blocks);
         this.addLine('sound.play_note("' + note + '", ' + duration + ")");
-      } else if (opcode === "scratchtoev3_ev3PlaySong") {
+      } else if (block.opcode === "scratchtoev3_ev3PlaySong") {
         const song = this.getInputValue(block, "SONG", blocks);
         const tempo = this.getInputValue(block, "TEMPO", blocks);
         this.addLine(
           "sound.play_song(json.loads(" + song + "), tempo=" + tempo + ")",
         );
-      } else if (opcode === "scratchtoev3_ev3PlayToneSequence") {
+      } else if (block.opcode === "scratchtoev3_ev3PlayToneSequence") {
         const sequence = this.getInputValue(block, "SEQUENCE", blocks);
         this.addLine("sound.tone(json.loads(" + sequence + "))");
-      } else if (opcode === "scratchtoev3_ev3PlayFile") {
+      } else if (block.opcode === "scratchtoev3_ev3PlayFile") {
         const filename = this.getInputValue(block, "FILENAME", blocks);
         const volume = this.getInputValue(block, "VOLUME", blocks);
         this.addLine(
@@ -4861,24 +4860,24 @@
             volume +
             ")",
         );
-      } else if (opcode === "scratchtoev3_ev3LEDStopAnimation") {
+      } else if (block.opcode === "scratchtoev3_ev3LEDStopAnimation") {
         this.addLine("leds.animate_stop()");
       }
 
       // Sprite state blocks
-      else if (opcode === "scratchtoev3_spriteSetPosition") {
+      else if (block.opcode === "scratchtoev3_spriteSetPosition") {
         const sprite = this.getInputValue(block, "SPRITE", blocks);
         const x = this.getInputValue(block, "X", blocks);
         const y = this.getInputValue(block, "Y", blocks);
         this.addLine("state = get_sprite_state(" + sprite + ")");
         this.addLine('state["x"] = ' + x);
         this.addLine('state["y"] = ' + y);
-      } else if (opcode === "scratchtoev3_spriteSetSize") {
+      } else if (block.opcode === "scratchtoev3_spriteSetSize") {
         const sprite = this.getInputValue(block, "SPRITE", blocks);
         const size = this.getInputValue(block, "SIZE", blocks);
         this.addLine("state = get_sprite_state(" + sprite + ")");
         this.addLine('state["size"] = ' + size);
-      } else if (opcode === "scratchtoev3_spriteSetVisible") {
+      } else if (block.opcode === "scratchtoev3_spriteSetVisible") {
         const sprite = this.getInputValue(block, "SPRITE", blocks);
         const visible = this.getInputValue(block, "VISIBLE", blocks);
         this.addLine("state = get_sprite_state(" + sprite + ")");
@@ -5255,7 +5254,7 @@
           port +
           '", "touch") else False)'
         );
-      } else if (opcode === "scratchtoev3_ev3ConfigurePort") {
+      } else if (block.opcode === "scratchtoev3_ev3ConfigurePort") {
         const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
         const device = this.getInputValue(block, "DEVICE", blocks);
         
@@ -5272,7 +5271,7 @@
         this.addLine(`time.sleep(0.5)`); // Wait for driver load
       }
       
-      else if (opcode === "scratchtoev3_ev3ColorRGB") {
+      else if (block.opcode === "scratchtoev3_ev3ColorRGB") {
           const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
           const comp = this.getInputValue(block, "COMPONENT", blocks).replace(/"/g, "");
           
@@ -5310,26 +5309,6 @@
           port +
           '", "color") else 0)'
         );
-      } else if (block.opcode === "scratchtoev3_ev3ColorRGB") {
-        const port = this.getInputValue(block, "PORT", blocks).replace(
-          /"/g,
-          "",
-        );
-        const component = this.getInputValue(
-          block,
-          "COMPONENT",
-          blocks,
-        ).replace(/"/g, "");
-        const idx = { red: 0, green: 1, blue: 2 }[component] || 0;
-        return (
-          '(get_sensor("' +
-          port +
-          '", "color").rgb[' +
-          idx +
-          '] if get_sensor("' +
-          port +
-          '", "color") else 0)'
-        );
       } else if (block.opcode === "scratchtoev3_ev3UltrasonicSensor") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
@@ -5342,7 +5321,7 @@
           port +
           '", "ultrasonic") else 0)'
         );
-      } else if (opcode === "scratchtoev3_ev3UltrasonicPresence") {
+      } else if (block.opcode === "scratchtoev3_ev3UltrasonicPresence") {
           const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
           return `(get_sensor("${port}", "ultrasonic").other_sensor_present if get_sensor("${port}", "ultrasonic") else False)`;
       }
@@ -5367,7 +5346,7 @@
           port +
           '", "gyro") else 0)'
         );
-      } else if (opcode === "scratchtoev3_ev3GyroReset") {
+      } else if (block.opcode === "scratchtoev3_ev3GyroReset") {
           const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
           this.addLine(`s = get_sensor("${port}", "gyro")`);
           this.addLine(`if s: s.reset()`); 
@@ -5472,11 +5451,11 @@
           port +
           '") else 0)'
         );
-      } else if (opcode === "scratchtoev3_ev3MotorIsRunning") {
+      } else if (block.opcode === "scratchtoev3_ev3MotorIsRunning") {
           const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
           return `("running" in get_motor("${port}").state if get_motor("${port}") else False)`;
       }
-      else if (opcode === "scratchtoev3_ev3MotorIsStalled") {
+      else if (block.opcode === "scratchtoev3_ev3MotorIsStalled") {
           const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
           return `("stalled" in get_motor("${port}").state if get_motor("${port}") else False)`;
       }
