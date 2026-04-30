@@ -889,10 +889,12 @@ if (typeof window !== "undefined") {
 
       if (messageType === NXT_OPCODE.REPLY) {
         const status = telegram[2];
-        for (const [id, resolve] of this.pendingRequests.entries()) {
+        // Resolve and remove the oldest pending request.
+        const first = this.pendingRequests.entries().next().value;
+        if (first) {
+          const [id, resolve] = first;
           resolve(telegram);
           this.pendingRequests.delete(id);
-          break;
         }
       }
     }
@@ -939,10 +941,6 @@ if (typeof window !== "undefined") {
       }
 
       return null;
-    }
-
-    sleep(ms) {
-        return new Promise((resolve) => setTimeout(resolve, ms));
     }
   }
 
@@ -4127,11 +4125,12 @@ this.addLine("}");
           `Reply status: 0x${status.toString(16)} (${NXT_ERROR[status] || "Unknown"})`,
         );
 
-        // Resolve pending requests
-        for (const [id, resolve] of this.pendingRequests.entries()) {
+        // Resolve and remove the oldest pending request.
+        const first = this.pendingRequests.entries().next().value;
+        if (first) {
+          const [id, resolve] = first;
           resolve(telegram);
           this.pendingRequests.delete(id);
-          break;
         }
       }
     }
@@ -6048,9 +6047,6 @@ this.addLine("}");
 }
 
     // ==================== CONNECTION ====================
-    connect() {
-      return this.peripheral.scan();
-    }
     disconnect() {
       return this.peripheral.disconnect();
     }

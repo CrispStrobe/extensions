@@ -292,21 +292,11 @@
     MARIO_HUB_PANTS_SENSOR: 0x4a,
     MARIO_HUB_GESTURE_SENSOR: 0x54,
 
-    VOLTAGE_SENSOR: 0x14,                    // 20
-    CURRENT_SENSOR: 0x15,                    // 21
-    PIEZO_BUZZER: 0x16,                      // 22
-    MOVE_HUB_TILT_SENSOR: 0x28,              // 40
-    DUPLO_TRAIN_BASE_SPEEDOMETER: 0x2c,      // 44
-    TECHNIC_MEDIUM_HUB_GEST_SENSOR: 0x36,    // 54
-    REMOTE_CONTROL_BUTTON: 0x37,             // 55
-    REMOTE_CONTROL_RSSI: 0x38,               // 56
-    TECHNIC_MEDIUM_HUB_ACCELEROMETER: 0x39,  // 57
-    TECHNIC_MEDIUM_HUB_GYRO_SENSOR: 0x3a,    // 58
-    TECHNIC_MEDIUM_HUB_TILT_SENSOR: 0x3b,    // 59
-    TECHNIC_MEDIUM_HUB_TEMPERATURE_SENSOR: 0x3c, // 60
-    MARIO_ACCELEROMETER: 0x47,               // 71
-    MARIO_BARCODE_SENSOR: 0x49,              // 73
-    MARIO_PANTS_SENSOR: 0x4a,                // 74
+    // Short-form aliases (same device IDs as above, different community names)
+    MOVE_HUB_TILT_SENSOR: 0x28,              // alias for INTERNAL_TILT
+    MARIO_ACCELEROMETER: 0x47,               // alias for MARIO_HUB_ACCELEROMETER
+    MARIO_BARCODE_SENSOR: 0x49,              // alias for MARIO_HUB_BARCODE_SENSOR
+    MARIO_PANTS_SENSOR: 0x4a,                // alias for MARIO_HUB_PANTS_SENSOR
   };
 
   const DeviceTypeName = {
@@ -2109,8 +2099,8 @@
       }
       
       // Last resort - try vm global
-      if (!this._runtime && typeof vm !== "undefined") {
-        this._runtime = vm.runtime;
+      if (!this._runtime && typeof globalThis.vm !== "undefined") {
+        this._runtime = globalThis.vm.runtime;
         logger.info("Got runtime from vm.runtime");
       }
       

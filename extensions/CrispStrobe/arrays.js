@@ -715,7 +715,11 @@
       const arr = arrays[args.NAME];
       if (!arr) return "[]";
       try {
-        const func = eval(`(${args.FUNC})`);
+        // new Function instead of eval: still compiles user JS (this is the
+        // feature — user-typed arrow functions for map/filter/reduce blocks)
+        // but the resulting fn only sees globals, not this method's locals.
+        // eslint-disable-next-line no-new-func
+        const func = new Function(`return (${args.FUNC});`)();
         const result = arr.map(func);
         return JSON.stringify(result);
       } catch (e) {
@@ -727,7 +731,8 @@
       const arr = arrays[args.NAME];
       if (!arr) return "[]";
       try {
-        const func = eval(`(${args.FUNC})`);
+        // eslint-disable-next-line no-new-func
+        const func = new Function(`return (${args.FUNC});`)();
         const result = arr.filter(func);
         return JSON.stringify(result);
       } catch (e) {
@@ -739,7 +744,8 @@
       const arr = arrays[args.NAME];
       if (!arr) return "";
       try {
-        const func = eval(`(${args.FUNC})`);
+        // eslint-disable-next-line no-new-func
+        const func = new Function(`return (${args.FUNC});`)();
         const init = this.parseValue(args.INIT);
         return arr.reduce(func, init);
       } catch (e) {

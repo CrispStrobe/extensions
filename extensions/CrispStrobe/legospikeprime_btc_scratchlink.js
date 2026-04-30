@@ -825,7 +825,7 @@
   class SpikePrime {
     constructor(runtime, extensionId) {
       this._runtime =
-        runtime || (typeof vm !== "undefined" ? vm.runtime : null);
+        runtime || (typeof globalThis.vm !== "undefined" ? globalThis.vm.runtime : null);
       this._extensionId = extensionId;
       this._remainingText = "";
 
@@ -1187,7 +1187,7 @@ continuous_sensor_loop()
           }
         } else if (dataText.startsWith("GESTURE:")) {
           const gesture = dataText.substring(8).toLowerCase();
-          if (this._sensors.gestures.hasOwnProperty(gesture)) {
+          if (Object.prototype.hasOwnProperty.call(this._sensors.gestures, gesture)) {
             this._sensors.gestures[gesture] = true;
             setTimeout(() => {
               this._sensors.gestures[gesture] = false;
@@ -1212,7 +1212,7 @@ continuous_sensor_loop()
     }
 
     _parseResponse(response) {
-      if (response.hasOwnProperty("m")) {
+      if (Object.prototype.hasOwnProperty.call(response, "m")) {
         switch (response.m) {
           case 0:
             this._parseHubStatus(response);
@@ -1230,7 +1230,7 @@ continuous_sensor_loop()
             break;
         }
       }
-      if (response.hasOwnProperty("i")) {
+      if (Object.prototype.hasOwnProperty.call(response, "i")) {
         const openRequest = this._openRequests[response.i];
         delete this._openRequests[response.i];
         if (openRequest) openRequest.resolve();
@@ -1305,7 +1305,7 @@ continuous_sensor_loop()
     }
 
     _parseEventResponse(response) {
-      if (SpikeOrientation.hasOwnProperty(response.p)) {
+      if (Object.prototype.hasOwnProperty.call(SpikeOrientation, response.p)) {
         this._sensors.orientation = SpikeOrientation[response.p];
       }
       const gestureMap = {

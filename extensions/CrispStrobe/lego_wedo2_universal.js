@@ -1128,8 +1128,8 @@
         logger.info("Got runtime from Scratch.vm.runtime");
       }
       
-      if (!this._runtime && typeof vm !== "undefined") {
-        this._runtime = vm.runtime;
+      if (!this._runtime && typeof globalThis.vm !== "undefined") {
+        this._runtime = globalThis.vm.runtime;
         logger.info("Got runtime from vm.runtime");
       }
       
