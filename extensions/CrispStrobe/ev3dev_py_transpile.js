@@ -773,7 +773,10 @@
       this.authHeader = null;
 
       // Streaming mode state
-      this.streamingMode = false;
+      // Default ON so command blocks (beep, motor_run, set_led, ...) actually
+      // reach the bridge once the user configures a connection. Pure-transpile
+      // users can drop the `disable streaming` block.
+      this.streamingMode = true;
 
       this.sensorCache = {};
       this.SENSOR_CACHE_MS = 50; // Read sensors max once per 50ms
@@ -913,7 +916,7 @@
             arguments: {
               MODE: { type: Scratch.ArgumentType.STRING, menu: "connectionModes", defaultValue: "https" },
               IP: { type: Scratch.ArgumentType.STRING, defaultValue: "192.168.178.50" },
-              PORT: { type: Scratch.ArgumentType.NUMBER, defaultValue: 443 },
+              PORT: { type: Scratch.ArgumentType.NUMBER, defaultValue: 8443 },
             },
           },
           {
@@ -1890,7 +1893,22 @@
     setConnectionMode(args) {
       this.ev3Protocol = args.MODE;
       this.ev3IP = args.IP;
-      this.ev3Port = args.PORT;
+
+      // Per-protocol port defaults: HTTP→8080, HTTPS→8443. The block has a
+      // single PORT field, so when the user leaves it at a default that
+      // belongs to the *other* protocol we transparently swap.
+      const httpDefaults = new Set([80, 8080]);
+      const httpsDefaults = new Set([443, 8443]);
+      let port = Number(args.PORT);
+      if (this.ev3Protocol === "http" && httpsDefaults.has(port)) {
+        port = 8080;
+      } else if (this.ev3Protocol === "https" && httpDefaults.has(port)) {
+        port = 8443;
+      }
+      this.ev3Port = port;
+
+      // Configuring a connection is an explicit opt-in to direct mode.
+      this.streamingMode = true;
 
       console.log(
         `Connection: ${this.ev3Protocol}://${this.ev3IP}:${this.ev3Port}`,
@@ -1933,7 +1951,11 @@
         );
         const data = await response.json();
         this.log("Connection test result", data);
-        return data.status === "ev3_bridge_active" ? t("connected") : "Error";
+        if (data.status === "ev3_bridge_active") {
+          this.streamingMode = true;
+          return t("connected");
+        }
+        return "Error";
       } catch (e) {
         this.log("Connection test failed", { error: e.message });
         return t("notConnected");
@@ -1945,6 +1967,13 @@
      */
     async sendCommand(cmd, params = {}, retries = 1, timeout = null) {
       if (!this.streamingMode) {
+        // Loud warning: silent drops are why play-tone "did nothing" while
+        // testConnection still reported Connected.
+        console.warn(
+          `[EV3] Dropping "${cmd}" because streaming is disabled. ` +
+          `Use the "set connection" or "enable streaming" block first.`,
+          params,
+        );
         this.log("Command not sent - streaming disabled", { cmd, params });
         return null;
       }

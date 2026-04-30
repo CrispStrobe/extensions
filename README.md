@@ -1,178 +1,222 @@
-# Custom TurboWarp with LEGO Extensions
+# Custom TurboWarp Extensions (LEGO + EV3dev)
 
-This project consists of two separate repositories that work together:
+This repo hosts a curated TurboWarp extension gallery, including a custom
+**ev3dev** extension that lets a Scratch project drive a real LEGO MINDSTORMS
+EV3 brick over Wi-Fi.
 
-1. **`extensions`**: Hosts the JavaScript code, images, and metadata for the custom extensions.
-2. **`scratch-gui`**: The modified editor that loads the extensions unsandboxed.
+## How the pieces fit together
 
-## Prerequisites
+```
+   Browser (you)
+   ┌───────────────────────────────────┐
+   │  scratch-gui  (the editor)        │
+   │   - https://crispstrobe.github.io/scratch-gui/
+   │   - https://scratch-gui-three.vercel.app/editor.html
+   │                                   │
+   │   loads extension JS from ↓       │
+   └───────────────────────────────────┘
+                 │  HTTPS
+                 ▼
+   ┌───────────────────────────────────┐
+   │  this repo  (extensions)          │
+   │   - https://crispstrobe.github.io/extensions/
+   │   serves: extensions-v0.json,     │
+   │           extensions/<user>/*.js  │
+   └───────────────────────────────────┘
+                 │ JSON over HTTP/HTTPS
+                 ▼
+   ┌───────────────────────────────────┐
+   │  EV3 brick                        │
+   │   running ev3_bridge.py           │
+   │   on ports 8080 (HTTP) / 8443 (HTTPS)
+   └───────────────────────────────────┘
+```
 
-* **Node.js**: (v18 or v20 LTS recommended. If using v24, see Troubleshooting below).
-* **Git**: Installed and configured.
-* **GitHub Account**: Pages enabled for both repositories.
+Three repos / hosts, three jobs:
 
-## Part 1: The Extensions Repository (`extensions`)
+| Where                                                                 | Job                                                                                  |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| [`CrispStrobe/scratch-gui`](https://github.com/CrispStrobe/scratch-gui) | The Scratch/TurboWarp editor UI. Lists extensions, lets users drag them in.          |
+| **this repo (`CrispStrobe/extensions`)**                              | Hosts the extension JS files and the gallery metadata (`extensions-v0.json`).        |
+| `extensions/CrispStrobe/ev3_bridge.py` on the EV3 brick               | An HTTP/HTTPS JSON server that turns `{"cmd":"beep",...}` calls into motor/sound/LED actions. |
 
-This repo acts as the "Server" for the extenions Javascript files. Building it generates the `extensions-v0.json` metadata that the TurboWarp Editor from scratch-gui reads.
+## Quick start (use it, don't develop it)
 
-### 1. Directory Structure
+1. Open one of the editor URLs above.
+2. Click **Add Extension** → **EV3dev** (or paste the URL of `ev3dev_py_transpile.js`).
+3. Drop a **set connection** block. Pick:
+   - **HTTP** → port `8080`
+   - **HTTPS** → port `8443` (requires installing the brick's self-signed cert; see below)
+4. Set the IP to your brick's IP (find it on the brick's screen once `ev3_bridge.py` is running).
+5. Drop a **test EV3 connection** reporter — it should say **Connected**.
+6. Drop a **beep 1000 Hz for 500 ms** block. The brick should beep.
 
-* **`extensions/<Username>/`**: Put your `.js` files here (e.g., `extensions/CrispStrobe/ev3.js`).
-* **`images/<Username>/`**: Put your icons here.
-* **Format**: PNG or SVG.
-* **Size**: 600x300 pixels (2:1 aspect ratio).
-* **Filename**: Must match the ID of the extension (e.g., `ev3.png`).
+If step 6 silently does nothing while step 5 says **Connected**, you're on an old
+build of the extension where `streamingMode` defaulted to `false` — pull the
+latest from this repo and redeploy.
 
-### 2. Configuration (`package.json`)
+## Setting up the EV3 bridge (`ev3_bridge.py`)
 
-Ensure you have the build tools and deployment scripts installed:
+The bridge script lives at `extensions/CrispStrobe/ev3_bridge.py`. Copy it to
+the brick and run it.
+
+```bash
+# From your laptop, copy the script to the brick:
+scp extensions/CrispStrobe/ev3_bridge.py robot@ev3dev.local:/home/robot/
+
+# SSH in and run it:
+ssh robot@ev3dev.local
+python3 ~/ev3_bridge.py            # HTTP 8080 + HTTPS 8443, with on-brick UI
+python3 ~/ev3_bridge.py --no-ui    # no UI (useful when running headless)
+python3 ~/ev3_bridge.py --http-only   # only HTTP 8080
+python3 ~/ev3_bridge.py --https-only  # only HTTPS 8443
+python3 ~/ev3_bridge.py --auth user:pass  # require Basic auth
+python3 ~/ev3_bridge.py -v         # verbose logging
+```
+
+The brick's screen shows the live IP and ports, so you can read the URL
+straight off the brick:
+
+```
+EV3 BRIDGE v2.3
+==========================
+http  192.168.178.57:8080
+https 192.168.178.57:8443
+host: ev3dev
+Scripts: 3  Running: 0
+Battery: 8.1V (44%)
+UP=Menu  BACK=Exit
+```
+
+Quick smoke test from any machine on the same network:
+
+```bash
+curl http://192.168.178.57:8080/                      # → {"status":"ev3_bridge_active",...}
+curl -X POST http://192.168.178.57:8080/ \
+     -H "Content-Type: application/json" \
+     -d '{"cmd":"beep","freq":1000,"dur":500}'        # → {"status":"ok"}
+```
+
+### HTTP vs HTTPS
+
+| Editor URL is …      | Use bridge over … | Why                                                                                                  |
+| -------------------- | ----------------- | ---------------------------------------------------------------------------------------------------- |
+| `http://…` / localhost | **HTTP 8080**     | Simplest. Browsers happily make HTTP calls from HTTP pages.                                          |
+| `https://…`          | **HTTPS 8443**    | Browsers block "mixed content" (HTTP from HTTPS pages). The bridge generates a self-signed cert; install it on your device first. |
+
+Cert install: visit `https://<brick-ip>:8443/certificate` (macOS/Linux) or
+`https://<brick-ip>:8443/profile` (iOS) and trust it.
+
+## Repo layout
+
+```
+extensions/
+  CrispStrobe/
+    ev3dev_py_transpile.js   ← the ev3dev extension (what the editor loads)
+    ev3_bridge.py            ← the on-brick HTTP/HTTPS server
+    ev3_universal.js         ← alternative EV3 extension (ScratchLink/Serial/HTTP/Bridge)
+    ev3_direct.js            ← direct-command EV3 extension
+    legoboost_universal.js   ← LEGO Boost
+    lego_wedo2_universal.js  ← LEGO WeDo 2.0
+    legospike*.js            ← LEGO SPIKE Prime variants
+    legonxt_transpile_universal.js
+    lego_poweredup.js
+    gamepad.js, csp.js, arrays.js, planetemaths.js, ...
+images/CrispStrobe/<id>.png  ← gallery thumbnails (600×300)
+generated-metadata/          ← built by `npm run build`
+```
+
+## Developing / publishing changes
+
+This repo serves on GitHub Pages. Publishing flow:
 
 ```bash
 npm install
-npm install --save-dev gh-pages spdx-expression-parse
+npm install --save-dev gh-pages spdx-expression-parse  # one-time
 
-```
-
-### 3. Build & Deploy
-
-Every time you add a new extension or edit a JS file, run these commands:
-
-```bash
-# 1. Build the metadata
+# 1. Build the gallery metadata (extensions-v0.json)
 npm run build
 
-# 2. Deploy the build output to GitHub Pages
-npm deploy
-```
-
-### 4. Verify
-
-After deploying, check that this "Magic Link" returns JSON text:
-`https://<YOUR-USERNAME>.github.io/extensions/generated-metadata/extensions-v0.json`
-
----
-
-## Part 2: The Editor Repository (`scratch-gui`)
-
-This repo is the user TurboWarp Blocks Editor interface. It can easily be modified to trust a specific extension URL.
-
-### 1. Critical Configuration Files
-
-You must edit these files to point to your GitHub Pages URL (e.g., `https://crispstrobe.github.io`).
-
-**A. `package.json**`
-
-* Add `"homepage": "https://<YOUR-USERNAME>.github.io/scratch-gui",` at the top.
-* Update scripts:
-```json
-"scripts": {
-  "postinstall": "patch-package",
-  "deploy": "gh-pages -d build",
-  ...
-}
-```
-
-**B. `src/containers/tw-security-manager.jsx**`
-
-* **Goal**: Allow Unsandboxed (hardware) access.
-* **Change**: Add your domain to `isTrustedExtension`.
-```javascript
-const isTrustedExtension = url => (
-    url.startsWith('https://extensions.turbowarp.org/') ||
-    url.startsWith('http://localhost:8000/') ||
-    url.startsWith('https://<YOUR-USERNAME>.github.io/') || // <--- ADD THIS
-    extensionsTrustedByUser.has(url)
-);
-
-```
-
-**C. `src/containers/extension-library.jsx` (The "Fetcher")**
-
-* **Goal**: Tell the editor where to download the extension list.
-* **Change**: Replace **ALL** instances of `https://extensions.turbowarp.org` with your URL.
-```javascript
-// Example 1: Fetching the list
-const res = await fetch('https://<YOUR-USERNAME>.github.io/extensions/generated-metadata/extensions-v0.json');
-
-// Example 2: Fetching the code
-extensionURL: `https://<YOUR-USERNAME>.github.io/extensions/${extension.slug}.js`,
-
-// Example 3: Fetching the icon
-iconURL: `https://<YOUR-USERNAME>.github.io/extensions/${extension.image || 'images/unknown.svg'}`,
-
-```
-
-**D. `src/lib/libraries/extensions/index.jsx` (The "Button")**
-
-* **Goal**: Ensure the "Extensions" button points to the right place.
-* **Change**: Update `galleryLoading`, `galleryMore`, `galleryError`.
-```javascript
-href: 'https://<YOUR-USERNAME>.github.io/extensions/',
-
-```
-
-### 2. Build & Deploy
-
-Every time you modify the editor code:
-
-```bash
-# 1. Build the editor (creates 'build' folder)
-# Windows PowerShell:
-$env:NODE_ENV="production"; npm run build
-
-# Windows Command Prompt (cmd):
-set NODE_ENV=production && npm run build
-
-# 2. Deploy the build folder to GitHub Pages
+# 2. Push the build/ folder to gh-pages
 npm run deploy
-
 ```
 
----
+Verify with: <https://crispstrobe.github.io/extensions/generated-metadata/extensions-v0.json>
+
+The matching editor changes live in
+[`CrispStrobe/scratch-gui`](https://github.com/CrispStrobe/scratch-gui) — the
+editor's `tw-security-manager.jsx` whitelists this domain so the extension can
+make `fetch()` calls to the brick from inside the unsandboxed extension worker.
 
 ## Troubleshooting
 
-### Node v24 "ERR_MODULE_NOT_FOUND"
+### "Connected" works but blocks like *beep* / *play tone* do nothing
 
-If `npm run build` fails in the extensions repo:
+The extension has a `streamingMode` flag. Older builds defaulted it to `false`,
+so direct command blocks were silently dropped while the connection reporter
+still said *Connected*. Current `ev3dev_py_transpile.js` defaults it to `true`
+and re-asserts it on `setConnectionMode` and a successful `testConnection`.
+Open the browser DevTools console — if you see
+`[EV3] Dropping "beep" because streaming is disabled.`, drop an
+**enable streaming** block before your command blocks.
 
-1. Open `development/builder.js`.
-2. Comment out the import: `// import spdxParser from "spdx-expression-parse";`
-3. Comment out the usage block around line 160 (`spdxParser(metadata.license)`).
+### Wrong port chosen by default
 
-### Extensions List is Empty
+The **set connection** block has one port field. The extension auto-corrects
+mismatches: with mode `http`, ports `443`/`8443` get rewritten to `8080`; with
+mode `https`, ports `80`/`8080` get rewritten to `8443`. So dragging the block,
+flipping the mode, and leaving the port at default just works.
 
-1. Open your Editor URL (`.../scratch-gui`).
-2. Open Developer Tools (F12) -> Network Tab.
-3. Click the "Extensions" button.
-4. Look for the request to `extensions-v0.json`.
-* **404 Error**: Your `extension-library.jsx` URL might be wrong. Check if it points to `generated-metadata`.
-* **CORS Error**: GitHub Pages issue (rare)?
-* **Success (200)**: But still empty? Clear browser cache (`Ctrl + F5`).
+### Extension list is empty in the editor
 
-### Extension Loads but Hardware Doesn't Work
+1. Open DevTools → Network.
+2. Click **Add Extension**.
+3. Look at the request to `extensions-v0.json`.
+   - **404** → the editor's `extension-library.jsx` URL is wrong; should point to
+     `…/extensions/generated-metadata/extensions-v0.json`.
+   - **200 but empty** → cache; hard-reload (`Ctrl+F5` / `⌘⇧R`).
 
-1. Check the Console (F12).
-2. If you see "Sandbox" warnings, maybe your `tw-security-manager.jsx` fix didn't apply.
-3. Ensure your extension URL matches the trusted URL exactly.
-4. If you attempt to use Bluetooth, dependent on what platform/environment, that might be tricky... I will probably add a few pointers later...
+### Hardware doesn't work even though the extension loaded
 
-# Info from Original TurboWarp Extensions Repo
+1. Open DevTools console.
+2. If you see "Sandbox" warnings, the `tw-security-manager.jsx` whitelist in
+   `scratch-gui` doesn't include this domain. Fix it there.
+3. Confirm the extension URL the editor loaded matches what's in the trusted list.
 
-User-contributed unsandboxed extension gallery for TurboWarp.
+### Node v24 build fails with "ERR_MODULE_NOT_FOUND"
 
-https://extensions.turbowarp.org/
+In `development/builder.js`, comment out the `spdx-expression-parse` import and
+the `spdxParser(metadata.license)` call (around line 160). Or use Node v18/20.
 
-## Contributing (original TurboWarp Repo)
+## Editor (scratch-gui) configuration cheatsheet
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+When forking the editor, edit these to point at *your* GitHub Pages URL:
+
+- `package.json` — add `"homepage": "https://<you>.github.io/scratch-gui"` and a
+  `"deploy": "gh-pages -d build"` script.
+- `src/containers/tw-security-manager.jsx` — add your domain to
+  `isTrustedExtension`.
+- `src/containers/extension-library.jsx` — replace the
+  `extensions.turbowarp.org` URLs with `https://<you>.github.io/extensions/…`.
+- `src/lib/libraries/extensions/index.jsx` — update the `galleryLoading`,
+  `galleryMore`, `galleryError` `href` values.
+
+Build & deploy the editor:
+
+```bash
+NODE_ENV=production npm run build
+npm run deploy
+```
+
+## Upstream / credits
+
+Forked from the [TurboWarp extensions gallery](https://extensions.turbowarp.org/),
+with custom additions in `extensions/CrispStrobe/`. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for the upstream contribution process.
 
 ## License
 
-Extensions (in the `extensions` folder) will have a comment at the top of the file describing the license for the code. In the past [MIT](./licenses/MIT.txt) was the default, however now [MPL-2.0](./licenses/MPL-2.0.txt) is recommended. Some extensions may contain a mix of several.
-
-Sample projects (in the `samples` folder) are licensed under [CC-BY 4.0](./licenses/CC-BY-4.0.txt).
-
-Everything else, such as the extension images, development server, and website are licensed under the [GNU General Public License version 3](licenses/GPL-3.0.txt).
-
-See [images/README.md](images/README.md) for attribution information for each image.
+Per-extension licenses are at the top of each `.js`. Default for new
+extensions: [MPL-2.0](./licenses/MPL-2.0.txt). Sample projects: [CC-BY 4.0](./licenses/CC-BY-4.0.txt).
+Everything else (build tools, website, images): [GPL-3.0](licenses/GPL-3.0.txt).
+Image attribution: see [images/README.md](images/README.md).
