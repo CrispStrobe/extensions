@@ -372,7 +372,7 @@ sensor_loop()
         }
       } else if (text.startsWith("GESTURE:")) {
         const gesture = text.substring(8).toLowerCase();
-        if (this.gestures.hasOwnProperty(gesture)) {
+        if (Object.prototype.hasOwnProperty.call(this.gestures, gesture)) {
           this.gestures[gesture] = true;
           setTimeout(() => {
             this.gestures[gesture] = false;

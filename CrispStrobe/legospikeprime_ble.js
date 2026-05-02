@@ -1909,7 +1909,7 @@
     generateHeader_with_imports() {
       this.addLine("#!/usr/bin/env python3");
       this.addLine("# Generated from Scratch by SPIKE Prime BLE Extension");
-      this.addLine(`# Language: ${currentLanguage}`);
+      this.addLine(`# Language: ${currentLang}`);
       this.addLine(`# Generated: ${new Date().toISOString()}`);
       this.addLine("");
     }
@@ -2639,10 +2639,6 @@
     // ========================================================================
     // CONNECTION BLOCKS
     // ========================================================================
-
-    isConnected() {
-      return this._peripheral.isConnected();
-    }
 
     getHubType() {
       return this._peripheral.getHubType();
