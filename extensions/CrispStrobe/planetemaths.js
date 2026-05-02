@@ -618,6 +618,73 @@
     return finalLanguage;
   }
 
+  // ============================================================================
+  // MODULE-LEVEL LOCALE STATE
+  //
+  // Keeps the active language outside the class so getInfo() (and any other
+  // call site) reads the current value at call time, and so language-change
+  // listeners are registered exactly once when the gallery .js is loaded —
+  // not once per `new PlaneteMaths()`. This mirrors the working pattern used
+  // by ev3dev_py_transpile.js.
+  // ============================================================================
+
+  let currentLang = detectLanguage();
+
+  if (typeof window !== "undefined") {
+    // TurboWarp persists the editor language to localStorage under tw:language;
+    // a `storage` event fires for changes made in *other* tabs.
+    window.addEventListener("storage", (e) => {
+      if (e.key === "tw:language") {
+        const newLang = detectLanguage();
+        if (newLang !== currentLang) {
+          currentLang = newLang;
+          console.log("[PlaneteMaths] currentLang →", currentLang);
+        }
+      }
+    });
+
+    // For changes made in the same tab, watch the Redux store directly.
+    let lastKnownLocale = null;
+    setInterval(() => {
+      try {
+        if (window.ReduxStore && window.ReduxStore.getState) {
+          const locale = window.ReduxStore.getState().locales?.locale;
+          if (locale && locale !== lastKnownLocale) {
+            lastKnownLocale = locale;
+            const lower = locale.toLowerCase();
+            const newLang = lower.startsWith("de")
+              ? "de"
+              : lower.startsWith("fr")
+                ? "fr"
+                : "en";
+            if (newLang !== currentLang) {
+              currentLang = newLang;
+              console.log(
+                "[PlaneteMaths] Redux locale changed → currentLang =",
+                currentLang,
+              );
+            }
+          }
+        }
+      } catch (e) {
+        // ReduxStore may not be exposed; ignore.
+      }
+    }, 1000);
+  }
+
+  // Module-level translation lookup — reads currentLang at call time so each
+  // getInfo() invocation reflects the latest detected language.
+  function t(key, defaultValue) {
+    try {
+      const tr = translations[currentLang];
+      if (tr && tr[key]) return tr[key];
+      if (translations.en && translations.en[key]) return translations.en[key];
+      return defaultValue !== undefined ? defaultValue : key;
+    } catch (e) {
+      return defaultValue !== undefined ? defaultValue : key;
+    }
+  }
+
   // Utility functions for type casting
   const Cast = {
     toNumber: function (value) {
@@ -707,91 +774,17 @@
 
   class PlaneteMaths {
     constructor() {
-      log("Extension initialized");
-      this.locale = detectLanguage();
-      log("Using locale:", this.locale);
-
-      // Set up language change detection
-      this._setupLanguageChangeDetection();
+      log("Extension initialized, currentLang:", currentLang);
     }
 
-    _setupLanguageChangeDetection() {
-      // Listen for localStorage changes (for TurboWarp language switches)
-      if (typeof window !== "undefined") {
-        window.addEventListener("storage", (e) => {
-          if (e.key === "tw:language") {
-            console.log(
-              "[PlaneteMaths] TurboWarp language changed, re-detecting...",
-            );
-            const newLang = detectLanguage();
-            if (newLang !== this.locale) {
-              this.locale = newLang;
-              console.log("[PlaneteMaths] Language updated to:", this.locale);
-              console.warn(
-                "[PlaneteMaths] Extension translations will apply after reload",
-              );
-            }
-          }
-        });
-
-        // Watch for Redux state changes
-        let lastKnownLocale = null;
-        setInterval(() => {
-          try {
-            if (window.ReduxStore && window.ReduxStore.getState) {
-              const state = window.ReduxStore.getState();
-              const currentLocale = state.locales?.locale;
-
-              if (currentLocale && currentLocale !== lastKnownLocale) {
-                lastKnownLocale = currentLocale;
-                console.log(
-                  "[PlaneteMaths] Redux locale changed to:",
-                  currentLocale,
-                );
-
-                const newLang = currentLocale.toLowerCase().startsWith("de")
-                  ? "de"
-                  : currentLocale.toLowerCase().startsWith("fr")
-                    ? "fr"
-                    : "en";
-                if (newLang !== this.locale) {
-                  this.locale = newLang;
-                  console.log(
-                    "[PlaneteMaths] Extension language updated to:",
-                    this.locale,
-                  );
-                  console.warn(
-                    "[PlaneteMaths] Extension translations will apply after reload",
-                  );
-                }
-              }
-            }
-          } catch (e) {
-            // Silently fail
-          }
-        }, 1000); // Check every second
-      }
-    }
-
+    // Delegates to the module-level `t()`. Kept as a method so the existing
+    // `this._translate(...)` call sites in getInfo() don't need to change.
     _translate(key, defaultValue) {
-      try {
-        const translation = translations[this.locale];
-        if (translation && translation[key]) {
-          return translation[key];
-        }
-        // Fallback to English
-        if (translations.en && translations.en[key]) {
-          return translations.en[key];
-        }
-        return defaultValue || key;
-      } catch (e) {
-        error("Translation error:", e);
-        return defaultValue || key;
-      }
+      return t(key, defaultValue);
     }
 
     getInfo() {
-      log("getInfo() called, locale:", this.locale);
+      log("getInfo() called, currentLang:", currentLang);
       return {
         id: "planetemaths",
         name: this._translate("pm.title", "Maths"),
