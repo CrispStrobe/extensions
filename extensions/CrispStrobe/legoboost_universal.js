@@ -6,6 +6,188 @@
 (function (Scratch) {
   "use strict";
 
+
+  // ============================================================================
+  // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
+  //
+  // Module-level locale state pattern shared with planetemaths.js,
+  // ev3dev_py_transpile.js, arrays.js, etc. Detect once at gallery-load,
+  // listen for changes, resolve block text via the module-level t(key) at
+  // every getInfo() call.
+  // ============================================================================
+
+  const translations = {
+    en: {
+      "boost.name": "LEGO Boost (Unified)",
+      "boost.setConnection": "set connection to [TYPE]",
+      "boost.setBridgeUrl": "set bridge URL to [URL]",
+      "boost.connect": "connect to LEGO Boost",
+      "boost.disconnect": "disconnect from LEGO Boost",
+      "boost.connected": "connected?",
+      "boost.setDebug": "set debug level to [LEVEL]",
+      "boost.enableDebug": "enable debug [ENABLED]",
+      "boost.motorOn": "turn motor [MOTOR_ID] on",
+      "boost.motorOff": "turn motor [MOTOR_ID] off",
+      "boost.motorOnSeconds": "turn motor [MOTOR_ID] on for [TIME] seconds",
+      "boost.motorOnDegrees": "turn motor [MOTOR_ID] on for [DEGREES] degrees",
+      "boost.motorPower": "set motor [MOTOR_ID] power to [POWER]%",
+      "boost.motorDirection": "set motor [MOTOR_ID] direction to [MOTOR_DIRECTION]",
+      "boost.motorStopAction": "set motor [MOTOR_ID] stop action to [ACTION]",
+      "boost.motorAccel": "set motor [MOTOR_ID] acceleration to [TIME] ms",
+      "boost.motorDecel": "set motor [MOTOR_ID] deceleration to [TIME] ms",
+      "boost.motorReset": "reset motor [MOTOR_ID] position to [POSITION]",
+      "boost.motorPosition": "motor [MOTOR_ID] position",
+      "boost.whenColorSeen": "when color sensor [PORT] sees [COLOR]",
+      "boost.isColorSeen": "color sensor [PORT] seeing [COLOR]?",
+      "boost.distance": "distance sensor [PORT] distance",
+      "boost.reflection": "color sensor [PORT] reflection",
+      "boost.force": "force sensor [PORT] force",
+      "boost.whenForcePressed": "when force sensor [PORT] pressed",
+      "boost.isForcePressed": "force sensor [PORT] pressed?",
+      "boost.whenTilted": "when tilted [TILT_DIRECTION_ANY]",
+      "boost.isTilted": "tilted [TILT_DIRECTION_ANY]?",
+      "boost.tiltAngle": "tilt angle [TILT_DIRECTION]",
+      "boost.lightColor": "set light color to [HUE]",
+      "boost.shutdown": "shutdown hub",
+      "boost.whenButton": "when button pressed",
+      "boost.isButton": "button pressed?",
+      "boost.battery": "battery level",
+      "boost.firmware": "firmware version",
+      "boost.rssi": "RSSI",
+      "boost.whenBatteryLow": "when battery low",
+      "boost.whenOverloaded": "when motor overloaded",
+    },
+    de: {
+      "boost.name": "LEGO Boost (Vereinheitlicht)",
+      "boost.setConnection": "Verbindung auf [TYPE] setzen",
+      "boost.setBridgeUrl": "Bridge-URL auf [URL] setzen",
+      "boost.connect": "mit LEGO Boost verbinden",
+      "boost.disconnect": "LEGO Boost trennen",
+      "boost.connected": "verbunden?",
+      "boost.setDebug": "Debug-Level auf [LEVEL] setzen",
+      "boost.enableDebug": "Debug aktivieren [ENABLED]",
+      "boost.motorOn": "Motor [MOTOR_ID] einschalten",
+      "boost.motorOff": "Motor [MOTOR_ID] ausschalten",
+      "boost.motorOnSeconds": "Motor [MOTOR_ID] für [TIME] Sekunden einschalten",
+      "boost.motorOnDegrees": "Motor [MOTOR_ID] um [DEGREES] Grad drehen",
+      "boost.motorPower": "Motorleistung [MOTOR_ID] auf [POWER]% setzen",
+      "boost.motorDirection": "Motorrichtung [MOTOR_ID] auf [MOTOR_DIRECTION] setzen",
+      "boost.motorStopAction": "Motor-Stoppaktion [MOTOR_ID] auf [ACTION] setzen",
+      "boost.motorAccel": "Motor-Beschleunigung [MOTOR_ID] auf [TIME] ms setzen",
+      "boost.motorDecel": "Motor-Verzögerung [MOTOR_ID] auf [TIME] ms setzen",
+      "boost.motorReset": "Motor-Position [MOTOR_ID] auf [POSITION] zurücksetzen",
+      "boost.motorPosition": "Motor-Position [MOTOR_ID]",
+      "boost.whenColorSeen": "wenn Farbsensor [PORT] [COLOR] sieht",
+      "boost.isColorSeen": "Farbsensor [PORT] sieht [COLOR]?",
+      "boost.distance": "Abstandssensor [PORT] Abstand",
+      "boost.reflection": "Farbsensor [PORT] Reflexion",
+      "boost.force": "Kraftsensor [PORT] Kraft",
+      "boost.whenForcePressed": "wenn Kraftsensor [PORT] gedrückt",
+      "boost.isForcePressed": "Kraftsensor [PORT] gedrückt?",
+      "boost.whenTilted": "wenn geneigt [TILT_DIRECTION_ANY]",
+      "boost.isTilted": "geneigt [TILT_DIRECTION_ANY]?",
+      "boost.tiltAngle": "Neigungswinkel [TILT_DIRECTION]",
+      "boost.lightColor": "Lichtfarbe auf [HUE] setzen",
+      "boost.shutdown": "Hub herunterfahren",
+      "boost.whenButton": "wenn Knopf gedrückt",
+      "boost.isButton": "Knopf gedrückt?",
+      "boost.battery": "Batteriestand",
+      "boost.firmware": "Firmware-Version",
+      "boost.rssi": "RSSI",
+      "boost.whenBatteryLow": "wenn Batterie schwach",
+      "boost.whenOverloaded": "wenn Motor überlastet",
+    },
+    fr: {
+      "boost.name": "LEGO Boost (Unifié)",
+      "boost.setConnection": "définir la connexion sur [TYPE]",
+      "boost.setBridgeUrl": "définir URL du pont sur [URL]",
+      "boost.connect": "se connecter au LEGO Boost",
+      "boost.disconnect": "déconnecter du LEGO Boost",
+      "boost.connected": "connecté ?",
+      "boost.setDebug": "définir niveau de débogage sur [LEVEL]",
+      "boost.enableDebug": "activer débogage [ENABLED]",
+      "boost.motorOn": "allumer moteur [MOTOR_ID]",
+      "boost.motorOff": "éteindre moteur [MOTOR_ID]",
+      "boost.motorOnSeconds": "allumer moteur [MOTOR_ID] pendant [TIME] secondes",
+      "boost.motorOnDegrees": "tourner moteur [MOTOR_ID] de [DEGREES] degrés",
+      "boost.motorPower": "régler puissance moteur [MOTOR_ID] sur [POWER]%",
+      "boost.motorDirection": "régler direction moteur [MOTOR_ID] sur [MOTOR_DIRECTION]",
+      "boost.motorStopAction": "régler action d'arrêt moteur [MOTOR_ID] sur [ACTION]",
+      "boost.motorAccel": "régler accélération moteur [MOTOR_ID] sur [TIME] ms",
+      "boost.motorDecel": "régler décélération moteur [MOTOR_ID] sur [TIME] ms",
+      "boost.motorReset": "réinitialiser position moteur [MOTOR_ID] à [POSITION]",
+      "boost.motorPosition": "position du moteur [MOTOR_ID]",
+      "boost.whenColorSeen": "quand capteur de couleur [PORT] voit [COLOR]",
+      "boost.isColorSeen": "capteur [PORT] voit [COLOR] ?",
+      "boost.distance": "distance du capteur [PORT]",
+      "boost.reflection": "réflexion du capteur [PORT]",
+      "boost.force": "force du capteur [PORT]",
+      "boost.whenForcePressed": "quand capteur de force [PORT] pressé",
+      "boost.isForcePressed": "capteur de force [PORT] pressé ?",
+      "boost.whenTilted": "quand incliné [TILT_DIRECTION_ANY]",
+      "boost.isTilted": "incliné [TILT_DIRECTION_ANY] ?",
+      "boost.tiltAngle": "angle d'inclinaison [TILT_DIRECTION]",
+      "boost.lightColor": "définir couleur lumière sur [HUE]",
+      "boost.shutdown": "éteindre le hub",
+      "boost.whenButton": "quand bouton appuyé",
+      "boost.isButton": "bouton appuyé ?",
+      "boost.battery": "niveau de batterie",
+      "boost.firmware": "version du firmware",
+      "boost.rssi": "RSSI",
+      "boost.whenBatteryLow": "quand batterie faible",
+      "boost.whenOverloaded": "quand moteur surchargé",
+    },
+  };
+
+  function detectLanguage() {
+    const candidates = [];
+    try { if (typeof window !== "undefined" && window.ReduxStore?.getState) { candidates.push(window.ReduxStore.getState().locales?.locale); } } catch (e) {}
+    try { candidates.push(localStorage.getItem("tw:language")); } catch (e) {}
+    try { if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) { candidates.push(Scratch.vm.runtime.getLocale()); } } catch (e) {}
+    try { candidates.push(document.documentElement.lang); } catch (e) {}
+    try { candidates.push(navigator.language); } catch (e) {}
+    for (const c of candidates) {
+      if (typeof c !== "string" || !c) continue;
+      const lower = c.toLowerCase();
+      if (lower.startsWith("de")) return "de";
+      if (lower.startsWith("fr")) return "fr";
+      if (lower.startsWith("en")) return "en";
+    }
+    return "en";
+  }
+
+  let currentLang = detectLanguage();
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (e) => {
+      if (e.key === "tw:language") {
+        const newLang = detectLanguage();
+        if (newLang !== currentLang) currentLang = newLang;
+      }
+    });
+    let lastKnownLocale = null;
+    setInterval(() => {
+      try {
+        if (window.ReduxStore?.getState) {
+          const locale = window.ReduxStore.getState().locales?.locale;
+          if (locale && locale !== lastKnownLocale) {
+            lastKnownLocale = locale;
+            const lower = locale.toLowerCase();
+            const newLang = lower.startsWith("de") ? "de" : lower.startsWith("fr") ? "fr" : "en";
+            if (newLang !== currentLang) currentLang = newLang;
+          }
+        }
+      } catch (e) {}
+    }, 1000);
+  }
+
+  function t(key, defaultValue) {
+    const tr = translations[currentLang];
+    if (tr && tr[key]) return tr[key];
+    if (translations.en && translations.en[key]) return translations.en[key];
+    return defaultValue !== undefined ? defaultValue : key;
+  }
+
   // ============================================================================
   // DEBUG LOGGER
   // ============================================================================
@@ -1624,7 +1806,7 @@
     getInfo() {
       return {
         id: "legoboostunified",
-        name: "LEGO Boost (Unified)",
+        name: t("boost.name"),
         color1: "#FF6D01",
         color2: "#F05A24",
         color3: "#E0491D",
@@ -1634,7 +1816,7 @@
           {
             opcode: "setConnectionType",
             blockType: BlockType.COMMAND,
-            text: "set connection to [TYPE]",
+            text: t("boost.setConnection"),
             arguments: {
               TYPE: {
                 type: ArgumentType.STRING,
@@ -1646,7 +1828,7 @@
           {
             opcode: "setBridgeURL",
             blockType: BlockType.COMMAND,
-            text: "set bridge URL to [URL]",
+            text: t("boost.setBridgeUrl"),
             arguments: {
               URL: {
                 type: ArgumentType.STRING,
@@ -1657,17 +1839,17 @@
           {
             opcode: "connect",
             blockType: BlockType.COMMAND,
-            text: "connect to LEGO Boost",
+            text: t("boost.connect"),
           },
           {
             opcode: "disconnect",
             blockType: BlockType.COMMAND,
-            text: "disconnect from LEGO Boost",
+            text: t("boost.disconnect"),
           },
           {
             opcode: "isConnected",
             blockType: BlockType.BOOLEAN,
-            text: "connected?",
+            text: t("boost.connected"),
           },
 
           "---",
@@ -1676,7 +1858,7 @@
           {
             opcode: "setDebugLevel",
             blockType: BlockType.COMMAND,
-            text: "set debug level to [LEVEL]",
+            text: t("boost.setDebug"),
             arguments: {
               LEVEL: {
                 type: ArgumentType.STRING,
@@ -1688,7 +1870,7 @@
           {
             opcode: "enableDebug",
             blockType: BlockType.COMMAND,
-            text: "enable debug [ENABLED]",
+            text: t("boost.enableDebug"),
             arguments: {
               ENABLED: {
                 type: ArgumentType.STRING,
@@ -1704,7 +1886,7 @@
           {
             opcode: "motorOn",
             blockType: BlockType.COMMAND,
-            text: "turn motor [MOTOR_ID] on",
+            text: t("boost.motorOn"),
             arguments: {
               MOTOR_ID: {
                 type: ArgumentType.STRING,
@@ -1716,7 +1898,7 @@
           {
             opcode: "motorOff",
             blockType: BlockType.COMMAND,
-            text: "turn motor [MOTOR_ID] off",
+            text: t("boost.motorOff"),
             arguments: {
               MOTOR_ID: {
                 type: ArgumentType.STRING,
@@ -1728,7 +1910,7 @@
           {
             opcode: "motorOnFor",
             blockType: BlockType.COMMAND,
-            text: "turn motor [MOTOR_ID] on for [TIME] seconds",
+            text: t("boost.motorOnSeconds"),
             arguments: {
               MOTOR_ID: {
                 type: ArgumentType.STRING,
@@ -1744,7 +1926,7 @@
           {
             opcode: "motorOnForDegrees",
             blockType: BlockType.COMMAND,
-            text: "turn motor [MOTOR_ID] on for [DEGREES] degrees",
+            text: t("boost.motorOnDegrees"),
             arguments: {
               MOTOR_ID: {
                 type: ArgumentType.STRING,
@@ -1764,7 +1946,7 @@
           {
             opcode: "setMotorPower",
             blockType: BlockType.COMMAND,
-            text: "set motor [MOTOR_ID] power to [POWER]%",
+            text: t("boost.motorPower"),
             arguments: {
               MOTOR_ID: {
                 type: ArgumentType.STRING,
@@ -1780,7 +1962,7 @@
           {
             opcode: "setMotorDirection",
             blockType: BlockType.COMMAND,
-            text: "set motor [MOTOR_ID] direction to [MOTOR_DIRECTION]",
+            text: t("boost.motorDirection"),
             arguments: {
               MOTOR_ID: {
                 type: ArgumentType.STRING,
@@ -1797,7 +1979,7 @@
           {
             opcode: "setMotorStopAction",
             blockType: BlockType.COMMAND,
-            text: "set motor [MOTOR_ID] stop action to [ACTION]",
+            text: t("boost.motorStopAction"),
             arguments: {
               MOTOR_ID: {
                 type: ArgumentType.STRING,
@@ -1814,7 +1996,7 @@
           {
             opcode: "setMotorAcceleration",
             blockType: BlockType.COMMAND,
-            text: "set motor [MOTOR_ID] acceleration to [TIME] ms",
+            text: t("boost.motorAccel"),
             arguments: {
               MOTOR_ID: {
                 type: ArgumentType.STRING,
@@ -1830,7 +2012,7 @@
           {
             opcode: "setMotorDeceleration",
             blockType: BlockType.COMMAND,
-            text: "set motor [MOTOR_ID] deceleration to [TIME] ms",
+            text: t("boost.motorDecel"),
             arguments: {
               MOTOR_ID: {
                 type: ArgumentType.STRING,
@@ -1846,7 +2028,7 @@
           {
             opcode: "resetMotorPosition",
             blockType: BlockType.COMMAND,
-            text: "reset motor [MOTOR_ID] position to [POSITION]",
+            text: t("boost.motorReset"),
             arguments: {
               MOTOR_ID: {
                 type: ArgumentType.STRING,
@@ -1866,7 +2048,7 @@
           {
             opcode: "getMotorPosition",
             blockType: BlockType.REPORTER,
-            text: "motor [MOTOR_ID] position",
+            text: t("boost.motorPosition"),
             arguments: {
               MOTOR_ID: {
                 type: ArgumentType.STRING,
@@ -1882,7 +2064,7 @@
           {
             opcode: "whenColor",
             blockType: BlockType.HAT,
-            text: "when color sensor [PORT] sees [COLOR]",
+            text: t("boost.whenColorSeen"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -1899,7 +2081,7 @@
           {
             opcode: "seeingColor",
             blockType: BlockType.BOOLEAN,
-            text: "color sensor [PORT] seeing [COLOR]?",
+            text: t("boost.isColorSeen"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -1920,7 +2102,7 @@
           {
             opcode: "getDistance",
             blockType: BlockType.REPORTER,
-            text: "distance sensor [PORT] distance",
+            text: t("boost.distance"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -1932,7 +2114,7 @@
           {
             opcode: "getReflection",
             blockType: BlockType.REPORTER,
-            text: "color sensor [PORT] reflection",
+            text: t("boost.reflection"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -1948,7 +2130,7 @@
           {
             opcode: "getForce",
             blockType: BlockType.REPORTER,
-            text: "force sensor [PORT] force",
+            text: t("boost.force"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -1960,7 +2142,7 @@
           {
             opcode: "whenForceSensorPressed",
             blockType: BlockType.HAT,
-            text: "when force sensor [PORT] pressed",
+            text: t("boost.whenForcePressed"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -1972,7 +2154,7 @@
           {
             opcode: "isForceSensorPressed",
             blockType: BlockType.BOOLEAN,
-            text: "force sensor [PORT] pressed?",
+            text: t("boost.isForcePressed"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -1988,7 +2170,7 @@
           {
             opcode: "whenTilted",
             blockType: BlockType.HAT,
-            text: "when tilted [TILT_DIRECTION_ANY]",
+            text: t("boost.whenTilted"),
             arguments: {
               TILT_DIRECTION_ANY: {
                 type: ArgumentType.STRING,
@@ -2000,7 +2182,7 @@
           {
             opcode: "isTilted",
             blockType: BlockType.BOOLEAN,
-            text: "tilted [TILT_DIRECTION_ANY]?",
+            text: t("boost.isTilted"),
             arguments: {
               TILT_DIRECTION_ANY: {
                 type: ArgumentType.STRING,
@@ -2012,7 +2194,7 @@
           {
             opcode: "getTiltAngle",
             blockType: BlockType.REPORTER,
-            text: "tilt angle [TILT_DIRECTION]",
+            text: t("boost.tiltAngle"),
             arguments: {
               TILT_DIRECTION: {
                 type: ArgumentType.STRING,
@@ -2028,7 +2210,7 @@
           {
             opcode: "setLightHue",
             blockType: BlockType.COMMAND,
-            text: "set light color to [HUE]",
+            text: t("boost.lightColor"),
             arguments: {
               HUE: {
                 type: ArgumentType.NUMBER,
@@ -2039,7 +2221,7 @@
           {
             opcode: "shutdown",
             blockType: BlockType.COMMAND,
-            text: "shutdown hub",
+            text: t("boost.shutdown"),
           },
 
           "---",
@@ -2048,37 +2230,37 @@
           {
             opcode: "whenButtonPressed",
             blockType: BlockType.HAT,
-            text: "when button pressed",
+            text: t("boost.whenButton"),
           },
           {
             opcode: "isButtonPressed",
             blockType: BlockType.BOOLEAN,
-            text: "button pressed?",
+            text: t("boost.isButton"),
           },
           {
             opcode: "getBatteryLevel",
             blockType: BlockType.REPORTER,
-            text: "battery level",
+            text: t("boost.battery"),
           },
           {
             opcode: "getFirmwareVersion",
             blockType: BlockType.REPORTER,
-            text: "firmware version",
+            text: t("boost.firmware"),
           },
           {
             opcode: "getRSSI",
             blockType: BlockType.REPORTER,
-            text: "RSSI",
+            text: t("boost.rssi"),
           },
           {
             opcode: "whenBatteryLow",
             blockType: BlockType.HAT,
-            text: "when battery low",
+            text: t("boost.whenBatteryLow"),
           },
           {
             opcode: "whenMotorOverloaded",
             blockType: BlockType.HAT,
-            text: "when motor overloaded",
+            text: t("boost.whenOverloaded"),
           },
         ],
         menus: {

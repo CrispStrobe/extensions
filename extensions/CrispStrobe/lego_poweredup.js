@@ -6,6 +6,212 @@
 (function (Scratch) {
   "use strict";
 
+
+  // ============================================================================
+  // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
+  //
+  // Module-level locale state pattern shared with planetemaths.js,
+  // ev3dev_py_transpile.js, arrays.js, etc. Detect once at gallery-load,
+  // listen for changes, resolve block text via the module-level t(key) at
+  // every getInfo() call.
+  // ============================================================================
+
+  const translations = {
+    en: {
+      "pup.name": "LEGO Powered Up",
+      "pup.setConnection": "set connection to [TYPE]",
+      "pup.setBridgeUrl": "set bridge URL to [URL]",
+      "pup.connect": "connect to hub",
+      "pup.disconnect": "disconnect from hub",
+      "pup.connected": "connected?",
+      "pup.hubType": "hub type",
+      "pup.connectedDevices": "connected devices",
+      "pup.deviceOnPort": "device on port [PORT]",
+      "pup.setDebug": "set debug level to [LEVEL]",
+      "pup.enableDebug": "enable debug [ENABLED]",
+      "pup.motorOn": "turn motor [PORT] on",
+      "pup.motorOff": "turn motor [PORT] off",
+      "pup.motorOnSeconds": "turn motor [PORT] on for [TIME] seconds",
+      "pup.motorOnDegrees": "turn motor [PORT] on for [DEGREES] degrees",
+      "pup.motorPower": "set motor [PORT] power to [POWER]%",
+      "pup.motorDirection": "set motor [PORT] direction to [DIRECTION]",
+      "pup.motorStopAction": "set motor [PORT] stop action to [ACTION]",
+      "pup.motorAccel": "set motor [PORT] acceleration to [TIME] ms",
+      "pup.motorDecel": "set motor [PORT] deceleration to [TIME] ms",
+      "pup.motorReset": "reset motor [PORT] position to [POSITION]",
+      "pup.motorPosition": "motor [PORT] position",
+      "pup.whenColorSeen": "when color sensor [PORT] sees [COLOR]",
+      "pup.isColorSeen": "color sensor [PORT] seeing [COLOR]?",
+      "pup.colorSensor": "color sensor [PORT] color",
+      "pup.distance": "distance sensor [PORT] distance",
+      "pup.reflection": "color sensor [PORT] reflection",
+      "pup.force": "force sensor [PORT] force",
+      "pup.whenForcePressed": "when force sensor [PORT] pressed",
+      "pup.isForcePressed": "force sensor [PORT] pressed?",
+      "pup.whenTilted": "when tilted [DIRECTION]",
+      "pup.isTilted": "tilted [DIRECTION]?",
+      "pup.tiltAngle": "tilt angle [DIRECTION]",
+      "pup.hubLed": "set hub LED to [HUE]",
+      "pup.ledBrightness": "set LED [PORT] brightness to [BRIGHTNESS]%",
+      "pup.matrixPixel": "set matrix [PORT] pixel [INDEX] to [COLOR]",
+      "pup.matrixAll": "set matrix [PORT] all pixels to [COLOR]",
+      "pup.matrixClear": "clear matrix [PORT]",
+      "pup.shutdown": "shutdown hub",
+      "pup.whenButton": "when button pressed",
+      "pup.isButton": "button pressed?",
+      "pup.battery": "battery level",
+      "pup.firmware": "firmware version",
+      "pup.rssi": "RSSI",
+      "pup.whenBatteryLow": "when battery low",
+      "pup.whenOverloaded": "when motor overloaded",
+    },
+    de: {
+      "pup.name": "LEGO Powered Up",
+      "pup.setConnection": "Verbindung auf [TYPE] setzen",
+      "pup.setBridgeUrl": "Bridge-URL auf [URL] setzen",
+      "pup.connect": "mit Hub verbinden",
+      "pup.disconnect": "Hub trennen",
+      "pup.connected": "verbunden?",
+      "pup.hubType": "Hub-Typ",
+      "pup.connectedDevices": "verbundene Geräte",
+      "pup.deviceOnPort": "Gerät an Port [PORT]",
+      "pup.setDebug": "Debug-Level auf [LEVEL] setzen",
+      "pup.enableDebug": "Debug aktivieren [ENABLED]",
+      "pup.motorOn": "Motor [PORT] einschalten",
+      "pup.motorOff": "Motor [PORT] ausschalten",
+      "pup.motorOnSeconds": "Motor [PORT] für [TIME] Sekunden einschalten",
+      "pup.motorOnDegrees": "Motor [PORT] um [DEGREES] Grad drehen",
+      "pup.motorPower": "Motorleistung [PORT] auf [POWER]% setzen",
+      "pup.motorDirection": "Motorrichtung [PORT] auf [DIRECTION] setzen",
+      "pup.motorStopAction": "Motor-Stoppaktion [PORT] auf [ACTION] setzen",
+      "pup.motorAccel": "Motor-Beschleunigung [PORT] auf [TIME] ms setzen",
+      "pup.motorDecel": "Motor-Verzögerung [PORT] auf [TIME] ms setzen",
+      "pup.motorReset": "Motor-Position [PORT] auf [POSITION] zurücksetzen",
+      "pup.motorPosition": "Motor-Position [PORT]",
+      "pup.whenColorSeen": "wenn Farbsensor [PORT] [COLOR] sieht",
+      "pup.isColorSeen": "Farbsensor [PORT] sieht [COLOR]?",
+      "pup.colorSensor": "Farbsensor [PORT] Farbe",
+      "pup.distance": "Abstandssensor [PORT] Abstand",
+      "pup.reflection": "Farbsensor [PORT] Reflexion",
+      "pup.force": "Kraftsensor [PORT] Kraft",
+      "pup.whenForcePressed": "wenn Kraftsensor [PORT] gedrückt",
+      "pup.isForcePressed": "Kraftsensor [PORT] gedrückt?",
+      "pup.whenTilted": "wenn geneigt [DIRECTION]",
+      "pup.isTilted": "geneigt [DIRECTION]?",
+      "pup.tiltAngle": "Neigungswinkel [DIRECTION]",
+      "pup.hubLed": "Hub-LED auf [HUE] setzen",
+      "pup.ledBrightness": "LED-Helligkeit [PORT] auf [BRIGHTNESS]% setzen",
+      "pup.matrixPixel": "Matrix [PORT] Pixel [INDEX] auf [COLOR] setzen",
+      "pup.matrixAll": "Matrix [PORT] alle Pixel auf [COLOR] setzen",
+      "pup.matrixClear": "Matrix [PORT] löschen",
+      "pup.shutdown": "Hub herunterfahren",
+      "pup.whenButton": "wenn Knopf gedrückt",
+      "pup.isButton": "Knopf gedrückt?",
+      "pup.battery": "Batteriestand",
+      "pup.firmware": "Firmware-Version",
+      "pup.rssi": "RSSI",
+      "pup.whenBatteryLow": "wenn Batterie schwach",
+      "pup.whenOverloaded": "wenn Motor überlastet",
+    },
+    fr: {
+      "pup.name": "LEGO Powered Up",
+      "pup.setConnection": "définir la connexion sur [TYPE]",
+      "pup.setBridgeUrl": "définir URL du pont sur [URL]",
+      "pup.connect": "se connecter au hub",
+      "pup.disconnect": "déconnecter du hub",
+      "pup.connected": "connecté ?",
+      "pup.hubType": "type de hub",
+      "pup.connectedDevices": "périphériques connectés",
+      "pup.deviceOnPort": "périphérique sur port [PORT]",
+      "pup.setDebug": "définir niveau de débogage sur [LEVEL]",
+      "pup.enableDebug": "activer débogage [ENABLED]",
+      "pup.motorOn": "allumer moteur [PORT]",
+      "pup.motorOff": "éteindre moteur [PORT]",
+      "pup.motorOnSeconds": "allumer moteur [PORT] pendant [TIME] secondes",
+      "pup.motorOnDegrees": "tourner moteur [PORT] de [DEGREES] degrés",
+      "pup.motorPower": "régler puissance moteur [PORT] sur [POWER]%",
+      "pup.motorDirection": "régler direction moteur [PORT] sur [DIRECTION]",
+      "pup.motorStopAction": "régler action d'arrêt moteur [PORT] sur [ACTION]",
+      "pup.motorAccel": "régler accélération moteur [PORT] sur [TIME] ms",
+      "pup.motorDecel": "régler décélération moteur [PORT] sur [TIME] ms",
+      "pup.motorReset": "réinitialiser position moteur [PORT] à [POSITION]",
+      "pup.motorPosition": "position du moteur [PORT]",
+      "pup.whenColorSeen": "quand capteur de couleur [PORT] voit [COLOR]",
+      "pup.isColorSeen": "capteur [PORT] voit [COLOR] ?",
+      "pup.colorSensor": "couleur du capteur [PORT]",
+      "pup.distance": "distance du capteur [PORT]",
+      "pup.reflection": "réflexion du capteur [PORT]",
+      "pup.force": "force du capteur [PORT]",
+      "pup.whenForcePressed": "quand capteur de force [PORT] pressé",
+      "pup.isForcePressed": "capteur de force [PORT] pressé ?",
+      "pup.whenTilted": "quand incliné [DIRECTION]",
+      "pup.isTilted": "incliné [DIRECTION] ?",
+      "pup.tiltAngle": "angle d'inclinaison [DIRECTION]",
+      "pup.hubLed": "définir LED du hub sur [HUE]",
+      "pup.ledBrightness": "régler luminosité LED [PORT] sur [BRIGHTNESS]%",
+      "pup.matrixPixel": "définir matrice [PORT] pixel [INDEX] sur [COLOR]",
+      "pup.matrixAll": "définir tous les pixels matrice [PORT] sur [COLOR]",
+      "pup.matrixClear": "effacer matrice [PORT]",
+      "pup.shutdown": "éteindre le hub",
+      "pup.whenButton": "quand bouton appuyé",
+      "pup.isButton": "bouton appuyé ?",
+      "pup.battery": "niveau de batterie",
+      "pup.firmware": "version du firmware",
+      "pup.rssi": "RSSI",
+      "pup.whenBatteryLow": "quand batterie faible",
+      "pup.whenOverloaded": "quand moteur surchargé",
+    },
+  };
+
+  function detectLanguage() {
+    const candidates = [];
+    try { if (typeof window !== "undefined" && window.ReduxStore?.getState) { candidates.push(window.ReduxStore.getState().locales?.locale); } } catch (e) {}
+    try { candidates.push(localStorage.getItem("tw:language")); } catch (e) {}
+    try { if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) { candidates.push(Scratch.vm.runtime.getLocale()); } } catch (e) {}
+    try { candidates.push(document.documentElement.lang); } catch (e) {}
+    try { candidates.push(navigator.language); } catch (e) {}
+    for (const c of candidates) {
+      if (typeof c !== "string" || !c) continue;
+      const lower = c.toLowerCase();
+      if (lower.startsWith("de")) return "de";
+      if (lower.startsWith("fr")) return "fr";
+      if (lower.startsWith("en")) return "en";
+    }
+    return "en";
+  }
+
+  let currentLang = detectLanguage();
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (e) => {
+      if (e.key === "tw:language") {
+        const newLang = detectLanguage();
+        if (newLang !== currentLang) currentLang = newLang;
+      }
+    });
+    let lastKnownLocale = null;
+    setInterval(() => {
+      try {
+        if (window.ReduxStore?.getState) {
+          const locale = window.ReduxStore.getState().locales?.locale;
+          if (locale && locale !== lastKnownLocale) {
+            lastKnownLocale = locale;
+            const lower = locale.toLowerCase();
+            const newLang = lower.startsWith("de") ? "de" : lower.startsWith("fr") ? "fr" : "en";
+            if (newLang !== currentLang) currentLang = newLang;
+          }
+        }
+      } catch (e) {}
+    }, 1000);
+  }
+
+  function t(key, defaultValue) {
+    const tr = translations[currentLang];
+    if (tr && tr[key]) return tr[key];
+    if (translations.en && translations.en[key]) return translations.en[key];
+    return defaultValue !== undefined ? defaultValue : key;
+  }
+
   // ============================================================================
   // DEBUG LOGGER
   // ============================================================================
@@ -2116,7 +2322,7 @@
     getInfo() {
       return {
         id: "legopoweredup",
-        name: "LEGO Powered Up",
+        name: t("pup.name"),
         color1: "#FF6D01",
         color2: "#F05A24",
         color3: "#E0491D",
@@ -2127,7 +2333,7 @@
           {
             opcode: "setConnectionType",
             blockType: BlockType.COMMAND,
-            text: "set connection to [TYPE]",
+            text: t("pup.setConnection"),
             arguments: {
               TYPE: {
                 type: ArgumentType.STRING,
@@ -2139,7 +2345,7 @@
           {
             opcode: "setBridgeURL",
             blockType: BlockType.COMMAND,
-            text: "set bridge URL to [URL]",
+            text: t("pup.setBridgeUrl"),
             arguments: {
               URL: {
                 type: ArgumentType.STRING,
@@ -2150,17 +2356,17 @@
           {
             opcode: "connect",
             blockType: BlockType.COMMAND,
-            text: "connect to hub",
+            text: t("pup.connect"),
           },
           {
             opcode: "disconnect",
             blockType: BlockType.COMMAND,
-            text: "disconnect from hub",
+            text: t("pup.disconnect"),
           },
           {
             opcode: "isConnected",
             blockType: BlockType.BOOLEAN,
-            text: "connected?",
+            text: t("pup.connected"),
           },
 
           "---",
@@ -2169,17 +2375,17 @@
           {
             opcode: "getHubType",
             blockType: BlockType.REPORTER,
-            text: "hub type",
+            text: t("pup.hubType"),
           },
           {
             opcode: "getConnectedDevices",
             blockType: BlockType.REPORTER,
-            text: "connected devices",
+            text: t("pup.connectedDevices"),
           },
           {
             opcode: "getDeviceOnPort",
             blockType: BlockType.REPORTER,
-            text: "device on port [PORT]",
+            text: t("pup.deviceOnPort"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2195,7 +2401,7 @@
           {
             opcode: "setDebugLevel",
             blockType: BlockType.COMMAND,
-            text: "set debug level to [LEVEL]",
+            text: t("pup.setDebug"),
             arguments: {
               LEVEL: {
                 type: ArgumentType.STRING,
@@ -2207,7 +2413,7 @@
           {
             opcode: "enableDebug",
             blockType: BlockType.COMMAND,
-            text: "enable debug [ENABLED]",
+            text: t("pup.enableDebug"),
             arguments: {
               ENABLED: {
                 type: ArgumentType.STRING,
@@ -2223,7 +2429,7 @@
           {
             opcode: "motorOn",
             blockType: BlockType.COMMAND,
-            text: "turn motor [PORT] on",
+            text: t("pup.motorOn"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2235,7 +2441,7 @@
           {
             opcode: "motorOff",
             blockType: BlockType.COMMAND,
-            text: "turn motor [PORT] off",
+            text: t("pup.motorOff"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2247,7 +2453,7 @@
           {
             opcode: "motorOnFor",
             blockType: BlockType.COMMAND,
-            text: "turn motor [PORT] on for [TIME] seconds",
+            text: t("pup.motorOnSeconds"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2263,7 +2469,7 @@
           {
             opcode: "motorOnForDegrees",
             blockType: BlockType.COMMAND,
-            text: "turn motor [PORT] on for [DEGREES] degrees",
+            text: t("pup.motorOnDegrees"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2283,7 +2489,7 @@
           {
             opcode: "setMotorPower",
             blockType: BlockType.COMMAND,
-            text: "set motor [PORT] power to [POWER]%",
+            text: t("pup.motorPower"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2299,7 +2505,7 @@
           {
             opcode: "setMotorDirection",
             blockType: BlockType.COMMAND,
-            text: "set motor [PORT] direction to [DIRECTION]",
+            text: t("pup.motorDirection"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2316,7 +2522,7 @@
           {
             opcode: "setMotorStopAction",
             blockType: BlockType.COMMAND,
-            text: "set motor [PORT] stop action to [ACTION]",
+            text: t("pup.motorStopAction"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2333,7 +2539,7 @@
           {
             opcode: "setMotorAcceleration",
             blockType: BlockType.COMMAND,
-            text: "set motor [PORT] acceleration to [TIME] ms",
+            text: t("pup.motorAccel"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2349,7 +2555,7 @@
           {
             opcode: "setMotorDeceleration",
             blockType: BlockType.COMMAND,
-            text: "set motor [PORT] deceleration to [TIME] ms",
+            text: t("pup.motorDecel"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2365,7 +2571,7 @@
           {
             opcode: "resetMotorPosition",
             blockType: BlockType.COMMAND,
-            text: "reset motor [PORT] position to [POSITION]",
+            text: t("pup.motorReset"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2385,7 +2591,7 @@
           {
             opcode: "getMotorPosition",
             blockType: BlockType.REPORTER,
-            text: "motor [PORT] position",
+            text: t("pup.motorPosition"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2401,7 +2607,7 @@
           {
             opcode: "whenColor",
             blockType: BlockType.HAT,
-            text: "when color sensor [PORT] sees [COLOR]",
+            text: t("pup.whenColorSeen"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2418,7 +2624,7 @@
           {
             opcode: "seeingColor",
             blockType: BlockType.BOOLEAN,
-            text: "color sensor [PORT] seeing [COLOR]?",
+            text: t("pup.isColorSeen"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2435,7 +2641,7 @@
           {
             opcode: "getColor",
             blockType: BlockType.REPORTER,
-            text: "color sensor [PORT] color",
+            text: t("pup.colorSensor"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2451,7 +2657,7 @@
           {
             opcode: "getDistance",
             blockType: BlockType.REPORTER,
-            text: "distance sensor [PORT] distance",
+            text: t("pup.distance"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2463,7 +2669,7 @@
           {
             opcode: "getReflection",
             blockType: BlockType.REPORTER,
-            text: "color sensor [PORT] reflection",
+            text: t("pup.reflection"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2479,7 +2685,7 @@
           {
             opcode: "getForce",
             blockType: BlockType.REPORTER,
-            text: "force sensor [PORT] force",
+            text: t("pup.force"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2491,7 +2697,7 @@
           {
             opcode: "whenForceSensorPressed",
             blockType: BlockType.HAT,
-            text: "when force sensor [PORT] pressed",
+            text: t("pup.whenForcePressed"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2503,7 +2709,7 @@
           {
             opcode: "isForceSensorPressed",
             blockType: BlockType.BOOLEAN,
-            text: "force sensor [PORT] pressed?",
+            text: t("pup.isForcePressed"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2519,7 +2725,7 @@
           {
             opcode: "whenTilted",
             blockType: BlockType.HAT,
-            text: "when tilted [DIRECTION]",
+            text: t("pup.whenTilted"),
             arguments: {
               DIRECTION: {
                 type: ArgumentType.STRING,
@@ -2531,7 +2737,7 @@
           {
             opcode: "isTilted",
             blockType: BlockType.BOOLEAN,
-            text: "tilted [DIRECTION]?",
+            text: t("pup.isTilted"),
             arguments: {
               DIRECTION: {
                 type: ArgumentType.STRING,
@@ -2543,7 +2749,7 @@
           {
             opcode: "getTiltAngle",
             blockType: BlockType.REPORTER,
-            text: "tilt angle [DIRECTION]",
+            text: t("pup.tiltAngle"),
             arguments: {
               DIRECTION: {
                 type: ArgumentType.STRING,
@@ -2559,7 +2765,7 @@
           {
             opcode: "setHubLED",
             blockType: BlockType.COMMAND,
-            text: "set hub LED to [HUE]",
+            text: t("pup.hubLed"),
             arguments: {
               HUE: {
                 type: ArgumentType.NUMBER,
@@ -2570,7 +2776,7 @@
           {
             opcode: "setLEDBrightness",
             blockType: BlockType.COMMAND,
-            text: "set LED [PORT] brightness to [BRIGHTNESS]%",
+            text: t("pup.ledBrightness"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2590,7 +2796,7 @@
           {
             opcode: "setMatrixPixel",
             blockType: BlockType.COMMAND,
-            text: "set matrix [PORT] pixel [INDEX] to [COLOR]",
+            text: t("pup.matrixPixel"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2611,7 +2817,7 @@
           {
             opcode: "setMatrixAll",
             blockType: BlockType.COMMAND,
-            text: "set matrix [PORT] all pixels to [COLOR]",
+            text: t("pup.matrixAll"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2628,7 +2834,7 @@
           {
             opcode: "clearMatrix",
             blockType: BlockType.COMMAND,
-            text: "clear matrix [PORT]",
+            text: t("pup.matrixClear"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -2644,7 +2850,7 @@
           {
             opcode: "shutdown",
             blockType: BlockType.COMMAND,
-            text: "shutdown hub",
+            text: t("pup.shutdown"),
           },
 
           "---",
@@ -2653,37 +2859,37 @@
           {
             opcode: "whenButtonPressed",
             blockType: BlockType.HAT,
-            text: "when button pressed",
+            text: t("pup.whenButton"),
           },
           {
             opcode: "isButtonPressed",
             blockType: BlockType.BOOLEAN,
-            text: "button pressed?",
+            text: t("pup.isButton"),
           },
           {
             opcode: "getBatteryLevel",
             blockType: BlockType.REPORTER,
-            text: "battery level",
+            text: t("pup.battery"),
           },
           {
             opcode: "getFirmwareVersion",
             blockType: BlockType.REPORTER,
-            text: "firmware version",
+            text: t("pup.firmware"),
           },
           {
             opcode: "getRSSI",
             blockType: BlockType.REPORTER,
-            text: "RSSI",
+            text: t("pup.rssi"),
           },
           {
             opcode: "whenBatteryLow",
             blockType: BlockType.HAT,
-            text: "when battery low",
+            text: t("pup.whenBatteryLow"),
           },
           {
             opcode: "whenMotorOverloaded",
             blockType: BlockType.HAT,
-            text: "when motor overloaded",
+            text: t("pup.whenOverloaded"),
           },
         ],
         menus: {

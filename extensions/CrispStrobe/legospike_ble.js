@@ -6,6 +6,122 @@
 (function (Scratch) {
   "use strict";
 
+
+  // ============================================================================
+  // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
+  //
+  // Module-level locale state pattern shared with planetemaths.js,
+  // ev3dev_py_transpile.js, arrays.js, etc. Detect once at gallery-load,
+  // listen for changes, resolve block text via the module-level t(key) at
+  // every getInfo() call.
+  // ============================================================================
+
+  const translations = {
+    en: {
+      "legospike_ble.name": "SPIKE Prime",
+      "legospike_ble.connect": "connect to SPIKE Prime",
+      "legospike_ble.disconnect": "disconnect",
+      "legospike_ble.connected": "connected?",
+      "legospike_ble.startMotor": "start motor [PORT] at [SPEED]%",
+      "legospike_ble.stopMotor": "stop motor [PORT] with [ACTION]",
+      "legospike_ble.motorPosition": "motor [PORT] position",
+      "legospike_ble.lightPixel": "set 3x3 light [PORT] pixel x:[X] y:[Y] brightness [BRIGHTNESS]%",
+      "legospike_ble.distanceMm": "distance sensor [PORT] (mm)",
+      "legospike_ble.forcePressed": "force sensor [PORT] pressed?",
+      "legospike_ble.forceValue": "force sensor [PORT] value (%)",
+      "legospike_ble.colorSensor": "color sensor [PORT] color",
+      "legospike_ble.orientation": "hub orientation [AXIS]",
+      "legospike_ble.acceleration": "hub acceleration [AXIS]",
+      "legospike_ble.faceUp": "hub face up",
+      "legospike_ble.battery": "battery level",
+    },
+    de: {
+      "legospike_ble.name": "SPIKE Prime",
+      "legospike_ble.connect": "mit SPIKE Prime verbinden",
+      "legospike_ble.disconnect": "trennen",
+      "legospike_ble.connected": "verbunden?",
+      "legospike_ble.startMotor": "Motor [PORT] mit [SPEED]% starten",
+      "legospike_ble.stopMotor": "Motor [PORT] stoppen mit [ACTION]",
+      "legospike_ble.motorPosition": "Position von Motor [PORT]",
+      "legospike_ble.lightPixel": "3x3-Licht [PORT] Pixel x:[X] y:[Y] Helligkeit [BRIGHTNESS]% setzen",
+      "legospike_ble.distanceMm": "Abstandssensor [PORT] (mm)",
+      "legospike_ble.forcePressed": "Kraftsensor [PORT] gedrückt?",
+      "legospike_ble.forceValue": "Kraftsensor [PORT] Wert (%)",
+      "legospike_ble.colorSensor": "Farbsensor [PORT] Farbe",
+      "legospike_ble.orientation": "Hub-Ausrichtung [AXIS]",
+      "legospike_ble.acceleration": "Hub-Beschleunigung [AXIS]",
+      "legospike_ble.faceUp": "Hub liegt mit Display nach oben",
+      "legospike_ble.battery": "Batteriestand",
+    },
+    fr: {
+      "legospike_ble.name": "SPIKE Prime",
+      "legospike_ble.connect": "se connecter au SPIKE Prime",
+      "legospike_ble.disconnect": "déconnecter",
+      "legospike_ble.connected": "connecté ?",
+      "legospike_ble.startMotor": "démarrer moteur [PORT] à [SPEED]%",
+      "legospike_ble.stopMotor": "arrêter moteur [PORT] avec [ACTION]",
+      "legospike_ble.motorPosition": "position du moteur [PORT]",
+      "legospike_ble.lightPixel": "définir matrice 3x3 [PORT] pixel x:[X] y:[Y] luminosité [BRIGHTNESS]%",
+      "legospike_ble.distanceMm": "capteur de distance [PORT] (mm)",
+      "legospike_ble.forcePressed": "capteur de force [PORT] pressé ?",
+      "legospike_ble.forceValue": "valeur du capteur de force [PORT] (%)",
+      "legospike_ble.colorSensor": "couleur du capteur [PORT]",
+      "legospike_ble.orientation": "orientation du hub [AXIS]",
+      "legospike_ble.acceleration": "accélération du hub [AXIS]",
+      "legospike_ble.faceUp": "hub face en haut",
+      "legospike_ble.battery": "niveau de batterie",
+    },
+  };
+
+  function detectLanguage() {
+    const candidates = [];
+    try { if (typeof window !== "undefined" && window.ReduxStore?.getState) { candidates.push(window.ReduxStore.getState().locales?.locale); } } catch (e) {}
+    try { candidates.push(localStorage.getItem("tw:language")); } catch (e) {}
+    try { if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) { candidates.push(Scratch.vm.runtime.getLocale()); } } catch (e) {}
+    try { candidates.push(document.documentElement.lang); } catch (e) {}
+    try { candidates.push(navigator.language); } catch (e) {}
+    for (const c of candidates) {
+      if (typeof c !== "string" || !c) continue;
+      const lower = c.toLowerCase();
+      if (lower.startsWith("de")) return "de";
+      if (lower.startsWith("fr")) return "fr";
+      if (lower.startsWith("en")) return "en";
+    }
+    return "en";
+  }
+
+  let currentLang = detectLanguage();
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (e) => {
+      if (e.key === "tw:language") {
+        const newLang = detectLanguage();
+        if (newLang !== currentLang) currentLang = newLang;
+      }
+    });
+    let lastKnownLocale = null;
+    setInterval(() => {
+      try {
+        if (window.ReduxStore?.getState) {
+          const locale = window.ReduxStore.getState().locales?.locale;
+          if (locale && locale !== lastKnownLocale) {
+            lastKnownLocale = locale;
+            const lower = locale.toLowerCase();
+            const newLang = lower.startsWith("de") ? "de" : lower.startsWith("fr") ? "fr" : "en";
+            if (newLang !== currentLang) currentLang = newLang;
+          }
+        }
+      } catch (e) {}
+    }, 1000);
+  }
+
+  function t(key, defaultValue) {
+    const tr = translations[currentLang];
+    if (tr && tr[key]) return tr[key];
+    if (translations.en && translations.en[key]) return translations.en[key];
+    return defaultValue !== undefined ? defaultValue : key;
+  }
+
   // Debug flag - set to true for extensive logging
   const DEBUG = false;
 
@@ -85,30 +201,30 @@
     getInfo() {
       return {
         id: "spikeprimeble",
-        name: "SPIKE Prime",
+        name: t("legospike_ble.name"),
         color1: "#FFD700",
         color2: "#D4AF37",
         blocks: [
           {
             opcode: "connectHub",
             blockType: Scratch.BlockType.COMMAND,
-            text: "connect to SPIKE Prime",
+            text: t("legospike_ble.connect"),
           },
           {
             opcode: "disconnectHub",
             blockType: Scratch.BlockType.COMMAND,
-            text: "disconnect",
+            text: t("legospike_ble.disconnect"),
           },
           {
             opcode: "isConnected",
             blockType: Scratch.BlockType.BOOLEAN,
-            text: "connected?",
+            text: t("legospike_ble.connected"),
           },
           "---",
           {
             opcode: "startMotor",
             blockType: Scratch.BlockType.COMMAND,
-            text: "start motor [PORT] at [SPEED]%",
+            text: t("legospike_ble.startMotor"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -121,7 +237,7 @@
           {
             opcode: "stopMotor",
             blockType: Scratch.BlockType.COMMAND,
-            text: "stop motor [PORT] with [ACTION]",
+            text: t("legospike_ble.stopMotor"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -138,7 +254,7 @@
           {
             opcode: "getMotorPosition",
             blockType: Scratch.BlockType.REPORTER,
-            text: "motor [PORT] position",
+            text: t("legospike_ble.motorPosition"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -151,7 +267,7 @@
           {
             opcode: "setLightMatrixPixel",
             blockType: Scratch.BlockType.COMMAND,
-            text: "set 3x3 light [PORT] pixel x:[X] y:[Y] brightness [BRIGHTNESS]%",
+            text: t("legospike_ble.lightPixel"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -170,7 +286,7 @@
           {
             opcode: "getDistance",
             blockType: Scratch.BlockType.REPORTER,
-            text: "distance sensor [PORT] (mm)",
+            text: t("legospike_ble.distanceMm"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -182,7 +298,7 @@
           {
             opcode: "isForceSensorPressed",
             blockType: Scratch.BlockType.BOOLEAN,
-            text: "force sensor [PORT] pressed?",
+            text: t("legospike_ble.forcePressed"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -194,7 +310,7 @@
           {
             opcode: "getForceSensorValue",
             blockType: Scratch.BlockType.REPORTER,
-            text: "force sensor [PORT] value (%)",
+            text: t("legospike_ble.forceValue"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -206,7 +322,7 @@
           {
             opcode: "getColor",
             blockType: Scratch.BlockType.REPORTER,
-            text: "color sensor [PORT] color",
+            text: t("legospike_ble.colorSensor"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -219,7 +335,7 @@
           {
             opcode: "getOrientation",
             blockType: Scratch.BlockType.REPORTER,
-            text: "hub orientation [AXIS]",
+            text: t("legospike_ble.orientation"),
             arguments: {
               AXIS: {
                 type: Scratch.ArgumentType.STRING,
@@ -231,7 +347,7 @@
           {
             opcode: "getAcceleration",
             blockType: Scratch.BlockType.REPORTER,
-            text: "hub acceleration [AXIS]",
+            text: t("legospike_ble.acceleration"),
             arguments: {
               AXIS: {
                 type: Scratch.ArgumentType.STRING,
@@ -243,13 +359,13 @@
           {
             opcode: "getFaceUp",
             blockType: Scratch.BlockType.REPORTER,
-            text: "hub face up",
+            text: t("legospike_ble.faceUp"),
           },
           "---",
           {
             opcode: "getBatteryLevel",
             blockType: Scratch.BlockType.REPORTER,
-            text: "battery level",
+            text: t("legospike_ble.battery"),
           },
         ],
         menus: {

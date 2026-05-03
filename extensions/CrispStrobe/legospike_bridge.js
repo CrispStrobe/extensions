@@ -6,6 +6,143 @@
 (function (Scratch) {
   "use strict";
 
+
+  // ============================================================================
+  // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
+  //
+  // Module-level locale state pattern shared with planetemaths.js,
+  // ev3dev_py_transpile.js, arrays.js, etc. Detect once at gallery-load,
+  // listen for changes, resolve block text via the module-level t(key) at
+  // every getInfo() call.
+  // ============================================================================
+
+  const translations = {
+    en: {
+      "legospike_bridge.name": "SPIKE Prime (Bridge)",
+      "legospike_bridge.connect": "🔌 connect to [URL]",
+      "legospike_bridge.disconnect": "disconnect",
+      "legospike_bridge.connected": "connected?",
+      "legospike_bridge.runFor": "[PORT] run [DIRECTION] for [VALUE] [UNIT]",
+      "legospike_bridge.startMotor": "[PORT] start motor [DIRECTION]",
+      "legospike_bridge.stopMotor": "[PORT] stop motor",
+      "legospike_bridge.setSpeed": "[PORT] set speed to [SPEED] %",
+      "legospike_bridge.position": "[PORT] position",
+      "legospike_bridge.writeText": "write [TEXT]",
+      "legospike_bridge.turnOn": "turn on [MATRIX]",
+      "legospike_bridge.displayPattern": "display pattern [PATTERN]",
+      "legospike_bridge.turnOffPixels": "turn off pixels",
+      "legospike_bridge.setPixel": "set pixel [X] [Y] to [BRIGHTNESS] %",
+      "legospike_bridge.axisAngle": "[AXIS] angle",
+      "legospike_bridge.axisAccel": "acceleration [AXIS]",
+      "legospike_bridge.resetYaw": "reset yaw angle",
+      "legospike_bridge.distance": "[PORT] distance",
+      "legospike_bridge.color": "[PORT] color",
+      "legospike_bridge.force": "[PORT] force",
+      "legospike_bridge.whenGesture": "quand le hub [GESTURE]",
+      "legospike_bridge.beep": "bip [FREQUENCY] Hz pendant [DURATION] ms",
+      "legospike_bridge.runPython": "exécuter Python : [CODE]",
+      "legospike_bridge.whenGesture": "when hub [GESTURE]",
+      "legospike_bridge.beep": "beep [FREQUENCY] Hz for [DURATION] ms",
+      "legospike_bridge.runPython": "run Python: [CODE]",
+    },
+    de: {
+      "legospike_bridge.name": "SPIKE Prime (Brücke)",
+      "legospike_bridge.connect": "🔌 mit [URL] verbinden",
+      "legospike_bridge.disconnect": "trennen",
+      "legospike_bridge.connected": "verbunden?",
+      "legospike_bridge.runFor": "[PORT] läuft [DIRECTION] für [VALUE] [UNIT]",
+      "legospike_bridge.startMotor": "[PORT] Motor starten [DIRECTION]",
+      "legospike_bridge.stopMotor": "[PORT] Motor stoppen",
+      "legospike_bridge.setSpeed": "[PORT] Geschwindigkeit auf [SPEED] % setzen",
+      "legospike_bridge.position": "[PORT] Position",
+      "legospike_bridge.writeText": "[TEXT] schreiben",
+      "legospike_bridge.turnOn": "[MATRIX] einschalten",
+      "legospike_bridge.displayPattern": "Muster [PATTERN] anzeigen",
+      "legospike_bridge.turnOffPixels": "Pixel ausschalten",
+      "legospike_bridge.setPixel": "Pixel [X] [Y] auf [BRIGHTNESS] % setzen",
+      "legospike_bridge.axisAngle": "[AXIS]-Winkel",
+      "legospike_bridge.axisAccel": "Beschleunigung [AXIS]",
+      "legospike_bridge.resetYaw": "Yaw-Winkel zurücksetzen",
+      "legospike_bridge.distance": "[PORT] Abstand",
+      "legospike_bridge.color": "[PORT] Farbe",
+      "legospike_bridge.force": "[PORT] Kraft",
+      "legospike_bridge.whenGesture": "wenn Hub [GESTURE]",
+      "legospike_bridge.beep": "Piepton [FREQUENCY] Hz für [DURATION] ms",
+      "legospike_bridge.runPython": "Python ausführen: [CODE]",
+    },
+    fr: {
+      "legospike_bridge.name": "SPIKE Prime (Pont)",
+      "legospike_bridge.connect": "🔌 se connecter à [URL]",
+      "legospike_bridge.disconnect": "déconnecter",
+      "legospike_bridge.connected": "connecté ?",
+      "legospike_bridge.runFor": "[PORT] tourne [DIRECTION] pendant [VALUE] [UNIT]",
+      "legospike_bridge.startMotor": "[PORT] démarrer moteur [DIRECTION]",
+      "legospike_bridge.stopMotor": "[PORT] arrêter moteur",
+      "legospike_bridge.setSpeed": "[PORT] définir vitesse sur [SPEED] %",
+      "legospike_bridge.position": "[PORT] position",
+      "legospike_bridge.writeText": "écrire [TEXT]",
+      "legospike_bridge.turnOn": "allumer [MATRIX]",
+      "legospike_bridge.displayPattern": "afficher motif [PATTERN]",
+      "legospike_bridge.turnOffPixels": "éteindre les pixels",
+      "legospike_bridge.setPixel": "définir pixel [X] [Y] sur [BRIGHTNESS] %",
+      "legospike_bridge.axisAngle": "angle [AXIS]",
+      "legospike_bridge.axisAccel": "accélération [AXIS]",
+      "legospike_bridge.resetYaw": "réinitialiser l'angle de lacet",
+      "legospike_bridge.distance": "[PORT] distance",
+      "legospike_bridge.color": "[PORT] couleur",
+      "legospike_bridge.force": "[PORT] force",
+    },
+  };
+
+  function detectLanguage() {
+    const candidates = [];
+    try { if (typeof window !== "undefined" && window.ReduxStore?.getState) { candidates.push(window.ReduxStore.getState().locales?.locale); } } catch (e) {}
+    try { candidates.push(localStorage.getItem("tw:language")); } catch (e) {}
+    try { if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) { candidates.push(Scratch.vm.runtime.getLocale()); } } catch (e) {}
+    try { candidates.push(document.documentElement.lang); } catch (e) {}
+    try { candidates.push(navigator.language); } catch (e) {}
+    for (const c of candidates) {
+      if (typeof c !== "string" || !c) continue;
+      const lower = c.toLowerCase();
+      if (lower.startsWith("de")) return "de";
+      if (lower.startsWith("fr")) return "fr";
+      if (lower.startsWith("en")) return "en";
+    }
+    return "en";
+  }
+
+  let currentLang = detectLanguage();
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (e) => {
+      if (e.key === "tw:language") {
+        const newLang = detectLanguage();
+        if (newLang !== currentLang) currentLang = newLang;
+      }
+    });
+    let lastKnownLocale = null;
+    setInterval(() => {
+      try {
+        if (window.ReduxStore?.getState) {
+          const locale = window.ReduxStore.getState().locales?.locale;
+          if (locale && locale !== lastKnownLocale) {
+            lastKnownLocale = locale;
+            const lower = locale.toLowerCase();
+            const newLang = lower.startsWith("de") ? "de" : lower.startsWith("fr") ? "fr" : "en";
+            if (newLang !== currentLang) currentLang = newLang;
+          }
+        }
+      } catch (e) {}
+    }, 1000);
+  }
+
+  function t(key, defaultValue) {
+    const tr = translations[currentLang];
+    if (tr && tr[key]) return tr[key];
+    if (translations.en && translations.en[key]) return translations.en[key];
+    return defaultValue !== undefined ? defaultValue : key;
+  }
+
   const Cast = Scratch.Cast;
 
   // Display patterns (unchanged)
@@ -610,14 +747,14 @@ sensor_loop()
     getInfo() {
       return {
         id: "spikeprimeBridge",
-        name: "SPIKE Prime (Bridge)",
+        name: t("legospike_bridge.name"),
         color1: "#FFD700",
         color2: "#D4AF37",
         blocks: [
           {
             opcode: "connectHub",
             blockType: Scratch.BlockType.COMMAND,
-            text: "🔌 connect to [URL]",
+            text: t("legospike_bridge.connect"),
             arguments: {
               URL: {
                 type: Scratch.ArgumentType.STRING,
@@ -628,18 +765,18 @@ sensor_loop()
           {
             opcode: "disconnectHub",
             blockType: Scratch.BlockType.COMMAND,
-            text: "disconnect",
+            text: t("legospike_bridge.disconnect"),
           },
           {
             opcode: "isConnected",
             blockType: Scratch.BlockType.BOOLEAN,
-            text: "connected?",
+            text: t("legospike_bridge.connected"),
           },
           "---",
           {
             opcode: "motorRunFor",
             blockType: Scratch.BlockType.COMMAND,
-            text: "[PORT] run [DIRECTION] for [VALUE] [UNIT]",
+            text: t("legospike_bridge.runFor"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -662,7 +799,7 @@ sensor_loop()
           {
             opcode: "motorStart",
             blockType: Scratch.BlockType.COMMAND,
-            text: "[PORT] start motor [DIRECTION]",
+            text: t("legospike_bridge.startMotor"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -679,7 +816,7 @@ sensor_loop()
           {
             opcode: "motorStop",
             blockType: Scratch.BlockType.COMMAND,
-            text: "[PORT] stop motor",
+            text: t("legospike_bridge.stopMotor"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -691,7 +828,7 @@ sensor_loop()
           {
             opcode: "motorSetSpeed",
             blockType: Scratch.BlockType.COMMAND,
-            text: "[PORT] set speed to [SPEED] %",
+            text: t("legospike_bridge.setSpeed"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -704,7 +841,7 @@ sensor_loop()
           {
             opcode: "getPosition",
             blockType: Scratch.BlockType.REPORTER,
-            text: "[PORT] position",
+            text: t("legospike_bridge.position"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -717,7 +854,7 @@ sensor_loop()
           {
             opcode: "displayText",
             blockType: Scratch.BlockType.COMMAND,
-            text: "write [TEXT]",
+            text: t("legospike_bridge.writeText"),
             arguments: {
               TEXT: {
                 type: Scratch.ArgumentType.STRING,
@@ -728,7 +865,7 @@ sensor_loop()
           {
             opcode: "displayImage",
             blockType: Scratch.BlockType.COMMAND,
-            text: "turn on [MATRIX]",
+            text: t("legospike_bridge.turnOn"),
             arguments: {
               MATRIX: {
                 type: Scratch.ArgumentType.MATRIX,
@@ -739,7 +876,7 @@ sensor_loop()
           {
             opcode: "displayPattern",
             blockType: Scratch.BlockType.COMMAND,
-            text: "display pattern [PATTERN]",
+            text: t("legospike_bridge.displayPattern"),
             arguments: {
               PATTERN: {
                 type: Scratch.ArgumentType.STRING,
@@ -751,12 +888,12 @@ sensor_loop()
           {
             opcode: "displayClear",
             blockType: Scratch.BlockType.COMMAND,
-            text: "turn off pixels",
+            text: t("legospike_bridge.turnOffPixels"),
           },
           {
             opcode: "setPixel",
             blockType: Scratch.BlockType.COMMAND,
-            text: "set pixel [X] [Y] to [BRIGHTNESS] %",
+            text: t("legospike_bridge.setPixel"),
             arguments: {
               X: { type: Scratch.ArgumentType.NUMBER, defaultValue: 3 },
               Y: { type: Scratch.ArgumentType.NUMBER, defaultValue: 3 },
@@ -770,7 +907,7 @@ sensor_loop()
           {
             opcode: "getAngle",
             blockType: Scratch.BlockType.REPORTER,
-            text: "[AXIS] angle",
+            text: t("legospike_bridge.axisAngle"),
             arguments: {
               AXIS: {
                 type: Scratch.ArgumentType.STRING,
@@ -782,7 +919,7 @@ sensor_loop()
           {
             opcode: "getAcceleration",
             blockType: Scratch.BlockType.REPORTER,
-            text: "acceleration [AXIS]",
+            text: t("legospike_bridge.axisAccel"),
             arguments: {
               AXIS: {
                 type: Scratch.ArgumentType.STRING,
@@ -794,13 +931,13 @@ sensor_loop()
           {
             opcode: "resetYaw",
             blockType: Scratch.BlockType.COMMAND,
-            text: "reset yaw angle",
+            text: t("legospike_bridge.resetYaw"),
           },
           "---",
           {
             opcode: "getDistance",
             blockType: Scratch.BlockType.REPORTER,
-            text: "[PORT] distance",
+            text: t("legospike_bridge.distance"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -812,7 +949,7 @@ sensor_loop()
           {
             opcode: "getColor",
             blockType: Scratch.BlockType.REPORTER,
-            text: "[PORT] color",
+            text: t("legospike_bridge.color"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -824,7 +961,7 @@ sensor_loop()
           {
             opcode: "getForce",
             blockType: Scratch.BlockType.REPORTER,
-            text: "[PORT] force",
+            text: t("legospike_bridge.force"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -849,7 +986,7 @@ sensor_loop()
           {
             opcode: "whenGesture",
             blockType: Scratch.BlockType.HAT,
-            text: "when hub [GESTURE]",
+            text: t("legospike_bridge.whenGesture"),
             arguments: {
               GESTURE: {
                 type: Scratch.ArgumentType.STRING,
@@ -862,7 +999,7 @@ sensor_loop()
           {
             opcode: "playBeep",
             blockType: Scratch.BlockType.COMMAND,
-            text: "beep [FREQUENCY] Hz for [DURATION] ms",
+            text: t("legospike_bridge.beep"),
             arguments: {
               FREQUENCY: {
                 type: Scratch.ArgumentType.NUMBER,
@@ -899,7 +1036,7 @@ sensor_loop()
           {
             opcode: "runPythonCommand",
             blockType: Scratch.BlockType.COMMAND,
-            text: "run Python: [CODE]",
+            text: t("legospike_bridge.runPython"),
             arguments: {
               CODE: {
                 type: Scratch.ArgumentType.STRING,
