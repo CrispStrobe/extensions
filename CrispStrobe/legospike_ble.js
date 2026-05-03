@@ -6,7 +6,6 @@
 (function (Scratch) {
   "use strict";
 
-
   // ============================================================================
   // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
   //
@@ -25,7 +24,8 @@
       "legospike_ble.startMotor": "start motor [PORT] at [SPEED]%",
       "legospike_ble.stopMotor": "stop motor [PORT] with [ACTION]",
       "legospike_ble.motorPosition": "motor [PORT] position",
-      "legospike_ble.lightPixel": "set 3x3 light [PORT] pixel x:[X] y:[Y] brightness [BRIGHTNESS]%",
+      "legospike_ble.lightPixel":
+        "set 3x3 light [PORT] pixel x:[X] y:[Y] brightness [BRIGHTNESS]%",
       "legospike_ble.distanceMm": "distance sensor [PORT] (mm)",
       "legospike_ble.forcePressed": "force sensor [PORT] pressed?",
       "legospike_ble.forceValue": "force sensor [PORT] value (%)",
@@ -43,7 +43,8 @@
       "legospike_ble.startMotor": "Motor [PORT] mit [SPEED]% starten",
       "legospike_ble.stopMotor": "Motor [PORT] stoppen mit [ACTION]",
       "legospike_ble.motorPosition": "Position von Motor [PORT]",
-      "legospike_ble.lightPixel": "3x3-Licht [PORT] Pixel x:[X] y:[Y] Helligkeit [BRIGHTNESS]% setzen",
+      "legospike_ble.lightPixel":
+        "3x3-Licht [PORT] Pixel x:[X] y:[Y] Helligkeit [BRIGHTNESS]% setzen",
       "legospike_ble.distanceMm": "Abstandssensor [PORT] (mm)",
       "legospike_ble.forcePressed": "Kraftsensor [PORT] gedrückt?",
       "legospike_ble.forceValue": "Kraftsensor [PORT] Wert (%)",
@@ -61,7 +62,8 @@
       "legospike_ble.startMotor": "démarrer moteur [PORT] à [SPEED]%",
       "legospike_ble.stopMotor": "arrêter moteur [PORT] avec [ACTION]",
       "legospike_ble.motorPosition": "position du moteur [PORT]",
-      "legospike_ble.lightPixel": "définir matrice 3x3 [PORT] pixel x:[X] y:[Y] luminosité [BRIGHTNESS]%",
+      "legospike_ble.lightPixel":
+        "définir matrice 3x3 [PORT] pixel x:[X] y:[Y] luminosité [BRIGHTNESS]%",
       "legospike_ble.distanceMm": "capteur de distance [PORT] (mm)",
       "legospike_ble.forcePressed": "capteur de force [PORT] pressé ?",
       "legospike_ble.forceValue": "valeur du capteur de force [PORT] (%)",
@@ -75,11 +77,25 @@
 
   function detectLanguage() {
     const candidates = [];
-    try { if (typeof window !== "undefined" && window.ReduxStore?.getState) { candidates.push(window.ReduxStore.getState().locales?.locale); } } catch (e) {}
-    try { candidates.push(localStorage.getItem("tw:language")); } catch (e) {}
-    try { if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) { candidates.push(Scratch.vm.runtime.getLocale()); } } catch (e) {}
-    try { candidates.push(document.documentElement.lang); } catch (e) {}
-    try { candidates.push(navigator.language); } catch (e) {}
+    try {
+      if (typeof window !== "undefined" && window.ReduxStore?.getState) {
+        candidates.push(window.ReduxStore.getState().locales?.locale);
+      }
+    } catch (e) {}
+    try {
+      candidates.push(localStorage.getItem("tw:language"));
+    } catch (e) {}
+    try {
+      if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) {
+        candidates.push(Scratch.vm.runtime.getLocale());
+      }
+    } catch (e) {}
+    try {
+      candidates.push(document.documentElement.lang);
+    } catch (e) {}
+    try {
+      candidates.push(navigator.language);
+    } catch (e) {}
     for (const c of candidates) {
       if (typeof c !== "string" || !c) continue;
       const lower = c.toLowerCase();
@@ -107,7 +123,11 @@
           if (locale && locale !== lastKnownLocale) {
             lastKnownLocale = locale;
             const lower = locale.toLowerCase();
-            const newLang = lower.startsWith("de") ? "de" : lower.startsWith("fr") ? "fr" : "en";
+            const newLang = lower.startsWith("de")
+              ? "de"
+              : lower.startsWith("fr")
+                ? "fr"
+                : "en";
             if (newLang !== currentLang) currentLang = newLang;
           }
         }
@@ -393,7 +413,7 @@
 
       if (!navigator.bluetooth) {
         alert(
-          "Web Bluetooth not supported!\n\nMake sure you are:\n- Using TurboWarp Desktop\n- Running with --disable-sandbox flag",
+          "Web Bluetooth not supported!\n\nMake sure you are:\n- Using TurboWarp Desktop\n- Running with --disable-sandbox flag"
         );
         return;
       }
@@ -419,16 +439,16 @@
 
         console.log("🔍 [SPIKE Prime] Getting service...");
         const service = await this.server.getPrimaryService(
-          HUB_CONSTANTS.SERVICE_UUID,
+          HUB_CONSTANTS.SERVICE_UUID
         );
         console.log("✅ [SPIKE Prime] Service found");
 
         console.log("🔍 [SPIKE Prime] Getting characteristics...");
         this.rxCharacteristic = await service.getCharacteristic(
-          HUB_CONSTANTS.RX_UUID,
+          HUB_CONSTANTS.RX_UUID
         );
         this.txCharacteristic = await service.getCharacteristic(
-          HUB_CONSTANTS.TX_UUID,
+          HUB_CONSTANTS.TX_UUID
         );
         console.log("✅ [SPIKE Prime] Characteristics found");
 
@@ -436,7 +456,7 @@
         await this.txCharacteristic.startNotifications();
         this.txCharacteristic.addEventListener(
           "characteristicvaluechanged",
-          this._onMessage.bind(this),
+          this._onMessage.bind(this)
         );
         console.log("✅ [SPIKE Prime] Notifications started");
 
@@ -535,7 +555,7 @@
         if (DEBUG)
           console.log(
             "📨 [SPIKE Prime] Message type:",
-            "0x" + msgType.toString(16),
+            "0x" + msgType.toString(16)
           );
 
         switch (msgType) {
@@ -553,7 +573,7 @@
             if (DEBUG)
               console.warn(
                 "❓ [SPIKE Prime] Unknown message type:",
-                "0x" + msgType.toString(16),
+                "0x" + msgType.toString(16)
               );
             break;
         }
@@ -573,7 +593,7 @@
         "ℹ️  [SPIKE Prime] Hub info - Packet size:",
         this.maxPacketSize,
         "Chunk size:",
-        this.maxChunkSize,
+        this.maxChunkSize
       );
     }
 
@@ -605,7 +625,7 @@
             if (remaining >= 21) {
               const imuView = new DataView(
                 payload.buffer,
-                payload.byteOffset + offset,
+                payload.byteOffset + offset
               );
               this.imu.faceUp = imuView.getUint8(1);
               this.imu.yaw = imuView.getInt16(3, true);
@@ -619,7 +639,7 @@
                   "🧭 IMU:",
                   this.imu.yaw,
                   this.imu.pitch,
-                  this.imu.roll,
+                  this.imu.roll
                 );
               offset += 21;
             } else offset = payload.length;
@@ -632,18 +652,18 @@
               if (portName) {
                 const motorView = new DataView(
                   payload.buffer,
-                  payload.byteOffset + offset,
+                  payload.byteOffset + offset
                 );
                 this.ports[portName].value.position = motorView.getInt32(
                   8,
-                  true,
+                  true
                 );
                 if (DEBUG)
                   console.log(
                     "⚙️  Motor",
                     portName,
                     "position:",
-                    this.ports[portName].value.position,
+                    this.ports[portName].value.position
                   );
               }
               offset += 11;
@@ -662,7 +682,7 @@
                   console.log(
                     "👆 Force",
                     portName + ":",
-                    this.ports[portName].value.force + "%",
+                    this.ports[portName].value.force + "%"
                   );
               }
               offset += 4;
@@ -679,7 +699,7 @@
                   console.log(
                     "🎨 Color",
                     portName + ":",
-                    this.ports[portName].value.color,
+                    this.ports[portName].value.color
                   );
               }
               offset += 9;
@@ -693,17 +713,17 @@
               if (portName) {
                 const distView = new DataView(
                   payload.buffer,
-                  payload.byteOffset + offset,
+                  payload.byteOffset + offset
                 );
                 this.ports[portName].value.distance = distView.getInt16(
                   2,
-                  true,
+                  true
                 );
                 if (DEBUG)
                   console.log(
                     "📏 Distance",
                     portName + ":",
-                    this.ports[portName].value.distance + "mm",
+                    this.ports[portName].value.distance + "mm"
                   );
               }
               offset += 4;
@@ -718,7 +738,7 @@
             if (DEBUG)
               console.warn(
                 "❓ Unknown device type:",
-                "0x" + deviceType.toString(16),
+                "0x" + deviceType.toString(16)
               );
             offset = payload.length;
             break;
@@ -749,7 +769,7 @@
         "🛑 [SPIKE Prime] Stop motor",
         args.PORT,
         "action:",
-        args.ACTION,
+        args.ACTION
       );
 
       const json = `{"m":"motor","p":{"port":${portId},"speed":0,"end_state":${endState}}}`;
@@ -769,14 +789,14 @@
       const x = Math.max(0, Math.min(2, Math.round(args.X)));
       const y = Math.max(0, Math.min(2, Math.round(args.Y)));
       const brightness = Math.round(
-        Math.max(0, Math.min(100, args.BRIGHTNESS)) / 10,
+        Math.max(0, Math.min(100, args.BRIGHTNESS)) / 10
       );
 
       console.log(
         "💡 [SPIKE Prime] Light",
         args.PORT,
         "pixel (" + x + "," + y + ") brightness:",
-        args.BRIGHTNESS + "%",
+        args.BRIGHTNESS + "%"
       );
 
       const pixelValue = (brightness << 4) | 9; // Red color

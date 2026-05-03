@@ -6,7 +6,6 @@
 (function (Scratch) {
   "use strict";
 
-
   // ============================================================================
   // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
   //
@@ -48,11 +47,25 @@
 
   function detectLanguage() {
     const candidates = [];
-    try { if (typeof window !== "undefined" && window.ReduxStore?.getState) { candidates.push(window.ReduxStore.getState().locales?.locale); } } catch (e) {}
-    try { candidates.push(localStorage.getItem("tw:language")); } catch (e) {}
-    try { if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) { candidates.push(Scratch.vm.runtime.getLocale()); } } catch (e) {}
-    try { candidates.push(document.documentElement.lang); } catch (e) {}
-    try { candidates.push(navigator.language); } catch (e) {}
+    try {
+      if (typeof window !== "undefined" && window.ReduxStore?.getState) {
+        candidates.push(window.ReduxStore.getState().locales?.locale);
+      }
+    } catch (e) {}
+    try {
+      candidates.push(localStorage.getItem("tw:language"));
+    } catch (e) {}
+    try {
+      if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) {
+        candidates.push(Scratch.vm.runtime.getLocale());
+      }
+    } catch (e) {}
+    try {
+      candidates.push(document.documentElement.lang);
+    } catch (e) {}
+    try {
+      candidates.push(navigator.language);
+    } catch (e) {}
     for (const c of candidates) {
       if (typeof c !== "string" || !c) continue;
       const lower = c.toLowerCase();
@@ -80,7 +93,11 @@
           if (locale && locale !== lastKnownLocale) {
             lastKnownLocale = locale;
             const lower = locale.toLowerCase();
-            const newLang = lower.startsWith("de") ? "de" : lower.startsWith("fr") ? "fr" : "en";
+            const newLang = lower.startsWith("de")
+              ? "de"
+              : lower.startsWith("fr")
+                ? "fr"
+                : "en";
             if (newLang !== currentLang) currentLang = newLang;
           }
         }
@@ -98,7 +115,7 @@
   // Embed the CSP solver
   var CSP = {},
     FAILURE = "FAILURE",
-    stepCounter = 0;
+    _stepCounter = 0;
 
   CSP.solve = function solve(csp) {
     csp = normalizeProblem(csp);
@@ -122,7 +139,7 @@
     const savedDom = unassigned[nextKey];
     delete unassigned[nextKey];
     for (let i = 0; i < values.length; i++) {
-      stepCounter++;
+      _stepCounter++;
       assigned[nextKey] = [values[i]];
       const consistent = enforceConsistency(assigned, unassigned, csp);
       if (consistent === FAILURE) {
@@ -357,16 +374,14 @@
       out.constraints = csp.constraints
         .slice()
         .filter(
-          (c) =>
-            Array.isArray(c) && c.length >= 3 && typeof c[2] === "function",
+          (c) => Array.isArray(c) && c.length >= 3 && typeof c[2] === "function"
         );
     }
     if (Array.isArray(csp.naryConstraints)) {
       out.naryConstraints = csp.naryConstraints
         .slice()
         .filter(
-          (C) =>
-            C && Array.isArray(C.vars) && typeof C.predicate === "function",
+          (C) => C && Array.isArray(C.vars) && typeof C.predicate === "function"
         );
     }
     return out;
@@ -386,11 +401,11 @@
         pred = c[2];
       if (!varsSet.has(head))
         throw new Error(
-          'Binary constraint references unknown variable "' + head + '"',
+          'Binary constraint references unknown variable "' + head + '"'
         );
       if (!varsSet.has(tail))
         throw new Error(
-          'Binary constraint references unknown variable "' + tail + '"',
+          'Binary constraint references unknown variable "' + tail + '"'
         );
       if (typeof pred !== "function")
         throw new Error("Binary constraint missing predicate function");
@@ -404,7 +419,7 @@
         const v = C.vars[j];
         if (!varsSet.has(v)) {
           throw new Error(
-            'N-ary constraint references unknown variable "' + v + '"',
+            'N-ary constraint references unknown variable "' + v + '"'
           );
         }
       }

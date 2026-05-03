@@ -6,7 +6,6 @@
 (function (Scratch) {
   "use strict";
 
-
   // ============================================================================
   // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
   //
@@ -84,11 +83,25 @@
 
   function detectLanguage() {
     const candidates = [];
-    try { if (typeof window !== "undefined" && window.ReduxStore?.getState) { candidates.push(window.ReduxStore.getState().locales?.locale); } } catch (e) {}
-    try { candidates.push(localStorage.getItem("tw:language")); } catch (e) {}
-    try { if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) { candidates.push(Scratch.vm.runtime.getLocale()); } } catch (e) {}
-    try { candidates.push(document.documentElement.lang); } catch (e) {}
-    try { candidates.push(navigator.language); } catch (e) {}
+    try {
+      if (typeof window !== "undefined" && window.ReduxStore?.getState) {
+        candidates.push(window.ReduxStore.getState().locales?.locale);
+      }
+    } catch (e) {}
+    try {
+      candidates.push(localStorage.getItem("tw:language"));
+    } catch (e) {}
+    try {
+      if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) {
+        candidates.push(Scratch.vm.runtime.getLocale());
+      }
+    } catch (e) {}
+    try {
+      candidates.push(document.documentElement.lang);
+    } catch (e) {}
+    try {
+      candidates.push(navigator.language);
+    } catch (e) {}
     for (const c of candidates) {
       if (typeof c !== "string" || !c) continue;
       const lower = c.toLowerCase();
@@ -116,7 +129,11 @@
           if (locale && locale !== lastKnownLocale) {
             lastKnownLocale = locale;
             const lower = locale.toLowerCase();
-            const newLang = lower.startsWith("de") ? "de" : lower.startsWith("fr") ? "fr" : "en";
+            const newLang = lower.startsWith("de")
+              ? "de"
+              : lower.startsWith("fr")
+                ? "fr"
+                : "en";
             if (newLang !== currentLang) currentLang = newLang;
           }
         }
@@ -134,7 +151,7 @@
   // ============================================================================
   // DEBUG LOGGER
   // ============================================================================
-  
+
   class DebugLogger {
     constructor(prefix = "[LEGO WeDo 2.0]", enabled = true) {
       this.prefix = prefix;
@@ -144,13 +161,14 @@
         WARN: 1,
         INFO: 2,
         DEBUG: 3,
-        TRACE: 4
+        TRACE: 4,
       };
       this.currentLevel = this.logLevel.DEBUG;
     }
 
     setLevel(level) {
-      this.currentLevel = this.logLevel[level.toUpperCase()] || this.logLevel.DEBUG;
+      this.currentLevel =
+        this.logLevel[level.toUpperCase()] || this.logLevel.DEBUG;
     }
 
     error(...args) {
@@ -255,7 +273,7 @@
     advertisementService: "00001523-1212-efde-1523-785feabcd123",
     ioService: "00004f0e-1212-efde-1523-785feabcd123",
     batteryService: "0000180f-0000-1000-8000-00805f9b34fb",
-    
+
     attachedIO: "00001527-1212-efde-1523-785feabcd123",
     inputValues: "00001560-1212-efde-1523-785feabcd123",
     inputCommand: "00001563-1212-efde-1523-785feabcd123",
@@ -263,7 +281,7 @@
     battery: "00002a19-0000-1000-8000-00805f9b34fb",
     button: "00001526-1212-efde-1523-785feabcd123",
     disconnect: "0000152e-1212-efde-1523-785feabcd123",
-    
+
     sendRateMax: 20,
     sendInterval: 50,
   };
@@ -311,7 +329,7 @@
       this._deviceType = deviceType;
       this._deviceName = DeviceTypeName[deviceType] || "Unknown Device";
       this._values = {};
-      
+
       logger.debug(`Device created: ${this._deviceName} on port ${portId}`);
     }
 
@@ -339,11 +357,11 @@
   class WeDo2Motor extends WeDo2Device {
     constructor(parent, portId, deviceType) {
       super(parent, portId, deviceType);
-      
+
       this._power = 100;
       this._direction = 1;
       this._brakeTimeout = null;
-      
+
       logger.debug(`Motor ${portId} initialized`);
     }
 
@@ -352,17 +370,17 @@
     }
 
     set power(value) {
-        const p = Math.max(0, Math.min(value, 100));
-        // WeDo 2.0 motors respond best in the 30-100 range
-        if (p === 0) {
-            this._power = 0;
-        } else {
-            // Use Scratch's official mapping formula
-            const delta = 100 / p;
-            this._power = 30 + (70 / delta);
-        }
-        logger.debug(`Motor ${this._portId} power set to ${this._power}`);
-        }
+      const p = Math.max(0, Math.min(value, 100));
+      // WeDo 2.0 motors respond best in the 30-100 range
+      if (p === 0) {
+        this._power = 0;
+      } else {
+        // Use Scratch's official mapping formula
+        const delta = 100 / p;
+        this._power = 30 + 70 / delta;
+      }
+      logger.debug(`Motor ${this._portId} power set to ${this._power}`);
+    }
 
     get direction() {
       return this._direction;
@@ -375,28 +393,28 @@
 
     turnOn() {
       this._clearBrake();
-      
+
       let effectivePower = 0;
       if (this._power > 0) {
         // Map 1-100 to WeDo's effective 30-100 range for better control
-        effectivePower = Math.floor(30 + (0.7 * this._power)) * this._direction;
+        effectivePower = Math.floor(30 + 0.7 * this._power) * this._direction;
       }
-      
+
       logger.debug(`Motor ${this._portId} turn on at ${effectivePower}`);
-      
-      const cmd = [this._portId, 1, 1, effectivePower & 0xFF];
+
+      const cmd = [this._portId, 1, 1, effectivePower & 0xff];
       this._parent.send(WeDo2BLE.outputCommand, new Uint8Array(cmd));
     }
 
     turnOff() {
       this._clearBrake();
-      
+
       logger.debug(`Motor ${this._portId} turn off (brake then float)`);
-      
+
       // First brake
       const brakeCmd = [this._portId, 1, 1, 127];
       this._parent.send(WeDo2BLE.outputCommand, new Uint8Array(brakeCmd));
-      
+
       // Then float after 1 second
       this._brakeTimeout = setTimeout(() => {
         const floatCmd = [this._portId, 1, 1, 0];
@@ -430,18 +448,22 @@
       this._onMessageCallback = null;
     }
 
+    // eslint-disable-next-line require-await
     async connect() {
       throw new Error("connect() must be implemented by subclass");
     }
 
+    // eslint-disable-next-line require-await
     async disconnect() {
       throw new Error("disconnect() must be implemented by subclass");
     }
 
+    // eslint-disable-next-line require-await
     async send(characteristic, data) {
       throw new Error("send() must be implemented by subclass");
     }
 
+    // eslint-disable-next-line require-await
     async read(characteristic) {
       throw new Error("read() must be implemented by subclass");
     }
@@ -468,7 +490,7 @@
       logger.group("BLE Connection");
       try {
         logger.info("Requesting Bluetooth device...");
-        
+
         this._device = await navigator.bluetooth.requestDevice({
           filters: [
             {
@@ -487,32 +509,35 @@
 
         logger.info("Connecting to GATT server...");
         this._server = await this._device.gatt.connect();
-        
+
         // Get services and characteristics
         logger.info("Getting services...");
         const services = await this._server.getPrimaryServices();
-        
+
         for (const service of services) {
           logger.debug(`Found service: ${service.uuid}`);
           const characteristics = await service.getCharacteristics();
-          
+
           for (const char of characteristics) {
             const uuid = char.uuid.toLowerCase();
             this._characteristics.set(uuid, char);
             logger.trace(`Registered characteristic: ${uuid}`);
-            
+
             // Start notifications for input characteristics
             if (
               uuid.includes("1527") || // Attached IO
               uuid.includes("1560") || // Input Values
-              uuid.includes("1526")    // Button
+              uuid.includes("1526") // Button
             ) {
               logger.debug(`Starting notifications for: ${uuid}`);
               await char.startNotifications();
-              
+
               char.addEventListener("characteristicvaluechanged", (event) => {
                 const data = new Uint8Array(event.target.value.buffer);
-                logger.trace(`BLE notification from ${uuid}:`, Array.from(data));
+                logger.trace(
+                  `BLE notification from ${uuid}:`,
+                  Array.from(data)
+                );
                 if (this._onMessageCallback) {
                   this._onMessageCallback(uuid, data);
                 }
@@ -550,15 +575,15 @@
         logger.error("Cannot send: not connected");
         throw new Error("Not connected");
       }
-      
+
       const uuid = characteristic.toLowerCase();
       const char = this._characteristics.get(uuid);
-      
+
       if (!char) {
         logger.error(`Characteristic not found: ${uuid}`);
         throw new Error(`Characteristic not found: ${uuid}`);
       }
-      
+
       logger.trace(`Sending to ${uuid}:`, Array.from(data));
       await char.writeValue(data);
     }
@@ -568,15 +593,15 @@
         logger.error("Cannot read: not connected");
         throw new Error("Not connected");
       }
-      
+
       const uuid = characteristic.toLowerCase();
       const char = this._characteristics.get(uuid);
-      
+
       if (!char) {
         logger.error(`Characteristic not found: ${uuid}`);
         throw new Error(`Characteristic not found: ${uuid}`);
       }
-      
+
       const value = await char.readValue();
       const data = new Uint8Array(value.buffer);
       logger.trace(`Read from ${uuid}:`, Array.from(data));
@@ -597,23 +622,23 @@
       logger.info("Scratch Link Adapter initialized");
     }
 
-    async connect() {
+    connect() {
       logger.group("Scratch Link Connection");
       try {
         logger.info("Getting Scratch Link socket from runtime...");
-        
+
         if (this._runtime && this._runtime.getScratchLinkSocket) {
           this._socket = this._runtime.getScratchLinkSocket("BLE");
           logger.info("✓ Got socket from runtime");
-          
+
           this._socket.setOnOpen(this._onOpen.bind(this));
           this._socket.setOnClose(this._onClose.bind(this));
           this._socket.setOnError(this._onError.bind(this));
           this._socket.setHandleMessage(this._handleMessage.bind(this));
-          
+
           logger.info("Opening socket...");
           this._socket.open();
-          
+
           return new Promise((resolve, reject) => {
             this._connectResolve = resolve;
             this._connectReject = reject;
@@ -631,7 +656,7 @@
 
     _onOpen() {
       logger.info("✓ Socket opened, discovering devices...");
-      
+
       this._sendRequest("discover", {
         filters: [
           {
@@ -641,40 +666,49 @@
       })
         .then((device) => {
           logger.info(`Device discovered: ${device.name || "WeDo 2.0"}`);
-          
+
           if (this._runtime) {
             this._runtime.emit(
               this._runtime.constructor.PERIPHERAL_LIST_UPDATE,
               { [device.peripheralId]: device }
             );
           }
-          
-          return this._sendRequest("connect", { 
-            peripheralId: device.peripheralId 
+
+          return this._sendRequest("connect", {
+            peripheralId: device.peripheralId,
           });
         })
         .then(() => {
           logger.info("✓ Connected to device");
-          
+
           // Start notifications for all input characteristics
           const notifications = [
-            { serviceId: WeDo2BLE.ioService, characteristicId: WeDo2BLE.attachedIO },
-            { serviceId: WeDo2BLE.ioService, characteristicId: WeDo2BLE.inputValues },
-            { serviceId: WeDo2BLE.advertisementService, characteristicId: WeDo2BLE.button },
+            {
+              serviceId: WeDo2BLE.ioService,
+              characteristicId: WeDo2BLE.attachedIO,
+            },
+            {
+              serviceId: WeDo2BLE.ioService,
+              characteristicId: WeDo2BLE.inputValues,
+            },
+            {
+              serviceId: WeDo2BLE.advertisementService,
+              characteristicId: WeDo2BLE.button,
+            },
           ];
-          
+
           return Promise.all(
-            notifications.map(n => this._sendRequest("startNotifications", n))
+            notifications.map((n) => this._sendRequest("startNotifications", n))
           );
         })
         .then(() => {
           logger.info("✓ Notifications started");
           this._connected = true;
-          
+
           if (this._runtime) {
             this._runtime.emit(this._runtime.constructor.PERIPHERAL_CONNECTED);
           }
-          
+
           if (this._connectResolve) {
             this._connectResolve(true);
             this._connectResolve = null;
@@ -692,7 +726,7 @@
     _onClose() {
       logger.warn("Socket closed");
       this._connected = false;
-      
+
       if (this._runtime) {
         this._runtime.emit(
           this._runtime.constructor.PERIPHERAL_CONNECTION_LOST_ERROR,
@@ -706,17 +740,14 @@
 
     _onError(error) {
       logger.error("Socket error:", error);
-      
+
       if (this._runtime) {
-        this._runtime.emit(
-          this._runtime.constructor.PERIPHERAL_REQUEST_ERROR,
-          {
-            message: "Scratch lost connection to LEGO WeDo 2.0",
-            extensionId: this._extensionId,
-          }
-        );
+        this._runtime.emit(this._runtime.constructor.PERIPHERAL_REQUEST_ERROR, {
+          message: "Scratch lost connection to LEGO WeDo 2.0",
+          extensionId: this._extensionId,
+        });
       }
-      
+
       if (this._connectReject) {
         this._connectReject(error);
         this._connectReject = null;
@@ -725,7 +756,8 @@
 
     _handleMessage(message) {
       try {
-        const json = typeof message === 'string' ? JSON.parse(message) : message;
+        const json =
+          typeof message === "string" ? JSON.parse(message) : message;
         logger.trace("Scratch Link message:", json);
 
         if (json.jsonrpc === "2.0") {
@@ -753,7 +785,7 @@
       }
     }
 
-    async disconnect() {
+    disconnect() {
       logger.info("Disconnecting Scratch Link...");
       if (this._socket && this._socket.isOpen && this._socket.isOpen()) {
         this._socket.close();
@@ -764,22 +796,22 @@
       logger.info("✓ Scratch Link disconnected");
     }
 
-    async send(characteristic, data) {
+    send(characteristic, data) {
       if (!this._connected || !this._socket) {
         logger.error("Cannot send: not connected");
         throw new Error("Not connected");
       }
 
       logger.trace(`Sending to ${characteristic}:`, Array.from(data));
-      
+
       const base64 = Base64Util.uint8ArrayToBase64(data);
-      
+
       // Determine service based on characteristic
       let serviceId = WeDo2BLE.ioService;
       if (characteristic.toLowerCase().includes("152")) {
         serviceId = WeDo2BLE.advertisementService;
       }
-      
+
       return this._sendRequest("write", {
         serviceId: serviceId,
         characteristicId: characteristic,
@@ -795,17 +827,17 @@
       }
 
       logger.trace(`Reading from ${characteristic}`);
-      
+
       let serviceId = WeDo2BLE.batteryService;
       if (characteristic.toLowerCase().includes("152")) {
         serviceId = WeDo2BLE.advertisementService;
       }
-      
+
       const result = await this._sendRequest("read", {
         serviceId: serviceId,
         characteristicId: characteristic,
       });
-      
+
       const data = Base64Util.base64ToUint8Array(result.message);
       logger.trace(`Read from ${characteristic}:`, Array.from(data));
       return data;
@@ -824,7 +856,7 @@
         };
 
         logger.trace("Sending request:", request);
-        
+
         if (this._socket && this._socket.sendMessage) {
           this._socket.sendMessage(request);
         } else {
@@ -840,12 +872,14 @@
 
   class WeDo2Hub {
     constructor(runtime, extensionId, connectionType) {
-      logger.info(`Initializing WeDo 2.0 Hub with connection type: ${connectionType}`);
-      
+      logger.info(
+        `Initializing WeDo 2.0 Hub with connection type: ${connectionType}`
+      );
+
       this._runtime = runtime;
       this._extensionId = extensionId;
       this._connectionType = connectionType;
-      
+
       this._connection = null;
       this._devices = {};
       this._ports = {};
@@ -867,7 +901,7 @@
       // Bind methods
       this.reset = this.reset.bind(this);
       this._onConnect = this._onConnect.bind(this);
-      
+
       // Register as peripheral extension
       if (this._runtime) {
         try {
@@ -884,7 +918,7 @@
 
     scan() {
       logger.info("============ SCAN CALLED ============");
-      
+
       if (this._connection) {
         logger.info("Disconnecting existing connection");
         this._connection.disconnect();
@@ -895,73 +929,79 @@
           logger.info("Creating BLE adapter");
           this._connection = new BLEAdapter();
           break;
-          
+
         case ConnectionType.SCRATCH_LINK:
           logger.info("Creating Scratch Link adapter");
-          this._connection = new ScratchLinkAdapter(this._runtime, this._extensionId);
+          this._connection = new ScratchLinkAdapter(
+            this._runtime,
+            this._extensionId
+          );
           break;
-          
+
         default:
           throw new Error(`Invalid connection type: ${this._connectionType}`);
       }
 
       this._connection.onMessage((uuid, data) => this._onMessage(uuid, data));
-      
+
       logger.info("Calling connection.connect()");
       return this.connect();
     }
 
     async connect() {
       logger.info("Connecting WeDo 2.0 Hub...");
-      
+
       if (!this._connection) {
         throw new Error("No connection adapter - call scan() first");
       }
-      
+
       await this._connection.connect();
       await this._initialize();
       logger.info("✓ WeDo 2.0 Hub connected and initialized");
     }
 
     async _initialize() {
-        logger.group("Initializing Hub");
-        try {
-            // Set LED to RGB mode FIRST
-            logger.info("Setting LED to RGB mode...");
-            const ledCmd = new Uint8Array([
-            1,                      // Command type
-            2,                      // Setup single
-            Port.LED,               // Port 6
-            DeviceType.RGB_LED,     // Type 23 (0x17)
-            1,                      // Mode 1 = RGB
-            0, 0, 0, 0,            // Delta
-            0,                      // Units
-            0                       // Notifications disabled for LED
-            ]);
-            await this.send(WeDo2BLE.inputCommand, ledCmd);
-            await this._delay(100);
-            
-            // Set LED to blue to indicate connected
-            logger.info("Setting LED to blue...");
-            await this.setLED(0x0000FF);
-            await this._delay(100);
+      logger.group("Initializing Hub");
+      try {
+        // Set LED to RGB mode FIRST
+        logger.info("Setting LED to RGB mode...");
+        const ledCmd = new Uint8Array([
+          1, // Command type
+          2, // Setup single
+          Port.LED, // Port 6
+          DeviceType.RGB_LED, // Type 23 (0x17)
+          1, // Mode 1 = RGB
+          0,
+          0,
+          0,
+          0, // Delta
+          0, // Units
+          0, // Notifications disabled for LED
+        ]);
+        await this.send(WeDo2BLE.inputCommand, ledCmd);
+        await this._delay(100);
 
-            // Start heartbeat for battery monitoring
-            logger.info("Starting heartbeat...");
-            this._startHeartbeat();
+        // Set LED to blue to indicate connected
+        logger.info("Setting LED to blue...");
+        await this.setLED(0x0000ff);
+        await this._delay(100);
 
-            logger.info("✓ Hub initialization complete");
-        } catch (error) {
-            logger.error("Hub initialization failed:", error);
-            throw error;
-        } finally {
-            logger.groupEnd();
-        }
-        }
+        // Start heartbeat for battery monitoring
+        logger.info("Starting heartbeat...");
+        this._startHeartbeat();
+
+        logger.info("✓ Hub initialization complete");
+      } catch (error) {
+        logger.error("Hub initialization failed:", error);
+        throw error;
+      } finally {
+        logger.groupEnd();
+      }
+    }
 
     async disconnect() {
       logger.info("Disconnecting WeDo 2.0 Hub...");
-      
+
       if (this._heartbeatInterval) {
         clearInterval(this._heartbeatInterval);
         this._heartbeatInterval = null;
@@ -978,10 +1018,10 @@
       if (this._connection) {
         await this._connection.disconnect();
       }
-      
+
       this._devices = {};
       this._ports = {};
-      
+
       logger.info("✓ WeDo 2.0 Hub disconnected");
     }
 
@@ -1009,45 +1049,45 @@
         // For critical commands, we might want to queue rather than drop
         // For now, we'll just drop non-critical messages
       }
-      
+
       return this._connection.send(characteristic, data);
     }
 
     async setLED(rgb) {
-      const r = (rgb >> 16) & 0xFF;
-      const g = (rgb >> 8) & 0xFF;
-      const b = rgb & 0xFF;
-      
+      const r = (rgb >> 16) & 0xff;
+      const g = (rgb >> 8) & 0xff;
+      const b = rgb & 0xff;
+
       logger.debug(`Setting LED to RGB(${r}, ${g}, ${b})`);
-      
+
       const cmd = new Uint8Array([Port.LED, 4, 3, r, g, b]);
       await this.send(WeDo2BLE.outputCommand, cmd);
     }
 
     async playTone(frequency, duration) {
       logger.debug(`Playing tone: ${frequency}Hz for ${duration}ms`);
-      
+
       const freqBytes = new Uint16Array([frequency]);
       const durBytes = new Uint16Array([duration]);
-      
+
       const cmd = new Uint8Array([
         Port.PIEZO,
         2,
         4,
-        freqBytes[0] & 0xFF,
-        (freqBytes[0] >> 8) & 0xFF,
-        durBytes[0] & 0xFF,
-        (durBytes[0] >> 8) & 0xFF,
+        freqBytes[0] & 0xff,
+        (freqBytes[0] >> 8) & 0xff,
+        durBytes[0] & 0xff,
+        (durBytes[0] >> 8) & 0xff,
       ]);
-      
+
       await this.send(WeDo2BLE.outputCommand, cmd);
     }
 
     stopAll() {
       if (!this.isConnected()) return;
       logger.info("Stopping all motors");
-      
-      Object.values(this._devices).forEach(device => {
+
+      Object.values(this._devices).forEach((device) => {
         if (device instanceof WeDo2Motor) {
           device.turnOff();
         }
@@ -1062,12 +1102,12 @@
       logger.info("Resetting hub state");
       this._devices = {};
       this._ports = {};
-      
+
       if (this._heartbeatInterval) {
         clearInterval(this._heartbeatInterval);
         this._heartbeatInterval = null;
       }
-      
+
       this.hubStatus = {
         buttonPressed: false,
         batteryLevel: 100,
@@ -1078,54 +1118,54 @@
     }
 
     _startHeartbeat() {
-        // Use 5 seconds like official Scratch extension
-        this._heartbeatInterval = setInterval(async () => {
-            if (this.isConnected()) {
-            try {
-                const batteryData = await this._connection.read(WeDo2BLE.battery);
-                if (batteryData && batteryData.length > 0) {
-                this.hubStatus.batteryLevel = batteryData[0];
-                logger.trace(`Battery level: ${this.hubStatus.batteryLevel}%`);
-                }
-            } catch (error) {
-                // Don't spam logs with heartbeat errors, just log once
-                if (!this._heartbeatErrorLogged) {
-                logger.warn("Heartbeat failed, will retry silently:", error);
-                this._heartbeatErrorLogged = true;
-                }
+      // Use 5 seconds like official Scratch extension
+      this._heartbeatInterval = setInterval(async () => {
+        if (this.isConnected()) {
+          try {
+            const batteryData = await this._connection.read(WeDo2BLE.battery);
+            if (batteryData && batteryData.length > 0) {
+              this.hubStatus.batteryLevel = batteryData[0];
+              logger.trace(`Battery level: ${this.hubStatus.batteryLevel}%`);
             }
+          } catch (error) {
+            // Don't spam logs with heartbeat errors, just log once
+            if (!this._heartbeatErrorLogged) {
+              logger.warn("Heartbeat failed, will retry silently:", error);
+              this._heartbeatErrorLogged = true;
             }
-        }, 5000); // 5 seconds instead of 10
-        
-        logger.debug("Heartbeat started (5s interval)");
+          }
         }
+      }, 5000); // 5 seconds instead of 10
+
+      logger.debug("Heartbeat started (5s interval)");
+    }
 
     _onMessage(uuid, data) {
-        logger.trace(`Processing message from ${uuid}:`, Array.from(data));
-        
-        const uuidLower = uuid.toLowerCase();
-        
-        // Attached IO - device connection/disconnection
-        if (uuidLower.includes("1527")) {
-            this._handleAttachedIO(data);
+      logger.trace(`Processing message from ${uuid}:`, Array.from(data));
+
+      const uuidLower = uuid.toLowerCase();
+
+      // Attached IO - device connection/disconnection
+      if (uuidLower.includes("1527")) {
+        this._handleAttachedIO(data);
+      }
+      // Input Values - sensor data
+      else if (uuidLower.includes("1560")) {
+        this._handleInputValues(data);
+      }
+      // Button
+      else if (uuidLower.includes("1526")) {
+        this.hubStatus.buttonPressed = data[0] === 1;
+        logger.debug(`Button pressed: ${this.hubStatus.buttonPressed}`);
+      }
+      // Low Voltage Alert - ADD THIS
+      else if (uuidLower.includes("1528")) {
+        this.hubStatus.lowVoltage = data[0] !== 0;
+        if (this.hubStatus.lowVoltage) {
+          logger.warn("Low voltage alert!");
         }
-        // Input Values - sensor data
-        else if (uuidLower.includes("1560")) {
-            this._handleInputValues(data);
-        }
-        // Button
-        else if (uuidLower.includes("1526")) {
-            this.hubStatus.buttonPressed = data[0] === 1;
-            logger.debug(`Button pressed: ${this.hubStatus.buttonPressed}`);
-        }
-        // Low Voltage Alert - ADD THIS
-        else if (uuidLower.includes("1528")) {
-            this.hubStatus.lowVoltage = data[0] !== 0;
-            if (this.hubStatus.lowVoltage) {
-            logger.warn("Low voltage alert!");
-            }
-        }
-        }
+      }
+    }
 
     _handleAttachedIO(data) {
       const portId = data[0];
@@ -1133,7 +1173,9 @@
       const deviceType = event === 0 ? null : data[3];
 
       logger.group(`Device event on port ${portId}`);
-      logger.debug(`Event: ${event === 0 ? 'detached' : 'attached'}, Device type: ${deviceType}`);
+      logger.debug(
+        `Event: ${event === 0 ? "detached" : "attached"}, Device type: ${deviceType}`
+      );
 
       if (event === 1) {
         // Device attached
@@ -1168,64 +1210,67 @@
     }
 
     _handleInputValues(data) {
-        const portId = data[1];
-        const deviceType = this._ports[portId];
+      const portId = data[1];
+      const deviceType = this._ports[portId];
 
-        if (!deviceType) {
-            return;
+      if (!deviceType) {
+        return;
+      }
+
+      const device = this._devices[portId];
+
+      if (deviceType === DeviceType.TILT_SENSOR) {
+        // WeDo 2.0 tilt sensor reports angles in range -45 to 45 (as 0-255)
+        // Values > 45 are negative angles (256 - value)
+        const rawX = data[2];
+        const rawY = data[3];
+
+        this.tiltX = rawX > 45 ? rawX - 256 : rawX;
+        this.tiltY = rawY > 45 ? rawY - 256 : rawY;
+
+        logger.trace(`Tilt: X=${this.tiltX}, Y=${this.tiltY}`);
+
+        if (device) {
+          device.setValue("tiltX", this.tiltX);
+          device.setValue("tiltY", this.tiltY);
+        }
+      } else if (deviceType === DeviceType.MOTION_SENSOR) {
+        // Enhanced distance with sub-unit precision
+        let distance = data[2];
+
+        // Check if there's a partial distance byte (for more precision)
+        if (data.length > 3 && data[3] > 0) {
+          distance += 1.0 / data[3];
         }
 
-        const device = this._devices[portId];
+        this.distance = distance;
+        logger.trace(`Distance: ${this.distance}`);
 
-        if (deviceType === DeviceType.TILT_SENSOR) {
-            // WeDo 2.0 tilt sensor reports angles in range -45 to 45 (as 0-255)
-            // Values > 45 are negative angles (256 - value)
-            const rawX = data[2];
-            const rawY = data[3];
-            
-            this.tiltX = rawX > 45 ? rawX - 256 : rawX;
-            this.tiltY = rawY > 45 ? rawY - 256 : rawY;
-            
-            logger.trace(`Tilt: X=${this.tiltX}, Y=${this.tiltY}`);
-            
-            if (device) {
-            device.setValue("tiltX", this.tiltX);
-            device.setValue("tiltY", this.tiltY);
-            }
-        } else if (deviceType === DeviceType.MOTION_SENSOR) {
-            // Enhanced distance with sub-unit precision
-            let distance = data[2];
-            
-            // Check if there's a partial distance byte (for more precision)
-            if (data.length > 3 && data[3] > 0) {
-            distance += 1.0 / data[3];
-            }
-            
-            this.distance = distance;
-            logger.trace(`Distance: ${this.distance}`);
-            
-            if (device) {
-            device.setValue("distance", this.distance);
-            }
+        if (device) {
+          device.setValue("distance", this.distance);
         }
-        }
+      }
+    }
 
     async _setupSensor(portId, deviceType) {
       logger.debug(`Setting up sensor on port ${portId}, type ${deviceType}`);
-      
+
       // Input format setup command
       // [length, command, port, type, mode, delta(4 bytes), units, notifications]
       const cmd = new Uint8Array([
-        1,                    // Command type
-        2,                    // Setup single
-        portId,               // Port
-        deviceType,           // Device type
-        InputMode.TILT,       // Mode (0 for both tilt and motion)
-        1, 0, 0, 0,          // Delta (1 = report all changes)
-        0,                    // Units
-        1,                    // Enable notifications
+        1, // Command type
+        2, // Setup single
+        portId, // Port
+        deviceType, // Device type
+        InputMode.TILT, // Mode (0 for both tilt and motion)
+        1,
+        0,
+        0,
+        0, // Delta (1 = report all changes)
+        0, // Units
+        1, // Enable notifications
       ]);
-      
+
       await this.send(WeDo2BLE.inputCommand, cmd);
       await this._delay(100);
     }
@@ -1244,32 +1289,34 @@
       logger.info("=".repeat(60));
       logger.info("LEGO WeDo 2.0 Unified Extension");
       logger.info("=".repeat(60));
-      
+
       // Get runtime
       this._runtime = runtime;
-      
+
       if (!this._runtime && typeof Scratch !== "undefined" && Scratch.vm) {
         this._runtime = Scratch.vm.runtime;
         logger.info("Got runtime from Scratch.vm.runtime");
       }
-      
+
       if (!this._runtime && typeof globalThis.vm !== "undefined") {
         this._runtime = globalThis.vm.runtime;
         logger.info("Got runtime from vm.runtime");
       }
-      
+
       logger.info("Runtime available:", !!this._runtime);
-      
+
       this._hub = null;
       this._connectionType = ConnectionType.SCRATCH_LINK;
-      
+
       logger.info("Extension initialized");
     }
 
     whenBatteryLow() {
-        if (!this._ensureConnected()) return false;
-        return this._hub.hubStatus.lowVoltage || this._hub.hubStatus.batteryLevel < 10;
-        }
+      if (!this._ensureConnected()) return false;
+      return (
+        this._hub.hubStatus.lowVoltage || this._hub.hubStatus.batteryLevel < 10
+      );
+    }
 
     getInfo() {
       return {
@@ -1529,18 +1576,20 @@
       logger.group("=== CONNECT ===");
       try {
         if (!this._hub) {
-          logger.info(`Creating hub with connection type: ${this._connectionType}`);
+          logger.info(
+            `Creating hub with connection type: ${this._connectionType}`
+          );
           this._hub = new WeDo2Hub(
             this._runtime,
             "wedo2unified",
             this._connectionType
           );
         }
-        
+
         if (!this._hub.isConnected()) {
           await this._hub.scan();
         }
-        
+
         logger.info("✓ Successfully connected");
       } catch (error) {
         logger.error("Connection failed:", error);
@@ -1590,34 +1639,34 @@
     // ========================================================================
 
     motorOn(args) {
-        if (!this._ensureConnected()) return Promise.resolve();
-        
-        this._forEachMotor(args.PORT, (motor) => {
-            motor.turnOn();
-        });
+      if (!this._ensureConnected()) return Promise.resolve();
 
-        return new Promise((resolve) => {
-            setTimeout(() => resolve(), WeDo2BLE.sendInterval);
-        });
-        }
+      this._forEachMotor(args.PORT, (motor) => {
+        motor.turnOn();
+      });
 
-        motorOff(args) {
-        if (!this._ensureConnected()) return Promise.resolve();
-        
-        this._forEachMotor(args.PORT, (motor) => {
-            motor.turnOff();
-        });
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(), WeDo2BLE.sendInterval);
+      });
+    }
 
-        return new Promise((resolve) => {
-            setTimeout(() => resolve(), WeDo2BLE.sendInterval);
-        });
-        }
+    motorOff(args) {
+      if (!this._ensureConnected()) return Promise.resolve();
+
+      this._forEachMotor(args.PORT, (motor) => {
+        motor.turnOff();
+      });
+
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(), WeDo2BLE.sendInterval);
+      });
+    }
 
     setMotorPower(args) {
       if (!this._ensureConnected()) return;
-      
+
       const power = Cast.toNumber(args.POWER);
-      
+
       this._forEachMotor(args.PORT, (motor) => {
         motor.power = power;
         motor.turnOn();
@@ -1630,7 +1679,7 @@
 
     setMotorDirection(args) {
       if (!this._ensureConnected()) return;
-      
+
       this._forEachMotor(args.PORT, (motor) => {
         switch (args.DIRECTION) {
           case "forward":
@@ -1676,7 +1725,7 @@
 
     setLED(args) {
       if (!this._ensureConnected()) return;
-      
+
       const hue = Cast.toNumber(args.HUE);
       const normalizedHue = ((hue % 100) + 100) % 100; // Wrap to 0-100
       const hueAngle = (normalizedHue * 360) / 100;
@@ -1685,28 +1734,40 @@
       const h = hueAngle;
       const s = 1;
       const v = 1;
-      
+
       const c = v * s;
       const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
       const m = v - c;
-      
+
       let r, g, b;
-      
+
       if (h >= 0 && h < 60) {
-        r = c; g = x; b = 0;
+        r = c;
+        g = x;
+        b = 0;
       } else if (h >= 60 && h < 120) {
-        r = x; g = c; b = 0;
+        r = x;
+        g = c;
+        b = 0;
       } else if (h >= 120 && h < 180) {
-        r = 0; g = c; b = x;
+        r = 0;
+        g = c;
+        b = x;
       } else if (h >= 180 && h < 240) {
-        r = 0; g = x; b = c;
+        r = 0;
+        g = x;
+        b = c;
       } else if (h >= 240 && h < 300) {
-        r = x; g = 0; b = c;
+        r = x;
+        g = 0;
+        b = c;
       } else {
-        r = c; g = 0; b = x;
+        r = c;
+        g = 0;
+        b = x;
       }
 
-      const rgb = 
+      const rgb =
         (Math.round((r + m) * 255) << 16) |
         (Math.round((g + m) * 255) << 8) |
         Math.round((b + m) * 255);
@@ -1720,13 +1781,13 @@
 
     playNote(args) {
       if (!this._ensureConnected()) return;
-      
+
       const note = Cast.toNumber(args.NOTE);
       const duration = Cast.toNumber(args.DURATION) * 1000; // Convert to ms
-      
+
       // Convert MIDI note to frequency
       const frequency = Math.round(440 * Math.pow(2, (note - 69) / 12));
-      
+
       this._hub.playTone(frequency, duration);
 
       return new Promise((resolve) => {
@@ -1767,7 +1828,7 @@
 
     _forEachMotor(portLabel, callback) {
       let ports = [];
-      
+
       switch (portLabel) {
         case "A":
           ports = [Port.A];
@@ -1793,7 +1854,7 @@
 
     _isTilted(direction) {
       const TILT_THRESHOLD = 15;
-      
+
       switch (direction) {
         case "any":
           return (
@@ -1822,6 +1883,6 @@
   }
 
   Scratch.extensions.register(new LEGOWeDo2Extension());
-  
+
   logger.info("🎉 LEGO WeDo 2.0 Unified Extension loaded successfully!");
 })(Scratch);
