@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: ESLint + format-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: ESLint (max-warnings=0)
+        run: npm run lint -- --max-warnings=0
+
+      - name: Prettier (--check)
+        run: npm run check-format
+
+  validate:
+    name: Gallery validate (informational)
+    runs-on: ubuntu-latest
+    # Pre-existing image / metadata errors in extensions/CrispStrobe/ — we
+    # don't want them to block PRs to other parts of the gallery, but we
+    # want to see the count in the run summary. Mark non-blocking.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Validate
+        run: npm run validate
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: Sanity-check generated metadata
+        run: |
+          test -s build/generated-metadata/extensions-v0.json
+          # Expect at least one CrispStrobe extension in the metadata
+          node -e '
+            const m = require("./build/generated-metadata/extensions-v0.json");
+            const ours = m.extensions.filter(e => (e.slug || "").startsWith("CrispStrobe/"));
+            if (ours.length < 10) throw new Error(`expected ≥10 CrispStrobe extensions, got ${ours.length}`);
+            console.log(`CrispStrobe extensions in metadata: ${ours.length}`);
+          '
