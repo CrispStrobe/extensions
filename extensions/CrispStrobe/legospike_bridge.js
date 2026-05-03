@@ -38,12 +38,16 @@
       "legospike_bridge.distance": "[PORT] distance",
       "legospike_bridge.color": "[PORT] color",
       "legospike_bridge.force": "[PORT] force",
-      "legospike_bridge.whenGesture": "quand le hub [GESTURE]",
-      "legospike_bridge.beep": "bip [FREQUENCY] Hz pendant [DURATION] ms",
-      "legospike_bridge.runPython": "exécuter Python : [CODE]",
       "legospike_bridge.whenGesture": "when hub [GESTURE]",
       "legospike_bridge.beep": "beep [FREQUENCY] Hz for [DURATION] ms",
       "legospike_bridge.runPython": "run Python: [CODE]",
+      "legospike_bridge.forcePressed": "[PORT] force sensor pressed?",
+      "legospike_bridge.stopAllSounds": "stop all sounds",
+      "legospike_bridge.batteryPct": "battery level %",
+      "legospike_bridge.timer": "timer",
+      "legospike_bridge.resetTimer": "reset timer",
+      "legospike_bridge.replOutput": "REPL output",
+      "legospike_bridge.clearRepl": "clear REPL output",
     },
     de: {
       "legospike_bridge.name": "SPIKE Prime (Brücke)",
@@ -69,6 +73,13 @@
       "legospike_bridge.whenGesture": "wenn Hub [GESTURE]",
       "legospike_bridge.beep": "Piepton [FREQUENCY] Hz für [DURATION] ms",
       "legospike_bridge.runPython": "Python ausführen: [CODE]",
+      "legospike_bridge.forcePressed": "[PORT] Kraftsensor gedrückt?",
+      "legospike_bridge.stopAllSounds": "alle Töne stoppen",
+      "legospike_bridge.batteryPct": "Batteriestand %",
+      "legospike_bridge.timer": "Timer",
+      "legospike_bridge.resetTimer": "Timer zurücksetzen",
+      "legospike_bridge.replOutput": "REPL-Ausgabe",
+      "legospike_bridge.clearRepl": "REPL-Ausgabe löschen",
     },
     fr: {
       "legospike_bridge.name": "SPIKE Prime (Pont)",
@@ -91,6 +102,16 @@
       "legospike_bridge.distance": "[PORT] distance",
       "legospike_bridge.color": "[PORT] couleur",
       "legospike_bridge.force": "[PORT] force",
+      "legospike_bridge.whenGesture": "quand le hub [GESTURE]",
+      "legospike_bridge.beep": "bip [FREQUENCY] Hz pendant [DURATION] ms",
+      "legospike_bridge.runPython": "exécuter Python : [CODE]",
+      "legospike_bridge.forcePressed": "capteur de force [PORT] pressé ?",
+      "legospike_bridge.stopAllSounds": "arrêter tous les sons",
+      "legospike_bridge.batteryPct": "niveau de batterie %",
+      "legospike_bridge.timer": "minuteur",
+      "legospike_bridge.resetTimer": "réinitialiser minuteur",
+      "legospike_bridge.replOutput": "sortie REPL",
+      "legospike_bridge.clearRepl": "effacer la sortie REPL",
     },
   };
 
@@ -973,7 +994,7 @@ sensor_loop()
           {
             opcode: "isForceSensorPressed",
             blockType: Scratch.BlockType.BOOLEAN,
-            text: "[PORT] force sensor pressed?",
+            text: t("legospike_bridge.forcePressed"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -1014,23 +1035,23 @@ sensor_loop()
           {
             opcode: "stopSound",
             blockType: Scratch.BlockType.COMMAND,
-            text: "stop all sounds",
+            text: t("legospike_bridge.stopAllSounds"),
           },
           "---",
           {
             opcode: "getBatteryLevel",
             blockType: Scratch.BlockType.REPORTER,
-            text: "battery level %",
+            text: t("legospike_bridge.batteryPct"),
           },
           {
             opcode: "getTimer",
             blockType: Scratch.BlockType.REPORTER,
-            text: "timer",
+            text: t("legospike_bridge.timer"),
           },
           {
             opcode: "resetTimer",
             blockType: Scratch.BlockType.COMMAND,
-            text: "reset timer",
+            text: t("legospike_bridge.resetTimer"),
           },
           "---",
           {
@@ -1047,12 +1068,12 @@ sensor_loop()
           {
             opcode: "getReplOutput",
             blockType: Scratch.BlockType.REPORTER,
-            text: "REPL output",
+            text: t("legospike_bridge.replOutput"),
           },
           {
             opcode: "clearReplOutput",
             blockType: Scratch.BlockType.COMMAND,
-            text: "clear REPL output",
+            text: t("legospike_bridge.clearRepl"),
           },
         ],
         menus: {

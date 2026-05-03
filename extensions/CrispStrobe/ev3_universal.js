@@ -143,9 +143,6 @@
       downloadLMS: 'download LMS code',
       compileRBF: 'compile to RBF',
       showRBF: 'show RBF bytecode',
-      downloadRBF: 'download RBF file',
-      uploadAndRun: 'upload and run on EV3',
-      showDebugLog: 'show debug log',
     },
     
     de: {
@@ -263,9 +260,6 @@
       downloadLMS: 'LMS-Code herunterladen',
       compileRBF: 'zu RBF kompilieren',
       showRBF: 'RBF-Bytecode anzeigen',
-      downloadRBF: 'RBF-Datei herunterladen',
-      uploadAndRun: 'auf EV3 hochladen und ausführen',
-      showDebugLog: 'Debug-Protokoll anzeigen',
     }
   };
 
