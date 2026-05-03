@@ -6,7 +6,6 @@
 (function (Scratch) {
   "use strict";
 
-
   // ============================================================================
   // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
   //
@@ -31,7 +30,8 @@
       "boost.motorOnSeconds": "turn motor [MOTOR_ID] on for [TIME] seconds",
       "boost.motorOnDegrees": "turn motor [MOTOR_ID] on for [DEGREES] degrees",
       "boost.motorPower": "set motor [MOTOR_ID] power to [POWER]%",
-      "boost.motorDirection": "set motor [MOTOR_ID] direction to [MOTOR_DIRECTION]",
+      "boost.motorDirection":
+        "set motor [MOTOR_ID] direction to [MOTOR_DIRECTION]",
       "boost.motorStopAction": "set motor [MOTOR_ID] stop action to [ACTION]",
       "boost.motorAccel": "set motor [MOTOR_ID] acceleration to [TIME] ms",
       "boost.motorDecel": "set motor [MOTOR_ID] deceleration to [TIME] ms",
@@ -68,14 +68,19 @@
       "boost.enableDebug": "Debug aktivieren [ENABLED]",
       "boost.motorOn": "Motor [MOTOR_ID] einschalten",
       "boost.motorOff": "Motor [MOTOR_ID] ausschalten",
-      "boost.motorOnSeconds": "Motor [MOTOR_ID] für [TIME] Sekunden einschalten",
+      "boost.motorOnSeconds":
+        "Motor [MOTOR_ID] für [TIME] Sekunden einschalten",
       "boost.motorOnDegrees": "Motor [MOTOR_ID] um [DEGREES] Grad drehen",
       "boost.motorPower": "Motorleistung [MOTOR_ID] auf [POWER]% setzen",
-      "boost.motorDirection": "Motorrichtung [MOTOR_ID] auf [MOTOR_DIRECTION] setzen",
-      "boost.motorStopAction": "Motor-Stoppaktion [MOTOR_ID] auf [ACTION] setzen",
-      "boost.motorAccel": "Motor-Beschleunigung [MOTOR_ID] auf [TIME] ms setzen",
+      "boost.motorDirection":
+        "Motorrichtung [MOTOR_ID] auf [MOTOR_DIRECTION] setzen",
+      "boost.motorStopAction":
+        "Motor-Stoppaktion [MOTOR_ID] auf [ACTION] setzen",
+      "boost.motorAccel":
+        "Motor-Beschleunigung [MOTOR_ID] auf [TIME] ms setzen",
       "boost.motorDecel": "Motor-Verzögerung [MOTOR_ID] auf [TIME] ms setzen",
-      "boost.motorReset": "Motor-Position [MOTOR_ID] auf [POSITION] zurücksetzen",
+      "boost.motorReset":
+        "Motor-Position [MOTOR_ID] auf [POSITION] zurücksetzen",
       "boost.motorPosition": "Motor-Position [MOTOR_ID]",
       "boost.whenColorSeen": "wenn Farbsensor [PORT] [COLOR] sieht",
       "boost.isColorSeen": "Farbsensor [PORT] sieht [COLOR]?",
@@ -108,14 +113,18 @@
       "boost.enableDebug": "activer débogage [ENABLED]",
       "boost.motorOn": "allumer moteur [MOTOR_ID]",
       "boost.motorOff": "éteindre moteur [MOTOR_ID]",
-      "boost.motorOnSeconds": "allumer moteur [MOTOR_ID] pendant [TIME] secondes",
+      "boost.motorOnSeconds":
+        "allumer moteur [MOTOR_ID] pendant [TIME] secondes",
       "boost.motorOnDegrees": "tourner moteur [MOTOR_ID] de [DEGREES] degrés",
       "boost.motorPower": "régler puissance moteur [MOTOR_ID] sur [POWER]%",
-      "boost.motorDirection": "régler direction moteur [MOTOR_ID] sur [MOTOR_DIRECTION]",
-      "boost.motorStopAction": "régler action d'arrêt moteur [MOTOR_ID] sur [ACTION]",
+      "boost.motorDirection":
+        "régler direction moteur [MOTOR_ID] sur [MOTOR_DIRECTION]",
+      "boost.motorStopAction":
+        "régler action d'arrêt moteur [MOTOR_ID] sur [ACTION]",
       "boost.motorAccel": "régler accélération moteur [MOTOR_ID] sur [TIME] ms",
       "boost.motorDecel": "régler décélération moteur [MOTOR_ID] sur [TIME] ms",
-      "boost.motorReset": "réinitialiser position moteur [MOTOR_ID] à [POSITION]",
+      "boost.motorReset":
+        "réinitialiser position moteur [MOTOR_ID] à [POSITION]",
       "boost.motorPosition": "position du moteur [MOTOR_ID]",
       "boost.whenColorSeen": "quand capteur de couleur [PORT] voit [COLOR]",
       "boost.isColorSeen": "capteur [PORT] voit [COLOR] ?",
@@ -141,11 +150,25 @@
 
   function detectLanguage() {
     const candidates = [];
-    try { if (typeof window !== "undefined" && window.ReduxStore?.getState) { candidates.push(window.ReduxStore.getState().locales?.locale); } } catch (e) {}
-    try { candidates.push(localStorage.getItem("tw:language")); } catch (e) {}
-    try { if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) { candidates.push(Scratch.vm.runtime.getLocale()); } } catch (e) {}
-    try { candidates.push(document.documentElement.lang); } catch (e) {}
-    try { candidates.push(navigator.language); } catch (e) {}
+    try {
+      if (typeof window !== "undefined" && window.ReduxStore?.getState) {
+        candidates.push(window.ReduxStore.getState().locales?.locale);
+      }
+    } catch (e) {}
+    try {
+      candidates.push(localStorage.getItem("tw:language"));
+    } catch (e) {}
+    try {
+      if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) {
+        candidates.push(Scratch.vm.runtime.getLocale());
+      }
+    } catch (e) {}
+    try {
+      candidates.push(document.documentElement.lang);
+    } catch (e) {}
+    try {
+      candidates.push(navigator.language);
+    } catch (e) {}
     for (const c of candidates) {
       if (typeof c !== "string" || !c) continue;
       const lower = c.toLowerCase();
@@ -173,7 +196,11 @@
           if (locale && locale !== lastKnownLocale) {
             lastKnownLocale = locale;
             const lower = locale.toLowerCase();
-            const newLang = lower.startsWith("de") ? "de" : lower.startsWith("fr") ? "fr" : "en";
+            const newLang = lower.startsWith("de")
+              ? "de"
+              : lower.startsWith("fr")
+                ? "fr"
+                : "en";
             if (newLang !== currentLang) currentLang = newLang;
           }
         }
@@ -191,7 +218,7 @@
   // ============================================================================
   // DEBUG LOGGER
   // ============================================================================
-  
+
   class DebugLogger {
     constructor(prefix = "[LEGO Boost]", enabled = true) {
       this.prefix = prefix;
@@ -201,13 +228,14 @@
         WARN: 1,
         INFO: 2,
         DEBUG: 3,
-        TRACE: 4
+        TRACE: 4,
       };
       this.currentLevel = this.logLevel.DEBUG;
     }
 
     setLevel(level) {
-      this.currentLevel = this.logLevel[level.toUpperCase()] || this.logLevel.DEBUG;
+      this.currentLevel =
+        this.logLevel[level.toUpperCase()] || this.logLevel.DEBUG;
     }
 
     error(...args) {
@@ -272,17 +300,29 @@
       let r, g, b;
 
       if (h >= 0 && h < 60) {
-        r = c; g = x; b = 0;
+        r = c;
+        g = x;
+        b = 0;
       } else if (h >= 60 && h < 120) {
-        r = x; g = c; b = 0;
+        r = x;
+        g = c;
+        b = 0;
       } else if (h >= 120 && h < 180) {
-        r = 0; g = c; b = x;
+        r = 0;
+        g = c;
+        b = x;
       } else if (h >= 180 && h < 240) {
-        r = 0; g = x; b = c;
+        r = 0;
+        g = x;
+        b = c;
       } else if (h >= 240 && h < 300) {
-        r = x; g = 0; b = c;
+        r = x;
+        g = 0;
+        b = c;
       } else {
-        r = c; g = 0; b = x;
+        r = c;
+        g = 0;
+        b = x;
       }
 
       return {
@@ -394,7 +434,7 @@
   const ConnectionType = {
     BLE: "ble",
     SCRATCH_LINK: "scratchlink",
-    BRIDGE: "bridge"
+    BRIDGE: "bridge",
   };
 
   const BoostBLE = {
@@ -709,7 +749,9 @@
     }
 
     turnOnForever() {
-      logger.debug(`Motor ${this._index} turn on forever at power ${this._power}`);
+      logger.debug(
+        `Motor ${this._index} turn on forever at power ${this._power}`
+      );
       if (this._pendingDurationTimeoutId) {
         clearTimeout(this._pendingDurationTimeoutId);
         this._pendingDurationTimeoutId = null;
@@ -723,15 +765,21 @@
         BoostOutputExecution.EXECUTE_IMMEDIATELY +
           BoostOutputExecution.COMMAND_FEEDBACK,
         BoostOutputSubCommand.START_SPEED,
-        [MathUtil.clamp(this._power * this._direction, -100, 100), BoostMotorMaxPowerAdd, BoostMotorProfile.DO_NOT_USE]
+        [
+          MathUtil.clamp(this._power * this._direction, -100, 100),
+          BoostMotorMaxPowerAdd,
+          BoostMotorProfile.DO_NOT_USE,
+        ]
       );
 
       this._parent.send(BoostBLE.characteristic, cmd);
     }
 
     turnOnFor(time) {
-      logger.debug(`Motor ${this._index} turn on for ${time}ms at power ${this._power}`);
-      
+      logger.debug(
+        `Motor ${this._index} turn on for ${time}ms at power ${this._power}`
+      );
+
       if (this._pendingDurationTimeoutId) {
         clearTimeout(this._pendingDurationTimeoutId);
       }
@@ -764,14 +812,16 @@
     }
 
     turnOnForDegrees(degrees) {
-      logger.debug(`Motor ${this._index} turn on for ${degrees}° at power ${this._power}`);
-      
+      logger.debug(
+        `Motor ${this._index} turn on for ${degrees}° at power ${this._power}`
+      );
+
       if (this._pendingDurationTimeoutId) {
         clearTimeout(this._pendingDurationTimeoutId);
       }
 
       this._status = BoostMotorState.ON_FOR_ROTATION;
-      
+
       const cmd = this._parent.generateOutputCommand(
         this._index,
         BoostOutputExecution.EXECUTE_IMMEDIATELY +
@@ -790,7 +840,7 @@
 
     turnOff() {
       logger.debug(`Motor ${this._index} turn off`);
-      
+
       if (this._pendingDurationTimeoutId) {
         clearTimeout(this._pendingDurationTimeoutId);
         this._pendingDurationTimeoutId = null;
@@ -867,14 +917,17 @@
       this._onMessageCallback = null;
     }
 
+    // eslint-disable-next-line require-await
     async connect() {
       throw new Error("connect() must be implemented by subclass");
     }
 
+    // eslint-disable-next-line require-await
     async disconnect() {
       throw new Error("disconnect() must be implemented by subclass");
     }
 
+    // eslint-disable-next-line require-await
     async send(characteristic, data) {
       throw new Error("send() must be implemented by subclass");
     }
@@ -903,7 +956,7 @@
       logger.group("BLE Connection");
       try {
         logger.info("Requesting Bluetooth device...");
-        
+
         this._device = await navigator.bluetooth.requestDevice({
           filters: [
             {
@@ -921,10 +974,10 @@
 
         logger.info("Connecting to GATT server...");
         this._server = await this._device.gatt.connect();
-        
+
         logger.info("Getting primary service...");
         this._service = await this._server.getPrimaryService(BoostBLE.service);
-        
+
         logger.info("Getting characteristic...");
         this._characteristic = await this._service.getCharacteristic(
           BoostBLE.characteristic
@@ -932,7 +985,7 @@
 
         logger.info("Starting notifications...");
         await this._characteristic.startNotifications();
-        
+
         this._characteristic.addEventListener(
           "characteristicvaluechanged",
           (event) => {
@@ -974,7 +1027,7 @@
         logger.error("Cannot send: not connected");
         throw new Error("Not connected");
       }
-      
+
       logger.trace("Sending BLE data:", Array.from(data));
       await this._characteristic.writeValue(data);
     }
@@ -990,13 +1043,16 @@
       logger.info("Scratch Link Adapter initialized");
     }
 
-    async connect() {
+    connect() {
       logger.group("Scratch Link Connection");
       try {
         logger.info("Connecting to Scratch Link WebSocket...");
-        
+
         return new Promise((resolve, reject) => {
-          this._ws = new WebSocket("wss://device-manager.scratch.mit.edu:20110/scratch/ble");
+          // eslint-disable-next-line extension/check-can-fetch -- talks to user-configured local bridge/brick endpoint set explicitly via a block; canFetch's prompt is UX-degrading and redundant here
+          this._ws = new WebSocket(
+            "wss://device-manager.scratch.mit.edu:20110/scratch/ble"
+          );
 
           this._ws.onopen = () => {
             logger.info("✓ WebSocket connected");
@@ -1009,7 +1065,9 @@
             })
               .then((device) => {
                 logger.info(`Device discovered: ${device.name || "Unknown"}`);
-                return this._sendRequest("connect", { peripheralId: device.peripheralId });
+                return this._sendRequest("connect", {
+                  peripheralId: device.peripheralId,
+                });
               })
               .then(() => {
                 logger.info("✓ Connected to device");
@@ -1037,7 +1095,9 @@
 
             if (message.jsonrpc === "2.0") {
               if (message.method === "characteristicDidChange") {
-                const data = Base64Util.base64ToUint8Array(message.params.message);
+                const data = Base64Util.base64ToUint8Array(
+                  message.params.message
+                );
                 logger.trace("Data received:", Array.from(data));
                 if (this._onMessageCallback) {
                   this._onMessageCallback(data);
@@ -1069,7 +1129,7 @@
       }
     }
 
-    async disconnect() {
+    disconnect() {
       logger.info("Disconnecting Scratch Link...");
       if (this._ws) {
         this._ws.close();
@@ -1087,7 +1147,7 @@
       }
 
       logger.trace("Sending data via Scratch Link:", Array.from(data));
-      
+
       await this._sendRequest("write", {
         serviceId: BoostBLE.service,
         characteristicId: characteristic,
@@ -1128,18 +1188,18 @@
       logger.group("Bridge Connection");
       try {
         logger.info("Scanning for devices via bridge...");
-        
-        const scanResponse = await fetch(`${this._bridgeUrl}/scan`, {
+
+        const scanResponse = await Scratch.fetch(`${this._bridgeUrl}/scan`, {
           method: "POST",
         });
-        
+
         if (!scanResponse.ok) {
           throw new Error(`Scan failed: ${scanResponse.statusText}`);
         }
 
         const devices = await scanResponse.json();
         logger.info(`Found ${devices.length} devices`);
-        
+
         if (devices.length === 0) {
           throw new Error("No LEGO Boost devices found");
         }
@@ -1147,11 +1207,14 @@
         this._deviceId = devices[0].id;
         logger.info(`Connecting to device: ${this._deviceId}`);
 
-        const connectResponse = await fetch(`${this._bridgeUrl}/connect`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ deviceId: this._deviceId }),
-        });
+        const connectResponse = await Scratch.fetch(
+          `${this._bridgeUrl}/connect`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ deviceId: this._deviceId }),
+          }
+        );
 
         if (!connectResponse.ok) {
           throw new Error(`Connection failed: ${connectResponse.statusText}`);
@@ -1162,7 +1225,7 @@
         // Start polling for notifications
         this._startPolling();
         this._connected = true;
-        
+
         logger.info("✓ Bridge connection established");
         return true;
       } catch (error) {
@@ -1175,7 +1238,7 @@
 
     async disconnect() {
       logger.info("Disconnecting bridge...");
-      
+
       if (this._pollingInterval) {
         clearInterval(this._pollingInterval);
         this._pollingInterval = null;
@@ -1183,7 +1246,7 @@
 
       if (this._deviceId) {
         try {
-          await fetch(`${this._bridgeUrl}/disconnect`, {
+          await Scratch.fetch(`${this._bridgeUrl}/disconnect`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ deviceId: this._deviceId }),
@@ -1206,7 +1269,7 @@
 
       logger.trace("Sending data via bridge:", Array.from(data));
 
-      const response = await fetch(`${this._bridgeUrl}/write`, {
+      const response = await Scratch.fetch(`${this._bridgeUrl}/write`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1223,13 +1286,13 @@
 
     _startPolling() {
       logger.info("Starting notification polling...");
-      
+
       this._pollingInterval = setInterval(async () => {
         try {
-          const response = await fetch(
+          const response = await Scratch.fetch(
             `${this._bridgeUrl}/notifications?deviceId=${this._deviceId}`
           );
-          
+
           if (response.ok) {
             const notifications = await response.json();
             for (const notification of notifications) {
@@ -1253,8 +1316,10 @@
 
   class BoostPeripheral {
     constructor(connectionType, bridgeUrl) {
-      logger.info(`Initializing Boost Peripheral with connection type: ${connectionType}`);
-      
+      logger.info(
+        `Initializing Boost Peripheral with connection type: ${connectionType}`
+      );
+
       // Create appropriate connection adapter
       switch (connectionType) {
         case ConnectionType.BLE:
@@ -1363,19 +1428,19 @@
 
     async disconnect() {
       logger.info("Disconnecting Boost Peripheral...");
-      
+
       if (this._pingIntervalId) {
         clearInterval(this._pingIntervalId);
         this._pingIntervalId = null;
       }
 
       await this._connection.disconnect();
-      
+
       this._motors = {};
       this._ports = {};
       this._portModes = {};
       this._sensors = {};
-      
+
       logger.info("✓ Boost Peripheral disconnected");
     }
 
@@ -1413,7 +1478,7 @@
       }
 
       logger.debug(`Setting port ${portId} to mode ${mode}`);
-      
+
       const cmd = [
         0x0a,
         0x00,
@@ -1436,7 +1501,7 @@
       if (!this._rateLimiter.okayToSend()) {
         logger.trace("Rate limiter: message queued");
       }
-      
+
       return this._connection.send(characteristic, data);
     }
 
@@ -1450,40 +1515,40 @@
         subCommand,
       ].concat(payload);
       cmd[0] = cmd.length;
-      
+
       logger.trace(`Generated output command for port ${portID}:`, cmd);
       return new Uint8Array(cmd);
     }
 
     setLED(rgbDecimal) {
       logger.debug(`Setting LED to color: ${rgbDecimal.toString(16)}`);
-      
+
       const cmd = this.generateOutputCommand(
         BoostPort.LED || 0x32,
         BoostOutputExecution.EXECUTE_IMMEDIATELY,
         BoostOutputSubCommand.WRITE_DIRECT_MODE_DATA,
         [0x00, rgbDecimal >> 16, (rgbDecimal >> 8) & 0xff, rgbDecimal & 0xff]
       );
-      
+
       this.send(BoostBLE.characteristic, cmd);
     }
 
     shutdown() {
       logger.info("Shutting down hub...");
-      
+
       const cmd = [
         0x04,
         0x00,
         BoostMessage.HUB_ACTIONS,
         BoostHubAction.SWITCH_OFF_HUB,
       ];
-      
+
       this.send(BoostBLE.characteristic, new Uint8Array(cmd));
     }
 
     _requestHubPropertyValue(property) {
       logger.debug(`Requesting hub property: ${property}`);
-      
+
       const cmd = [
         0x05,
         0x00,
@@ -1491,13 +1556,13 @@
         property,
         BoostHubPropertyOperation.REQUEST_UPDATE,
       ];
-      
+
       this.send(BoostBLE.characteristic, new Uint8Array(cmd));
     }
 
     _enableHubPropertyReports(property) {
       logger.debug(`Enabling reports for hub property: ${property}`);
-      
+
       const cmd = [
         0x05,
         0x00,
@@ -1505,13 +1570,13 @@
         property,
         BoostHubPropertyOperation.ENABLE_UPDATES,
       ];
-      
+
       this.send(BoostBLE.characteristic, new Uint8Array(cmd));
     }
 
     _enableAlertReports(alert) {
       logger.debug(`Enabling reports for alert: ${alert}`);
-      
+
       const cmd = [
         0x05,
         0x00,
@@ -1519,7 +1584,7 @@
         alert,
         BoostAlertOperation.ENABLE_UPDATES,
       ];
-      
+
       this.send(BoostBLE.characteristic, new Uint8Array(cmd));
     }
 
@@ -1527,13 +1592,13 @@
       this._pingIntervalId = setInterval(() => {
         this._requestHubPropertyValue(BoostHubProperty.RSSI);
       }, BoostPingInterval);
-      
+
       logger.debug("Ping interval started");
     }
 
     _onMessage(data) {
       logger.trace("Processing message:", Array.from(data));
-      
+
       const messageType = data[2];
 
       switch (messageType) {
@@ -1632,10 +1697,15 @@
           logger.trace(`RSSI: ${this.hubStatus.rssi} dBm`);
           break;
         case BoostHubProperty.FW_VERSION: {
-          const version = int32ArrayToNumber([data[5], data[6], data[7], data[8]]);
+          const version = int32ArrayToNumber([
+            data[5],
+            data[6],
+            data[7],
+            data[8],
+          ]);
           this.hubStatus.fwVersion = decodeVersion(version);
           logger.info(`Firmware version: ${this.hubStatus.fwVersion}`);
-          
+
           // Detect firmware version and adjust ports
           const versionNum = parseInt(this.hubStatus.fwVersion.split(".")[2]);
           if (versionNum <= 23) {
@@ -1690,44 +1760,46 @@
           break;
 
         case BoostIO.COLOR:
-        case BoostIO.MOTION_SENSOR: {
-          const mode = this._portModes[portId];
-          
-          if (!this._sensors[portId]) {
-            this._sensors[portId] = {};
-          }
+        case BoostIO.MOTION_SENSOR:
+          {
+            const mode = this._portModes[portId];
 
-          switch (mode) {
-            case BoostMode.COLOR: {
-              const colorValue = data[4];
-              const newColor = Object.keys(BoostColorIndex).find(
-                (key) => BoostColorIndex[key] === colorValue
-              ) || BoostColor.NONE;
-              
-              if (newColor !== this.color) {
-                this.previousColor = this.color;
-                this.color = newColor;
-                logger.debug(`Color changed: ${this.previousColor} → ${this.color}`);
+            if (!this._sensors[portId]) {
+              this._sensors[portId] = {};
+            }
+
+            switch (mode) {
+              case BoostMode.COLOR: {
+                const colorValue = data[4];
+                const newColor =
+                  Object.keys(BoostColorIndex).find(
+                    (key) => BoostColorIndex[key] === colorValue
+                  ) || BoostColor.NONE;
+
+                if (newColor !== this.color) {
+                  this.previousColor = this.color;
+                  this.color = newColor;
+                  logger.debug(
+                    `Color changed: ${this.previousColor} → ${this.color}`
+                  );
+                }
+
+                this._sensors[portId].color = this.color;
+                break;
               }
-              
-              this._sensors[portId].color = this.color;
-              break;
-
+              case BoostMode.DISTANCE: {
+                const distance = data[4] > 255 ? 255 : data[4];
+                this._sensors[portId].distance = distance;
+                logger.trace(`Distance: ${distance}`);
+                break;
+              }
+              case BoostMode.REFLECTION: {
+                const reflection = data[4] > 100 ? 100 : data[4];
+                this._sensors[portId].reflection = reflection;
+                logger.trace(`Reflection: ${reflection}`);
+                break;
+              }
             }
-            case BoostMode.DISTANCE: {
-              const distance = data[4] > 255 ? 255 : data[4];
-              this._sensors[portId].distance = distance;
-              logger.trace(`Distance: ${distance}`);
-              break;
-
-            }
-            case BoostMode.REFLECTION: {
-              const reflection = data[4] > 100 ? 100 : data[4];
-              this._sensors[portId].reflection = reflection;
-              logger.trace(`Reflection: ${reflection}`);
-              break;
-            }
-        }
           }
           break;
 
@@ -1737,35 +1809,39 @@
         case BoostIO.MOTOR_SYSTEM: {
           const motor = this._motors[portId];
           if (motor) {
-            const position = int32ArrayToNumber([data[4], data[5], data[6], data[7]]);
+            const position = int32ArrayToNumber([
+              data[4],
+              data[5],
+              data[6],
+              data[7],
+            ]);
             motor.position = position;
             logger.trace(`Motor ${portId} position: ${position}`);
           }
           break;
-
         }
-        case BoostIO.TECHNIC_FORCE_SENSOR: {
-          const mode2 = this._portModes[portId];
-          
-          if (!this._sensors[portId]) {
-            this._sensors[portId] = {};
-          }
+        case BoostIO.TECHNIC_FORCE_SENSOR:
+          {
+            const mode2 = this._portModes[portId];
 
-          switch (mode2) {
-            case BoostMode.FORCE: {
-              const force = Math.round(data[4] * 10) / 10;
-              this._sensors[portId].force = force;
-              logger.trace(`Force: ${force}N`);
-              break;
+            if (!this._sensors[portId]) {
+              this._sensors[portId] = {};
+            }
 
+            switch (mode2) {
+              case BoostMode.FORCE: {
+                const force = Math.round(data[4] * 10) / 10;
+                this._sensors[portId].force = force;
+                logger.trace(`Force: ${force}N`);
+                break;
+              }
+              case BoostMode.TOUCHED: {
+                const touched = data[4] === 1;
+                this._sensors[portId].touched = touched;
+                logger.trace(`Touched: ${touched}`);
+                break;
+              }
             }
-            case BoostMode.TOUCHED: {
-              const touched = data[4] === 1;
-              this._sensors[portId].touched = touched;
-              logger.trace(`Touched: ${touched}`);
-              break;
-            }
-        }
           }
           break;
       }
@@ -1774,7 +1850,7 @@
     _handlePortFeedback(data) {
       const portId = data[3];
       const feedback = data[4];
-      
+
       logger.trace(`Port ${portId} feedback: ${feedback}`);
 
       switch (feedback) {
@@ -1804,11 +1880,11 @@
       logger.info("=".repeat(60));
       logger.info("LEGO Boost Unified Extension");
       logger.info("=".repeat(60));
-      
+
       this._peripheral = null;
       this._connectionType = ConnectionType.BLE;
       this._bridgeUrl = "http://localhost:8080";
-      
+
       logger.info("Extension initialized");
     }
 
@@ -2386,8 +2462,11 @@
         }
 
         logger.info(`Connection type: ${this._connectionType}`);
-        this._peripheral = new BoostPeripheral(this._connectionType, this._bridgeUrl);
-        
+        this._peripheral = new BoostPeripheral(
+          this._connectionType,
+          this._bridgeUrl
+        );
+
         await this._peripheral.connect();
         logger.info("✓ Successfully connected");
       } catch (error) {
@@ -2444,7 +2523,7 @@
 
     motorOn(args) {
       if (!this._ensureConnected()) return;
-      
+
       this._forEachMotor(args.MOTOR_ID, (motorIndex) => {
         const motor = this._peripheral.motor(motorIndex);
         if (motor) {
@@ -2459,7 +2538,7 @@
 
     motorOff(args) {
       if (!this._ensureConnected()) return;
-      
+
       this._forEachMotor(args.MOTOR_ID, (motorIndex) => {
         const motor = this._peripheral.motor(motorIndex);
         if (motor) {
@@ -2474,9 +2553,9 @@
 
     motorOnFor(args) {
       if (!this._ensureConnected()) return;
-      
+
       const time = Cast.toNumber(args.TIME) * 1000;
-      
+
       this._forEachMotor(args.MOTOR_ID, (motorIndex) => {
         const motor = this._peripheral.motor(motorIndex);
         if (motor) {
@@ -2491,16 +2570,17 @@
 
     motorOnForDegrees(args) {
       if (!this._ensureConnected()) return;
-      
+
       const degrees = Cast.toNumber(args.DEGREES);
-      
+
       const promises = [];
       this._forEachMotor(args.MOTOR_ID, (motorIndex) => {
         const motor = this._peripheral.motor(motorIndex);
         if (motor) {
           motor.turnOnForDegrees(degrees);
-          
-          const estimatedTime = (Math.abs(degrees) / 360) * 1000 * (100 / motor.power);
+
+          const estimatedTime =
+            (Math.abs(degrees) / 360) * 1000 * (100 / motor.power);
           promises.push(
             new Promise((resolve) => {
               setTimeout(() => resolve(), estimatedTime);
@@ -2518,12 +2598,12 @@
 
     setMotorPower(args) {
       if (!this._ensureConnected()) return;
-      
+
       this._forEachMotor(args.MOTOR_ID, (motorIndex) => {
         const motor = this._peripheral.motor(motorIndex);
         if (motor) {
           motor.power = MathUtil.clamp(Cast.toNumber(args.POWER), 0, 100);
-          
+
           switch (motor.status) {
             case BoostMotorState.ON_FOREVER:
               motor.turnOnForever();
@@ -2546,7 +2626,7 @@
 
     setMotorDirection(args) {
       if (!this._ensureConnected()) return;
-      
+
       this._forEachMotor(args.MOTOR_ID, (motorIndex) => {
         const motor = this._peripheral.motor(motorIndex);
         if (motor) {
@@ -2584,7 +2664,7 @@
 
     setMotorStopAction(args) {
       if (!this._ensureConnected()) return;
-      
+
       const stopModeMap = {
         float: BoostMotorEndState.FLOAT,
         brake: BoostMotorEndState.BRAKE,
@@ -2602,9 +2682,9 @@
 
     setMotorAcceleration(args) {
       if (!this._ensureConnected()) return;
-      
+
       const time = Cast.toNumber(args.TIME);
-      
+
       this._forEachMotor(args.MOTOR_ID, (motorIndex) => {
         const motor = this._peripheral.motor(motorIndex);
         if (motor) {
@@ -2615,9 +2695,9 @@
 
     setMotorDeceleration(args) {
       if (!this._ensureConnected()) return;
-      
+
       const time = Cast.toNumber(args.TIME);
-      
+
       this._forEachMotor(args.MOTOR_ID, (motorIndex) => {
         const motor = this._peripheral.motor(motorIndex);
         if (motor) {
@@ -2628,9 +2708,9 @@
 
     resetMotorPosition(args) {
       if (!this._ensureConnected()) return;
-      
+
       const position = Cast.toNumber(args.POSITION);
-      
+
       this._forEachMotor(args.MOTOR_ID, (motorIndex) => {
         const motor = this._peripheral.motor(motorIndex);
         if (motor) {
@@ -2641,7 +2721,7 @@
 
     getMotorPosition(args) {
       if (!this._ensureConnected()) return 0;
-      
+
       let portID = null;
       switch (args.MOTOR_ID) {
         case BoostMotorLabel.A:
@@ -2676,7 +2756,7 @@
 
     async _checkColor(args) {
       if (!this._ensureConnected()) return false;
-      
+
       const port = this._getPortFromLabel(args.PORT);
       if (port === null) return false;
 
@@ -2691,7 +2771,7 @@
 
     whenColor(args) {
       if (!this._ensureConnected()) return false;
-      
+
       if (args.COLOR === BoostColor.ANY || args.COLOR === "any color") {
         return (
           this._peripheral.color !== BoostColor.NONE &&
@@ -2707,7 +2787,7 @@
 
     async getDistance(args) {
       if (!this._ensureConnected()) return 0;
-      
+
       const port = this._getPortFromLabel(args.PORT);
       if (port === null) return 0;
 
@@ -2717,7 +2797,7 @@
 
     async getReflection(args) {
       if (!this._ensureConnected()) return 0;
-      
+
       const port = this._getPortFromLabel(args.PORT);
       if (port === null) return 0;
 
@@ -2727,7 +2807,7 @@
 
     async getForce(args) {
       if (!this._ensureConnected()) return 0;
-      
+
       const port = this._getPortFromLabel(args.PORT);
       if (port === null) return 0;
 
@@ -2737,7 +2817,7 @@
 
     async isForceSensorPressed(args) {
       if (!this._ensureConnected()) return false;
-      
+
       const port = this._getPortFromLabel(args.PORT);
       if (port === null) return false;
 
@@ -2810,7 +2890,7 @@
 
     setLightHue(args) {
       if (!this._ensureConnected()) return;
-      
+
       let inputHue = Cast.toNumber(args.HUE);
       inputHue = MathUtil.wrapClamp(inputHue, 0, 100);
       const hue = (inputHue * 360) / 100;
@@ -2909,7 +2989,7 @@
           motors = [];
           break;
       }
-      
+
       for (const index of motors) {
         callback(index);
       }
@@ -2927,6 +3007,6 @@
   }
 
   Scratch.extensions.register(new LEGOBoostExtension());
-  
+
   logger.info("🎉 LEGO Boost Unified Extension loaded successfully!");
 })(Scratch);

@@ -25,7 +25,7 @@
       setConnection: "set connection [MODE] IP [IP] port [PORT]",
       setEV3IP: "set EV3 IP to [IP]",
       setCredentials: "set credentials user [USER] password [PASS]", // for htpasswd
-      
+
       enableStreaming: "enable streaming mode",
       disableStreaming: "disable streaming mode",
       testConnection: "test EV3 connection",
@@ -45,7 +45,7 @@
       motorRunToAbs: "motor [PORT] go to position [POS]° at [SPEED]%",
       motorRunDegrees: "motor [PORT] run [DEGREES] degrees at [SPEED]%",
       motorSetRamp: "set motor [PORT] smoothing to [MS] ms",
-      
+
       motorStop: "motor [PORT] stop [BRAKE]",
       tankDrive: "tank drive L:[LEFT] R:[RIGHT] for [ROTATIONS] rotations",
       motorPosition: "motor [PORT] position",
@@ -55,7 +55,7 @@
       motorReset: "reset motor [PORT] position",
       dcMotorRun: "DC motor [PORT] power [SPEED]%",
       dcMotorStop: "DC motor [PORT] stop",
-      
+
       // Servo
       servo: "Servo",
       servoRunTo: "servo [PORT] move to [POS]° speed [SPEED]%",
@@ -74,16 +74,16 @@
       dev_nxt_light: "NXT Light Sensor",
       dev_nxt_sound: "NXT Sound Sensor",
       dev_auto: "Auto-Detect (Reset)",
-      
+
       // Color Sensor
       colorSensor: "color sensor [PORT] [MODE]",
       colorIs: "color sensor [PORT] is [COLOR]?",
       colorRGB: "color sensor [PORT] value [COMPONENT]", // Renamed from RGB to include HSV/LAB
-      
+
       // Ultrasonic
       ultrasonicSensor: "ultrasonic sensor [PORT] distance [UNIT]",
       ultrasonicPresence: "ultrasonic [PORT] other sensor present?",
-      
+
       // Gyro
       gyroSensor: "gyro sensor [PORT] [MODE]",
       gyroReset: "reset gyro [PORT]",
@@ -144,26 +144,26 @@
       notConnected: "Not connected",
       uploaderInstructions:
         "Make executable: chmod +x upload_to_ev3.sh\nRun: ./upload_to_ev3.sh <ip>",
-      
+
       // Menu Items
       menu_brake: "brake",
       menu_coast: "coast",
       menu_hold: "hold",
-      
+
       menu_col_color: "color",
       menu_col_reflect: "reflected light",
       menu_col_ambient: "ambient light",
-      
+
       menu_unit_cm: "cm",
       menu_unit_in: "inch",
-      
+
       menu_gyro_angle: "angle",
       menu_gyro_rate: "rate",
-      
+
       menu_led_left: "left",
       menu_led_right: "right",
       menu_led_both: "both",
-      
+
       // Colors
       col_nocolor: "No Color",
       col_black: "Black",
@@ -266,7 +266,7 @@
       motorRunToAbs: "Motor [PORT] gehe zu Position [POS]° mit [SPEED]%",
       motorRunDegrees: "Motor [PORT] läuft [DEGREES] Grad mit [SPEED]%",
       motorSetRamp: "setze Motor [PORT] Dämpfung auf [MS] ms",
-      
+
       tankDrive: "Kettenantrieb L:[LEFT] R:[RIGHT] für [ROTATIONS] Umdrehungen",
       motorPosition: "Motor [PORT] Position",
       motorSpeed: "Motor [PORT] Geschwindigkeit",
@@ -294,16 +294,16 @@
       dev_nxt_light: "NXT Lichtsensor",
       dev_nxt_sound: "NXT Geräuschsensor",
       dev_auto: "Auto-Erkennung (Reset)",
-      
+
       // Color Sensor
       colorSensor: "Farbsensor [PORT] [MODE]",
       colorIs: "Farbsensor [PORT] ist [COLOR]?",
       colorRGB: "Farbsensor [PORT] Wert [COMPONENT]",
-      
+
       // Ultrasonic
       ultrasonicSensor: "Ultraschallsensor [PORT] Entfernung [UNIT]",
       ultrasonicPresence: "Ultraschall [PORT] anderer Sensor erkannt?",
-      
+
       // Gyro
       gyroSensor: "Gyrosensor [PORT] [MODE]",
       gyroReset: "setze Gyrosensor [PORT] zurück",
@@ -371,21 +371,21 @@
       menu_brake: "bremsen",
       menu_coast: "ausrollen",
       menu_hold: "halten",
-      
+
       menu_col_color: "Farbe",
       menu_col_reflect: "Lichtreflexion",
       menu_col_ambient: "Umgebungslicht",
-      
+
       menu_unit_cm: "cm",
       menu_unit_in: "Zoll",
-      
+
       menu_gyro_angle: "Winkel",
       menu_gyro_rate: "Drehzahl",
-      
+
       menu_led_left: "links",
       menu_led_right: "rechts",
       menu_led_both: "beide",
-      
+
       // Colors
       col_nocolor: "Keine Farbe",
       col_black: "Schwarz",
@@ -525,7 +525,7 @@
         results.scratchTranslate = window.scratchTranslate.locale;
         console.log(
           "7. window.scratchTranslate.locale:",
-          window.scratchTranslate.locale,
+          window.scratchTranslate.locale
         );
       } else {
         results.scratchTranslate = "not available";
@@ -573,7 +573,7 @@
     // Method 10: Check meta tags
     try {
       const metaLang = document.querySelector(
-        'meta[http-equiv="content-language"]',
+        'meta[http-equiv="content-language"]'
       );
       const metaContent = metaLang ? metaLang.getAttribute("content") : null;
       results.metaTag = metaContent;
@@ -619,7 +619,7 @@
     ) {
       console.log(
         "✓ Using TurboWarp localStorage:",
-        results.turboWarpLocalStorage,
+        results.turboWarpLocalStorage
       );
       finalLanguage = results.turboWarpLocalStorage
         .toLowerCase()
@@ -636,7 +636,7 @@
     ) {
       console.log(
         "✓ Using document.documentElement.lang:",
-        results.documentLang,
+        results.documentLang
       );
       finalLanguage = results.documentLang.toLowerCase().startsWith("de")
         ? "de"
@@ -672,7 +672,7 @@
     ) {
       console.log(
         "✓ Using navigator.languages[0]:",
-        results.navigatorLanguages[0],
+        results.navigatorLanguages[0]
       );
       finalLanguage = results.navigatorLanguages[0]
         .toLowerCase()
@@ -867,7 +867,7 @@
           message: "No detection info available. Reload extension to detect.",
         },
         null,
-        2,
+        2
       );
     }
 
@@ -883,20 +883,20 @@
 
       // --- INJECT AUTH HEADER IF PRESENT ---
       if (this.authHeader) {
-          if (!options.headers) {
-              options.headers = {};
-          }
-          // Handle both Headers object and plain object literals
-          if (options.headers instanceof Headers) {
-              options.headers.append("Authorization", this.authHeader);
-          } else {
-              options.headers["Authorization"] = this.authHeader;
-          }
+        if (!options.headers) {
+          options.headers = {};
+        }
+        // Handle both Headers object and plain object literals
+        if (options.headers instanceof Headers) {
+          options.headers.append("Authorization", this.authHeader);
+        } else {
+          options.headers["Authorization"] = this.authHeader;
+        }
       }
       // -------------------------------------
 
       try {
-        const response = await fetch(url, {
+        const response = await Scratch.fetch(url, {
           ...options,
           signal: controller.signal,
         });
@@ -934,8 +934,15 @@
             blockType: Scratch.BlockType.COMMAND,
             text: t("setConnection"), // Uses the translated string
             arguments: {
-              MODE: { type: Scratch.ArgumentType.STRING, menu: "connectionModes", defaultValue: "https" },
-              IP: { type: Scratch.ArgumentType.STRING, defaultValue: "192.168.178.50" },
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "connectionModes",
+                defaultValue: "https",
+              },
+              IP: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "192.168.178.50",
+              },
               PORT: { type: Scratch.ArgumentType.NUMBER, defaultValue: 8443 },
             },
           },
@@ -944,22 +951,56 @@
             blockType: Scratch.BlockType.COMMAND,
             text: t("setCredentials"),
             arguments: {
-              USER: { type: Scratch.ArgumentType.STRING, defaultValue: "admin" },
-              PASS: { type: Scratch.ArgumentType.STRING, defaultValue: "password" },
+              USER: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "admin",
+              },
+              PASS: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "password",
+              },
             },
           },
-          { opcode: "enableStreaming", blockType: Scratch.BlockType.COMMAND, text: t("enableStreaming") },
-          { opcode: "disableStreaming", blockType: Scratch.BlockType.COMMAND, text: t("disableStreaming") },
-          { opcode: "testConnection", blockType: Scratch.BlockType.REPORTER, text: t("testConnection") },
+          {
+            opcode: "enableStreaming",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("enableStreaming"),
+          },
+          {
+            opcode: "disableStreaming",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("disableStreaming"),
+          },
+          {
+            opcode: "testConnection",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("testConnection"),
+          },
 
           "---",
 
           // --- Transpilation ---
           { blockType: Scratch.BlockType.LABEL, text: t("transpilation") },
-          { opcode: "transpileProject", blockType: Scratch.BlockType.COMMAND, text: t("transpileProject") },
-          { opcode: "showCode", blockType: Scratch.BlockType.COMMAND, text: t("showCode") },
-          { opcode: "downloadCode", blockType: Scratch.BlockType.COMMAND, text: t("downloadCode") },
-          { opcode: "downloadUploader", blockType: Scratch.BlockType.COMMAND, text: t("downloadUploader") },
+          {
+            opcode: "transpileProject",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("transpileProject"),
+          },
+          {
+            opcode: "showCode",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("showCode"),
+          },
+          {
+            opcode: "downloadCode",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("downloadCode"),
+          },
+          {
+            opcode: "downloadUploader",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("downloadUploader"),
+          },
 
           "---",
 
@@ -1169,31 +1210,41 @@
             opcode: "ev3MotorPosition",
             blockType: Scratch.BlockType.REPORTER,
             text: t("motorPosition"),
-            arguments: { PORT: { type: Scratch.ArgumentType.STRING, menu: "motorPorts" } },
+            arguments: {
+              PORT: { type: Scratch.ArgumentType.STRING, menu: "motorPorts" },
+            },
           },
           {
             opcode: "ev3MotorSpeed",
             blockType: Scratch.BlockType.REPORTER,
             text: t("motorSpeed"),
-            arguments: { PORT: { type: Scratch.ArgumentType.STRING, menu: "motorPorts" } },
+            arguments: {
+              PORT: { type: Scratch.ArgumentType.STRING, menu: "motorPorts" },
+            },
           },
           {
             opcode: "ev3MotorIsRunning",
             blockType: Scratch.BlockType.BOOLEAN,
             text: t("motorIsRunning"),
-            arguments: { PORT: { type: Scratch.ArgumentType.STRING, menu: "motorPorts" } },
+            arguments: {
+              PORT: { type: Scratch.ArgumentType.STRING, menu: "motorPorts" },
+            },
           },
           {
             opcode: "ev3MotorIsStalled",
             blockType: Scratch.BlockType.BOOLEAN,
             text: t("motorIsStalled"),
-            arguments: { PORT: { type: Scratch.ArgumentType.STRING, menu: "motorPorts" } },
+            arguments: {
+              PORT: { type: Scratch.ArgumentType.STRING, menu: "motorPorts" },
+            },
           },
           {
             opcode: "ev3MotorReset",
             blockType: Scratch.BlockType.COMMAND,
             text: t("motorReset"),
-            arguments: { PORT: { type: Scratch.ArgumentType.STRING, menu: "motorPorts" } },
+            arguments: {
+              PORT: { type: Scratch.ArgumentType.STRING, menu: "motorPorts" },
+            },
           },
 
           // Servo Motor
@@ -1255,7 +1306,9 @@
             opcode: "ev3TouchSensor",
             blockType: Scratch.BlockType.BOOLEAN,
             text: t("touchSensor"),
-            arguments: { PORT: { type: Scratch.ArgumentType.STRING, menu: "sensorPorts" } },
+            arguments: {
+              PORT: { type: Scratch.ArgumentType.STRING, menu: "sensorPorts" },
+            },
           },
           {
             opcode: "ev3ConfigurePort",
@@ -1263,10 +1316,12 @@
             text: t("configurePort"),
             arguments: {
               PORT: { type: Scratch.ArgumentType.STRING, menu: "sensorPorts" },
-              DEVICE: { type: Scratch.ArgumentType.STRING, menu: "legacyDevices" },
+              DEVICE: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "legacyDevices",
+              },
             },
           },
-
 
           // Color Sensor
           {
@@ -1295,10 +1350,13 @@
             text: t("colorRGB"),
             arguments: {
               PORT: { type: Scratch.ArgumentType.STRING, menu: "sensorPorts" },
-              COMPONENT: { type: Scratch.ArgumentType.STRING, menu: "rgbComponent" },
+              COMPONENT: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "rgbComponent",
+              },
             },
           },
-          
+
           // Ultrasonic
           {
             opcode: "ev3UltrasonicSensor",
@@ -1313,7 +1371,9 @@
             opcode: "ev3UltrasonicPresence",
             blockType: Scratch.BlockType.BOOLEAN,
             text: t("ultrasonicPresence"),
-            arguments: { PORT: { type: Scratch.ArgumentType.STRING, menu: "sensorPorts" } },
+            arguments: {
+              PORT: { type: Scratch.ArgumentType.STRING, menu: "sensorPorts" },
+            },
           },
 
           // Gyro
@@ -1330,7 +1390,9 @@
             opcode: "ev3GyroReset",
             blockType: Scratch.BlockType.COMMAND,
             text: t("gyroReset"),
-            arguments: { PORT: { type: Scratch.ArgumentType.STRING, menu: "sensorPorts" } },
+            arguments: {
+              PORT: { type: Scratch.ArgumentType.STRING, menu: "sensorPorts" },
+            },
           },
 
           "---",
@@ -1341,7 +1403,9 @@
             opcode: "ev3InfraredProximity",
             blockType: Scratch.BlockType.REPORTER,
             text: t("irProximity"),
-            arguments: { PORT: { type: Scratch.ArgumentType.STRING, menu: "sensorPorts" } },
+            arguments: {
+              PORT: { type: Scratch.ArgumentType.STRING, menu: "sensorPorts" },
+            },
           },
           {
             opcode: "ev3InfraredBeaconHeading",
@@ -1407,7 +1471,9 @@
             opcode: "ev3ButtonPressed",
             blockType: Scratch.BlockType.BOOLEAN,
             text: t("buttonPressed"),
-            arguments: { BUTTON: { type: Scratch.ArgumentType.STRING, menu: "buttons" } },
+            arguments: {
+              BUTTON: { type: Scratch.ArgumentType.STRING, menu: "buttons" },
+            },
           },
 
           "---",
@@ -1788,22 +1854,25 @@
           colorMode: {
             items: [
               { text: t("menu_col_color"), value: "color" },
-              { text: t("menu_col_reflect"), value: "reflected_light_intensity" },
+              {
+                text: t("menu_col_reflect"),
+                value: "reflected_light_intensity",
+              },
               { text: t("menu_col_ambient"), value: "ambient_light_intensity" },
             ],
           },
           // Full EV3 Color Palette
           ev3Colors: {
             items: [
-                { text: t("col_nocolor"), value: "0" },
-                { text: t("col_black"), value: "1" },
-                { text: t("col_blue"), value: "2" },
-                { text: t("col_green"), value: "3" },
-                { text: t("col_yellow"), value: "4" },
-                { text: t("col_red"), value: "5" },
-                { text: t("col_white"), value: "6" },
-                { text: t("col_brown"), value: "7" }
-            ]
+              { text: t("col_nocolor"), value: "0" },
+              { text: t("col_black"), value: "1" },
+              { text: t("col_blue"), value: "2" },
+              { text: t("col_green"), value: "3" },
+              { text: t("col_yellow"), value: "4" },
+              { text: t("col_red"), value: "5" },
+              { text: t("col_white"), value: "6" },
+              { text: t("col_brown"), value: "7" },
+            ],
           },
           // Extended RGB/HSV/LAB components
           rgbComponent: {
@@ -1815,11 +1884,11 @@
               { text: t("rgb_h_hue"), value: "h-hue" },
               { text: t("rgb_h_sat"), value: "h-saturation" },
               { text: t("rgb_h_val"), value: "h-value" },
-              
+
               { text: t("rgb_l_hue"), value: "l-hue" },
               { text: t("rgb_l_light"), value: "l-lightness" },
               { text: t("rgb_l_sat"), value: "l-saturation" },
-              
+
               { text: t("rgb_lab_l"), value: "lab-l" },
               { text: t("rgb_lab_a"), value: "lab-a" },
               { text: t("rgb_lab_b"), value: "lab-b" },
@@ -1833,10 +1902,10 @@
             ],
           },
           distanceUnit: {
-             items: [
-                 { text: t("menu_unit_cm"), value: "cm" },
-                 { text: t("menu_unit_in"), value: "in" }
-             ]
+            items: [
+              { text: t("menu_unit_cm"), value: "cm" },
+              { text: t("menu_unit_in"), value: "in" },
+            ],
           },
           ledColors: {
             items: [
@@ -1883,7 +1952,7 @@
               { text: t("dev_nxt_touch"), value: "lego-nxt-touch" },
               { text: t("dev_nxt_light"), value: "lego-nxt-light" },
               { text: t("dev_nxt_sound"), value: "lego-nxt-sound" },
-            ]
+            ],
           },
           soundMode: { items: ["db", "dba"] },
           lightMode: { items: ["reflect", "ambient"] },
@@ -1931,23 +2000,23 @@
       this.streamingMode = true;
 
       console.log(
-        `Connection: ${this.ev3Protocol}://${this.ev3IP}:${this.ev3Port}`,
+        `Connection: ${this.ev3Protocol}://${this.ev3IP}:${this.ev3Port}`
       );
     }
 
     setCredentials(args) {
-        const user = args.USER;
-        const pass = args.PASS;
-        
-        if (user && user.trim() !== "") {
-            // Create Base64 encoded auth string standard for HTTP Basic Auth
-            // btoa() creates a base-64 encoded ASCII string
-            this.authHeader = "Basic " + btoa(user + ":" + pass);
-            console.log("EV3 Credentials set for user:", user);
-        } else {
-            this.authHeader = null;
-            console.log("EV3 Credentials cleared");
-        }
+      const user = args.USER;
+      const pass = args.PASS;
+
+      if (user && user.trim() !== "") {
+        // Create Base64 encoded auth string standard for HTTP Basic Auth
+        // btoa() creates a base-64 encoded ASCII string
+        this.authHeader = "Basic " + btoa(user + ":" + pass);
+        console.log("EV3 Credentials set for user:", user);
+      } else {
+        this.authHeader = null;
+        console.log("EV3 Credentials cleared");
+      }
     }
 
     enableStreaming() {
@@ -1967,7 +2036,7 @@
         const response = await this.fetchWithTimeout(
           url,
           { method: "GET" },
-          2000,
+          2000
         );
         const data = await response.json();
         this.log("Connection test result", data);
@@ -1991,8 +2060,8 @@
         // testConnection still reported Connected.
         console.warn(
           `[EV3] Dropping "${cmd}" because streaming is disabled. ` +
-          `Use the "set connection" or "enable streaming" block first.`,
-          params,
+            `Use the "set connection" or "enable streaming" block first.`,
+          params
         );
         this.log("Command not sent - streaming disabled", { cmd, params });
         return null;
@@ -2022,7 +2091,7 @@
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload),
             },
-            currentTimeout, // Use the dynamic timeout
+            currentTimeout // Use the dynamic timeout
           );
 
           if (!response.ok) {
@@ -2052,7 +2121,7 @@
             // Exponential backoff
             const delay = Math.min(
               this.RETRY_DELAY_BASE_MS * Math.pow(2, attempt),
-              this.MAX_RETRY_DELAY_MS,
+              this.MAX_RETRY_DELAY_MS
             );
             this.log("Retrying after delay", { delay, attempt: attempt + 1 });
             await new Promise((resolve) => setTimeout(resolve, delay));
@@ -2122,7 +2191,7 @@
 
             // Ask user if they want to continue
             const continueAnyway = confirm(
-              `${uploadResults.errors.length} sound(s) failed to upload:\n\n${errorMsg}\n\nContinue running script anyway?`,
+              `${uploadResults.errors.length} sound(s) failed to upload:\n\n${errorMsg}\n\nContinue running script anyway?`
             );
 
             if (!continueAnyway) {
@@ -2150,7 +2219,7 @@
             `✓ Script uploaded and running!\n\n` +
               `Script: ${scriptName}\n` +
               `Script ID: ${scriptId}\n` +
-              `Sounds: ${soundCount} uploaded`,
+              `Sounds: ${soundCount} uploaded`
           );
         }
       } catch (error) {
@@ -2197,13 +2266,13 @@
               .join("\n");
 
             alert(
-              `Script uploaded, but ${uploadResults.errors.length} sound(s) failed:\n\n${errorList}`,
+              `Script uploaded, but ${uploadResults.errors.length} sound(s) failed:\n\n${errorList}`
             );
           } else {
             alert(
               `✓ Upload complete!\n\n` +
                 `Script: ${scriptName}\n` +
-                `Sounds: ${soundCount} uploaded`,
+                `Sounds: ${soundCount} uploaded`
             );
           }
         } else {
@@ -2364,7 +2433,7 @@
 
         if (code.length > this.MAX_CODE_SIZE_BYTES) {
           throw new Error(
-            `Code too large (max ${this.MAX_CODE_SIZE_BYTES / 1024}KB)`,
+            `Code too large (max ${this.MAX_CODE_SIZE_BYTES / 1024}KB)`
           );
         }
 
@@ -2381,7 +2450,7 @@
               code: code,
             }),
           },
-          this.UPLOAD_TIMEOUT_MS,
+          this.UPLOAD_TIMEOUT_MS
         );
 
         if (!response.ok) {
@@ -2440,7 +2509,7 @@
               name: scriptName,
             }),
           },
-          this.REQUEST_TIMEOUT_MS,
+          this.REQUEST_TIMEOUT_MS
         );
 
         if (!response.ok) {
@@ -2512,7 +2581,7 @@
               script_id: scriptId,
             }),
           },
-          5000,
+          5000
         );
 
         if (!response.ok) {
@@ -2562,7 +2631,7 @@
               cmd: "stop_all_scripts",
             }),
           },
-          5000,
+          5000
         );
 
         if (!response.ok) {
@@ -2608,7 +2677,7 @@
               name: scriptName,
             }),
           },
-          this.REQUEST_TIMEOUT_MS,
+          this.REQUEST_TIMEOUT_MS
         );
 
         if (!response.ok) {
@@ -2646,7 +2715,7 @@
         const response = await this.fetchWithTimeout(
           url,
           { method: "GET" },
-          this.REQUEST_TIMEOUT_MS,
+          this.REQUEST_TIMEOUT_MS
         );
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -2674,7 +2743,7 @@
         const response = await this.fetchWithTimeout(
           url,
           { method: "GET" },
-          this.REQUEST_TIMEOUT_MS,
+          this.REQUEST_TIMEOUT_MS
         );
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -2708,7 +2777,7 @@
         const response = await this.fetchWithTimeout(
           url,
           { method: "GET" },
-          5000,
+          5000
         );
 
         if (!response.ok) {
@@ -2742,7 +2811,7 @@
         const response = await this.fetchWithTimeout(
           url,
           { method: "GET" },
-          this.REQUEST_TIMEOUT_MS,
+          this.REQUEST_TIMEOUT_MS
         );
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -2770,7 +2839,7 @@
         const response = await this.fetchWithTimeout(
           url,
           { method: "GET" },
-          this.REQUEST_TIMEOUT_MS,
+          this.REQUEST_TIMEOUT_MS
         );
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -2800,7 +2869,7 @@
         const response = await this.fetchWithTimeout(
           url,
           { method: "GET" },
-          this.REQUEST_TIMEOUT_MS,
+          this.REQUEST_TIMEOUT_MS
         );
 
         if (!response.ok) {
@@ -2859,7 +2928,7 @@
         const estimatedSize = (base64Data.length * 3) / 4; // Base64 overhead
         if (estimatedSize > this.MAX_SOUND_SIZE_BYTES) {
           throw new Error(
-            `Sound file too large (max ${this.MAX_SOUND_SIZE_BYTES / (1024 * 1024)}MB)`,
+            `Sound file too large (max ${this.MAX_SOUND_SIZE_BYTES / (1024 * 1024)}MB)`
           );
         }
 
@@ -2881,7 +2950,7 @@
               data: base64Data,
             }),
           },
-          this.UPLOAD_TIMEOUT_MS,
+          this.UPLOAD_TIMEOUT_MS
         );
 
         if (!response.ok) {
@@ -2952,7 +3021,7 @@
           console.log(`[${progress}/${fileCount}] ✓ ${fileName}`);
         } catch (error) {
           console.error(
-            `[${progress}/${fileCount}] ✗ ${fileName}: ${error.message}`,
+            `[${progress}/${fileCount}] ✗ ${fileName}: ${error.message}`
           );
           errors.push({ fileName, error: error.message });
         }
@@ -3035,7 +3104,7 @@
         const response = await this.fetchWithTimeout(
           url,
           { method: "GET" },
-          this.REQUEST_TIMEOUT_MS,
+          this.REQUEST_TIMEOUT_MS
         );
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -3258,7 +3327,7 @@
           rotations: args.ROTATIONS,
         },
         1,
-        this.LONG_TIMEOUT_MS,
+        this.LONG_TIMEOUT_MS
       ); // long timeout
     }
 
@@ -3268,7 +3337,7 @@
 
     ev3MotorRunDegrees(args) {
       // We reuse 'motor_run_for' but calculate rotations (degrees / 360)
-      // Or we can add a specific handler if we want to be purists, 
+      // Or we can add a specific handler if we want to be purists,
       // but converting to rotations is safe and compatible with current bridge.
       this.sendCommand("motor_run_for", {
         port: args.PORT,
@@ -3310,18 +3379,18 @@
     }
 
     servoStop(args) {
-        this.sendCommand("servo_stop", { port: args.PORT });
+      this.sendCommand("servo_stop", { port: args.PORT });
     }
 
     async ev3MotorIsRunning(args) {
-        const data = await this.getSensorData(`/motor/state/${args.PORT}`);
-        // check if 'running' is in state flags list
-        return data.value && data.value.includes("running");
+      const data = await this.getSensorData(`/motor/state/${args.PORT}`);
+      // check if 'running' is in state flags list
+      return data.value && data.value.includes("running");
     }
 
     async ev3MotorIsStalled(args) {
-        const data = await this.getSensorData(`/motor/state/${args.PORT}`);
-        return data.value && data.value.includes("stalled");
+      const data = await this.getSensorData(`/motor/state/${args.PORT}`);
+      return data.value && data.value.includes("stalled");
     }
 
     ev3DcMotorRun(args) {
@@ -3344,7 +3413,7 @@
           rotations: args.ROTATIONS,
         },
         1,
-        this.LONG_TIMEOUT_MS,
+        this.LONG_TIMEOUT_MS
       ); // long timeout
     }
 
@@ -3369,7 +3438,7 @@
         const response = await this.fetchWithTimeout(
           url,
           { method: "GET" },
-          5000,
+          5000
         );
 
         if (!response.ok) {
@@ -3420,91 +3489,98 @@
 
     async ev3ColorSensor(args) {
       const data = await this.getSensorData(
-        `/sensor/color/${args.PORT}/${args.MODE}`,
+        `/sensor/color/${args.PORT}/${args.MODE}`
       );
       return data.value || 0;
     }
 
     async ev3ColorIsColor(args) {
-        // Read color sensor in 'color' mode (integer)
-        const data = await this.getSensorData(`/sensor/color/${args.PORT}/color`);
-        const detectedColor = data.value || 0;
-        return detectedColor == args.COLOR; // Compare integer values
+      // Read color sensor in 'color' mode (integer)
+      const data = await this.getSensorData(`/sensor/color/${args.PORT}/color`);
+      const detectedColor = data.value || 0;
+      return detectedColor == args.COLOR; // Compare integer values
     }
 
     async ev3ColorRGB(args) {
-        const comp = args.COMPONENT;
-        // Determine mode based on component
-        let mode = "rgb";
-        let idx = 0;
-        
-        if (["red", "green", "blue"].includes(comp)) {
-            mode = "rgb";
-            idx = ["red", "green", "blue"].indexOf(comp);
-        } else if (comp.startsWith("h-")) {
-            mode = "hsv";
-            idx = ["h-hue", "h-saturation", "h-value"].indexOf(comp);
-        } else if (comp.startsWith("l-")) {
-            mode = "hls";
-            idx = ["l-hue", "l-lightness", "l-saturation"].indexOf(comp);
-        } else if (comp.startsWith("lab-")) {
-            mode = "lab";
-            idx = ["lab-l", "lab-a", "lab-b"].indexOf(comp);
-        }
+      const comp = args.COMPONENT;
+      // Determine mode based on component
+      let mode = "rgb";
+      let idx = 0;
 
-        const data = await this.getSensorData(`/sensor/color_extended/${args.PORT}/${mode}`);
-        // server should return array in data.value
-        return (data.value && data.value[idx]) || 0;
+      if (["red", "green", "blue"].includes(comp)) {
+        mode = "rgb";
+        idx = ["red", "green", "blue"].indexOf(comp);
+      } else if (comp.startsWith("h-")) {
+        mode = "hsv";
+        idx = ["h-hue", "h-saturation", "h-value"].indexOf(comp);
+      } else if (comp.startsWith("l-")) {
+        mode = "hls";
+        idx = ["l-hue", "l-lightness", "l-saturation"].indexOf(comp);
+      } else if (comp.startsWith("lab-")) {
+        mode = "lab";
+        idx = ["lab-l", "lab-a", "lab-b"].indexOf(comp);
+      }
+
+      const data = await this.getSensorData(
+        `/sensor/color_extended/${args.PORT}/${mode}`
+      );
+      // server should return array in data.value
+      return (data.value && data.value[idx]) || 0;
     }
 
     async ev3UltrasonicSensor(args) {
-        // Support cm and inches
-        const mode = args.UNIT === "in" ? "distance_inches" : "distance_centimeters";
-        const data = await this.getSensorData(`/sensor/ultrasonic/${args.PORT}/${mode}`);
-        return data.value || 0;
+      // Support cm and inches
+      const mode =
+        args.UNIT === "in" ? "distance_inches" : "distance_centimeters";
+      const data = await this.getSensorData(
+        `/sensor/ultrasonic/${args.PORT}/${mode}`
+      );
+      return data.value || 0;
     }
 
     async ev3UltrasonicPresence(args) {
-        const data = await this.getSensorData(`/sensor/ultrasonic/${args.PORT}/other_sensor_present`);
-        return data.value || false;
+      const data = await this.getSensorData(
+        `/sensor/ultrasonic/${args.PORT}/other_sensor_present`
+      );
+      return data.value || false;
     }
 
     async ev3GyroSensor(args) {
       const data = await this.getSensorData(
-        `/sensor/gyro/${args.PORT}/${args.MODE}`,
+        `/sensor/gyro/${args.PORT}/${args.MODE}`
       );
       return data.value || 0;
     }
 
     ev3GyroReset(args) {
-        this.sendCommand("gyro_reset", { port: args.PORT });
+      this.sendCommand("gyro_reset", { port: args.PORT });
     }
 
     // Infrared
     async ev3InfraredProximity(args) {
       const data = await this.getSensorData(
-        `/sensor/infrared/${args.PORT}/proximity`,
+        `/sensor/infrared/${args.PORT}/proximity`
       );
       return data.value || 0;
     }
 
     async ev3InfraredBeaconHeading(args) {
       const data = await this.getSensorData(
-        `/sensor/infrared/${args.PORT}/heading/${args.CHANNEL}`,
+        `/sensor/infrared/${args.PORT}/heading/${args.CHANNEL}`
       );
       return data.value || 0;
     }
 
     async ev3InfraredBeaconDistance(args) {
       const data = await this.getSensorData(
-        `/sensor/infrared/${args.PORT}/distance/${args.CHANNEL}`,
+        `/sensor/infrared/${args.PORT}/distance/${args.CHANNEL}`
       );
       return data.value || 0;
     }
 
     async ev3InfraredRemoteButton(args) {
       const data = await this.getSensorData(
-        `/sensor/infrared/${args.PORT}/button/${args.CHANNEL}/${args.BUTTON}`,
+        `/sensor/infrared/${args.PORT}/button/${args.CHANNEL}/${args.BUTTON}`
       );
       return data.value || false;
     }
@@ -3559,7 +3635,7 @@
         "speak",
         { text: text, lang: lang },
         1,
-        this.LONG_TIMEOUT_MS,
+        this.LONG_TIMEOUT_MS
       ); // long timeout
     }
 
@@ -3631,7 +3707,7 @@
      * Extract sound assets from Scratch project
      * @returns {Object} Map of sound names to audio data
      */
-    async extractSoundAssets() {
+    extractSoundAssets() {
       const soundAssets = {};
 
       try {
@@ -3752,7 +3828,7 @@
 
           if (note.length !== 2) {
             throw new Error(
-              `Note ${i} must have exactly 2 values [note, duration], got ${note.length}`,
+              `Note ${i} must have exactly 2 values [note, duration], got ${note.length}`
             );
           }
 
@@ -3761,28 +3837,28 @@
           // Validate note name
           if (typeof noteName !== "string" || noteName.trim() === "") {
             throw new Error(
-              `Note ${i}: note name must be a non-empty string, got "${noteName}"`,
+              `Note ${i}: note name must be a non-empty string, got "${noteName}"`
             );
           }
 
           const trimmedNote = noteName.trim();
           if (!notePattern.test(trimmedNote)) {
             throw new Error(
-              `Note ${i}: invalid note "${trimmedNote}". Use format: C4, F#5, Bb3 (note + optional #/b + octave 0-8)`,
+              `Note ${i}: invalid note "${trimmedNote}". Use format: C4, F#5, Bb3 (note + optional #/b + octave 0-8)`
             );
           }
 
           // Validate duration
           if (typeof duration !== "string" || duration.trim() === "") {
             throw new Error(
-              `Note ${i}: duration must be a non-empty string, got "${duration}"`,
+              `Note ${i}: duration must be a non-empty string, got "${duration}"`
             );
           }
 
           const trimmedDuration = duration.trim().toLowerCase();
           if (!validDurations.includes(trimmedDuration)) {
             throw new Error(
-              `Note ${i}: invalid duration "${trimmedDuration}". Valid: w (whole), h (half), q (quarter), e (eighth), s (sixteenth), or add 'd' for dotted (dq, dh, etc.)`,
+              `Note ${i}: invalid duration "${trimmedDuration}". Valid: w (whole), h (half), q (quarter), e (eighth), s (sixteenth), or add 'd' for dotted (dq, dh, etc.)`
             );
           }
         }
@@ -3811,7 +3887,7 @@
         };
         const totalBeats = notes.reduce(
           (sum, [, dur]) => sum + (durationMap[dur.toLowerCase()] || 1),
-          0,
+          0
         );
         const estimatedSeconds = (totalBeats * 60) / tempo;
 
@@ -3841,7 +3917,7 @@
             `- e = eighth note (0.5 beats)\n` +
             `- s = sixteenth note (0.25 beats)\n` +
             `- Add 'd' for dotted (dq = dotted quarter)\n\n` +
-            `Tempo: 20-300 BPM`,
+            `Tempo: 20-300 BPM`
         );
       }
     }
@@ -3885,7 +3961,7 @@
 
           if (tone.length !== 3) {
             throw new Error(
-              `Tone ${i} must have exactly 3 values [frequency, duration, delay]`,
+              `Tone ${i} must have exactly 3 values [frequency, duration, delay]`
             );
           }
 
@@ -3894,7 +3970,7 @@
           // Validate frequency (20-20000 Hz)
           if (typeof freq !== "number" || freq < 20 || freq > 20000) {
             throw new Error(
-              `Tone ${i}: frequency must be 20-20000 Hz, got ${freq}`,
+              `Tone ${i}: frequency must be 20-20000 Hz, got ${freq}`
             );
           }
 
@@ -3905,14 +3981,14 @@
             duration > 10000
           ) {
             throw new Error(
-              `Tone ${i}: duration must be 1-10000 ms, got ${duration}`,
+              `Tone ${i}: duration must be 1-10000 ms, got ${duration}`
             );
           }
 
           // Validate delay (0-10000 ms)
           if (typeof delay !== "number" || delay < 0 || delay > 10000) {
             throw new Error(
-              `Tone ${i}: delay must be 0-10000 ms, got ${delay}`,
+              `Tone ${i}: delay must be 0-10000 ms, got ${delay}`
             );
           }
         }
@@ -3924,7 +4000,7 @@
           toneCount: sequence.length,
           totalDuration: sequence.reduce(
             (sum, [, dur, delay]) => sum + dur + delay,
-            0,
+            0
           ),
         });
       } catch (error) {
@@ -3941,7 +4017,7 @@
             `Ranges:\n` +
             `- Frequency: 20-20000 Hz\n` +
             `- Duration: 1-10000 ms\n` +
-            `- Delay: 0-10000 ms`,
+            `- Delay: 0-10000 ms`
         );
       }
     }
@@ -4082,7 +4158,7 @@
             if (block.opcode === "event_whenbroadcastreceived") {
               const broadcastName = this.getFieldValue(
                 block,
-                "BROADCAST_OPTION",
+                "BROADCAST_OPTION"
               );
               if (
                 broadcastName &&
@@ -4142,13 +4218,13 @@
       this.addLine("");
       this.addLine("from ev3dev2.motor import LargeMotor, MediumMotor, Motor");
       this.addLine(
-        "from ev3dev2.motor import OUTPUT_A, OUTPUT_B, OUTPUT_C, OUTPUT_D, SpeedPercent",
+        "from ev3dev2.motor import OUTPUT_A, OUTPUT_B, OUTPUT_C, OUTPUT_D, SpeedPercent"
       );
       this.addLine(
-        "from ev3dev2.sensor import INPUT_1, INPUT_2, INPUT_3, INPUT_4",
+        "from ev3dev2.sensor import INPUT_1, INPUT_2, INPUT_3, INPUT_4"
       );
       this.addLine(
-        "from ev3dev2.sensor.lego import TouchSensor, ColorSensor, UltrasonicSensor, GyroSensor, InfraredSensor",
+        "from ev3dev2.sensor.lego import TouchSensor, ColorSensor, UltrasonicSensor, GyroSensor, InfraredSensor"
       );
       this.addLine("from ev3dev2.display import Display");
       this.addLine("from ev3dev2.led import Leds");
@@ -4201,7 +4277,7 @@
       this.indentLevel--;
       this.addLine("");
       this.addLine(
-        "esc_thread = threading.Thread(target=monitor_esc_button, daemon=True)",
+        "esc_thread = threading.Thread(target=monitor_esc_button, daemon=True)"
       );
       this.addLine("esc_thread.start()");
       this.addLine("");
@@ -4240,7 +4316,7 @@
       this.indentLevel--;
       this.addLine("");
       this.addLine(
-        "remote_thread = threading.Thread(target=remote_stop_listener, daemon=True)",
+        "remote_thread = threading.Thread(target=remote_stop_listener, daemon=True)"
       );
       this.addLine("remote_thread.start()");
       this.addLine("");
@@ -4263,7 +4339,7 @@
       this.addLine("if port not in motors:");
       this.indentLevel++;
       this.addLine(
-        'port_map = {"A": OUTPUT_A, "B": OUTPUT_B, "C": OUTPUT_C, "D": OUTPUT_D}',
+        'port_map = {"A": OUTPUT_A, "B": OUTPUT_B, "C": OUTPUT_C, "D": OUTPUT_D}'
       );
       this.addLine("try:");
       this.indentLevel++;
@@ -4273,7 +4349,7 @@
       this.addLine("except Exception as e:");
       this.indentLevel++;
       this.addLine(
-        'print(f"Warning: Could not initialize motor on port {port}: {e}")',
+        'print(f"Warning: Could not initialize motor on port {port}: {e}")'
       );
       this.addLine("motors[port] = None");
       this.indentLevel--;
@@ -4291,7 +4367,7 @@
       this.addLine("if key not in sensors:");
       this.indentLevel++;
       this.addLine(
-        'port_map = {"1": INPUT_1, "2": INPUT_2, "3": INPUT_3, "4": INPUT_4}',
+        'port_map = {"1": INPUT_1, "2": INPUT_2, "3": INPUT_3, "4": INPUT_4}'
       );
       this.addLine("sensor_classes = {");
       this.indentLevel++;
@@ -4305,14 +4381,14 @@
       this.addLine("try:");
       this.indentLevel++;
       this.addLine(
-        "sensors[key] = sensor_classes[sensor_type](port_map[port])",
+        "sensors[key] = sensor_classes[sensor_type](port_map[port])"
       );
       this.addLine('print(f"Initialized {sensor_type} sensor on port {port}")');
       this.indentLevel--;
       this.addLine("except Exception as e:");
       this.indentLevel++;
       this.addLine(
-        'print(f"Warning: Could not initialize {sensor_type} sensor on port {port}: {e}")',
+        'print(f"Warning: Could not initialize {sensor_type} sensor on port {port}: {e}")'
       );
       this.addLine("sensors[key] = None");
       this.indentLevel--;
@@ -4352,7 +4428,7 @@
         const comma = i < spriteNames.length - 1 ? "," : "";
         const visiblePy = state.visible ? "True" : "False";
         this.addLine(
-          `"${name}": {"x": ${state.x}, "y": ${state.y}, "size": ${state.size}, "visible": ${visiblePy}}${comma}`,
+          `"${name}": {"x": ${state.x}, "y": ${state.y}, "size": ${state.size}, "visible": ${visiblePy}}${comma}`
         );
       }
       this.indentLevel--;
@@ -4364,7 +4440,7 @@
       this.addLine("if sprite_name not in sprite_states:");
       this.indentLevel++;
       this.addLine(
-        'sprite_states[sprite_name] = {"x": 0, "y": 0, "size": 100, "visible": True}',
+        'sprite_states[sprite_name] = {"x": 0, "y": 0, "size": 100, "visible": True}'
       );
       this.indentLevel--;
       this.addLine("return sprite_states[sprite_name]");
@@ -4378,7 +4454,7 @@
       this.addLine("def trigger_broadcast(message):");
       this.indentLevel++;
       this.addLine(
-        '"""Trigger all handlers for broadcast (fire-and-forget)"""',
+        '"""Trigger all handlers for broadcast (fire-and-forget)"""'
       );
       this.addLine("if message in broadcasts:");
       this.indentLevel++;
@@ -4386,7 +4462,7 @@
       this.indentLevel++;
       this.addLine("handler_name = handler.__name__");
       this.addLine(
-        "if handler_name in running_broadcasts and running_broadcasts[handler_name].is_alive():",
+        "if handler_name in running_broadcasts and running_broadcasts[handler_name].is_alive():"
       );
       this.indentLevel++;
       this.addLine("continue");
@@ -4433,7 +4509,7 @@
 
         for (let i = 0; i < this.mainScripts.length; i++) {
           this.addLine(
-            "t" + i + " = threading.Thread(target=" + this.mainScripts[i] + ")",
+            "t" + i + " = threading.Thread(target=" + this.mainScripts[i] + ")"
           );
           this.addLine("threads.append(t" + i + ")");
           this.addLine("t" + i + ".start()");
@@ -4538,7 +4614,7 @@
       } else if (opcode === "event_whenbroadcastreceived") {
         const broadcastName = this.getFieldValue(hatBlock, "BROADCAST_OPTION");
         this.addLine(
-          'broadcasts["' + broadcastName + '"].append(' + funcName + ")",
+          'broadcasts["' + broadcastName + '"].append(' + funcName + ")"
         );
         this.addLine("");
       }
@@ -4552,7 +4628,7 @@
       if (opcode === "scratchtoev3_ev3MotorRun") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         const speed = this.getInputValue(block, "SPEED", blocks);
         this.addLine(`motor = get_motor("${port}")`);
@@ -4563,7 +4639,7 @@
       } else if (block.opcode === "scratchtoev3_ev3MotorRunFor") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         const rotations = this.getInputValue(block, "ROTATIONS", blocks);
         const speed = this.getInputValue(block, "SPEED", blocks);
@@ -4575,74 +4651,88 @@
             speed +
             "), " +
             rotations +
-            ")",
+            ")"
         );
         this.indentLevel--;
       } else if (block.opcode === "scratchtoev3_ev3MotorRunDegrees") {
-        const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
         const degrees = this.getInputValue(block, "DEGREES", blocks);
         const speed = this.getInputValue(block, "SPEED", blocks);
         this.addLine(`motor = get_motor("${port}")`);
         this.addLine("if motor:");
         this.indentLevel++;
         // Use on_for_degrees directly
-        this.addLine(`motor.on_for_degrees(SpeedPercent(${speed}), ${degrees}, block=False)`);
+        this.addLine(
+          `motor.on_for_degrees(SpeedPercent(${speed}), ${degrees}, block=False)`
+        );
         this.indentLevel--;
-      } 
-      
-      else if (block.opcode === "scratchtoev3_ev3MotorRunTimed") {
-        const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
+      } else if (block.opcode === "scratchtoev3_ev3MotorRunTimed") {
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
         const seconds = this.getInputValue(block, "SECONDS", blocks);
         const speed = this.getInputValue(block, "SPEED", blocks);
         this.addLine(`motor = get_motor("${port}")`);
         this.addLine("if motor:");
         this.indentLevel++;
-        this.addLine(`motor.on_for_seconds(SpeedPercent(${speed}), ${seconds}, block=False)`);
+        this.addLine(
+          `motor.on_for_seconds(SpeedPercent(${speed}), ${seconds}, block=False)`
+        );
         this.indentLevel--;
-      } 
-      
-      else if (block.opcode === "scratchtoev3_ev3MotorRunToAbsPos") {
-        const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
+      } else if (block.opcode === "scratchtoev3_ev3MotorRunToAbsPos") {
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
         const pos = this.getInputValue(block, "POS", blocks);
         const speed = this.getInputValue(block, "SPEED", blocks);
         this.addLine(`motor = get_motor("${port}")`);
         this.addLine("if motor:");
         this.indentLevel++;
         // on_to_position speed must be positive in Python
-        this.addLine(`motor.on_to_position(SpeedPercent(abs(${speed})), ${pos}, block=False)`);
+        this.addLine(
+          `motor.on_to_position(SpeedPercent(abs(${speed})), ${pos}, block=False)`
+        );
         this.indentLevel--;
       } else if (block.opcode === "scratchtoev3_servoRunToPosition") {
-        const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
         const pos = this.getInputValue(block, "POS", blocks);
         const speed = this.getInputValue(block, "SPEED", blocks);
-        
+
         // Ensure imports and helper usage matches the bridge logic
         this.addLine(`from ev3dev2.motor import ServoMotor, SpeedPercent`);
         // We assume get_servo_motor is defined in the header of the generated script
         // or we instantiate directly if we want to be self-contained
-        this.addLine(`s = ServoMotor(OUTPUT_${port})`); 
+        this.addLine(`s = ServoMotor(OUTPUT_${port})`);
         this.addLine(`if s:`);
         this.indentLevel++;
-        this.addLine(`s.run_to_abs_pos(position_sp=${pos}, speed_sp=SpeedPercent(${speed}))`);
+        this.addLine(
+          `s.run_to_abs_pos(position_sp=${pos}, speed_sp=SpeedPercent(${speed}))`
+        );
         this.indentLevel--;
-      }
-      else if (block.opcode === "scratchtoev3_servoStop") {
-        const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
+      } else if (block.opcode === "scratchtoev3_servoStop") {
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
         this.addLine(`from ev3dev2.motor import ServoMotor`);
         this.addLine(`s = ServoMotor(OUTPUT_${port})`);
         this.addLine(`if s: s.stop()`);
-      }
-      
-      
-      
-      else if (block.opcode === "scratchtoev3_ev3MotorStop") {
+      } else if (block.opcode === "scratchtoev3_ev3MotorStop") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         const brake = this.getInputValue(block, "BRAKE", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         this.addLine(`motor = get_motor("${port}")`);
         this.addLine("if motor:");
@@ -4650,7 +4740,10 @@
         this.addLine('motor.stop(stop_action="' + brake + '")');
         this.indentLevel--;
       } else if (block.opcode === "scratchtoev3_ev3MotorSetRamping") {
-        const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
         const ms = this.getInputValue(block, "MS", blocks);
         this.addLine(`motor = get_motor("${port}")`);
         this.addLine("if motor:");
@@ -4658,9 +4751,7 @@
         this.addLine(`motor.ramp_up_sp = ${ms}`);
         this.addLine(`motor.ramp_down_sp = ${ms}`);
         this.indentLevel--;
-      }
-      
-      else if (block.opcode === "scratchtoev3_ev3TankDrive") {
+      } else if (block.opcode === "scratchtoev3_ev3TankDrive") {
         const left = this.getInputValue(block, "LEFT", blocks);
         const right = this.getInputValue(block, "RIGHT", blocks);
         const rotations = this.getInputValue(block, "ROTATIONS", blocks);
@@ -4673,18 +4764,21 @@
             left +
             "), " +
             rotations +
-            ", block=False)",
+            ", block=False)"
         );
         this.addLine(
           "motor_right.on_for_rotations(SpeedPercent(" +
             right +
             "), " +
             rotations +
-            ", block=True)",
+            ", block=True)"
         );
         this.indentLevel--;
       } else if (block.opcode === "scratchtoev3_ev3DcMotorRun") {
-        const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
         const speed = this.getInputValue(block, "SPEED", blocks);
         this.addLine(`from ev3dev2.motor import DcMotor`); // Ensure import
         this.addLine(`m = DcMotor(OUTPUT_${port})`);
@@ -4693,9 +4787,11 @@
         this.addLine(`m.duty_cycle_sp = ${speed}`);
         this.addLine(`m.run_direct()`);
         this.indentLevel--;
-      } 
-      else if (block.opcode === "scratchtoev3_ev3DcMotorStop") {
-        const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
+      } else if (block.opcode === "scratchtoev3_ev3DcMotorStop") {
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
         this.addLine(`m = DcMotor(OUTPUT_${port})`);
         this.addLine(`if m: m.stop()`);
       }
@@ -4709,7 +4805,7 @@
         const x = this.getInputValue(block, "X", blocks);
         const y = this.getInputValue(block, "Y", blocks);
         this.addLine(
-          "display.text_pixels(str(" + text + "), x=" + x + ", y=" + y + ")",
+          "display.text_pixels(str(" + text + "), x=" + x + ", y=" + y + ")"
         );
         this.addLine("display.update()");
       } else if (block.opcode === "scratchtoev3_ev3DrawCircle") {
@@ -4719,7 +4815,7 @@
         this.addLine("from PIL import ImageDraw");
         this.addLine("draw = ImageDraw.Draw(display.image)");
         this.addLine(
-          `draw.ellipse((${x}-${r}, ${y}-${r}, ${x}+${r}, ${y}+${r}), outline='black')`,
+          `draw.ellipse((${x}-${r}, ${y}-${r}, ${x}+${r}, ${y}+${r}), outline='black')`
         );
         this.addLine("display.update()");
       } else if (block.opcode === "scratchtoev3_ev3DrawRectangle") {
@@ -4730,7 +4826,7 @@
         this.addLine("from PIL import ImageDraw");
         this.addLine("draw = ImageDraw.Draw(display.image)");
         this.addLine(
-          `draw.rectangle((${x1}, ${y1}, ${x2}, ${y2}), outline='black')`,
+          `draw.rectangle((${x1}, ${y1}, ${x2}, ${y2}), outline='black')`
         );
         this.addLine("display.update()");
       } else if (block.opcode === "scratchtoev3_ev3DrawLine") {
@@ -4747,7 +4843,7 @@
         // Use German voice if extension language is German
         if (currentLang === "de") {
           this.addLine(
-            "sound.speak(str(" + text + "), espeak_opts='-v de -a 200 -s 120')",
+            "sound.speak(str(" + text + "), espeak_opts='-v de -a 200 -s 120')"
           );
         } else {
           this.addLine("sound.speak(str(" + text + "))");
@@ -4756,32 +4852,33 @@
         const freq = this.getInputValue(block, "FREQUENCY", blocks);
         const duration = this.getInputValue(block, "DURATION", blocks);
         this.addLine(
-          "sound.play_tone(" + freq + ", " + duration + " / 1000.0)",
+          "sound.play_tone(" + freq + ", " + duration + " / 1000.0)"
         );
       } else if (block.opcode === "scratchtoev3_ev3SetLED") {
         const color = this.getInputValue(block, "COLOR", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         // Map OFF to BLACK (proper ev3dev2 color)
         const ev3Color = color === "OFF" ? "BLACK" : color;
         this.addLine('leds.set_color("LEFT", "' + ev3Color + '")');
         this.addLine('leds.set_color("RIGHT", "' + ev3Color + '")');
       } else if (block.opcode === "scratchtoev3_ev3ColorIsColor") {
-          const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
-          const targetColor = this.getInputValue(block, "COLOR", blocks);
-          
-          return `(get_sensor("${port}", "color").color == ${targetColor} if get_sensor("${port}", "color") else False)`;
-      }
-      
-      else if (block.opcode === "scratchtoev3_ev3SetLEDSide") {
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
+        const targetColor = this.getInputValue(block, "COLOR", blocks);
+
+        return `(get_sensor("${port}", "color").color == ${targetColor} if get_sensor("${port}", "color") else False)`;
+      } else if (block.opcode === "scratchtoev3_ev3SetLEDSide") {
         const side = this.getInputValue(block, "SIDE", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         const color = this.getInputValue(block, "COLOR", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         const ev3Color = color === "OFF" ? "BLACK" : color;
         this.addLine('leds.set_color("' + side + '", "' + ev3Color + '")');
@@ -4793,15 +4890,15 @@
         const animation = this.getInputValue(
           block,
           "ANIMATION",
-          blocks,
+          blocks
         ).replace(/"/g, "");
         const color1 = this.getInputValue(block, "COLOR1", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         const color2 = this.getInputValue(block, "COLOR2", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         const duration = this.getInputValue(block, "DURATION", blocks);
         const sleeptime = this.getInputValue(block, "SLEEPTIME", blocks);
@@ -4819,7 +4916,7 @@
               sleeptime +
               ", duration=" +
               duration +
-              ", block=False)",
+              ", block=False)"
           );
         } else if (animation === "flash") {
           this.addLine(
@@ -4829,7 +4926,7 @@
               sleeptime +
               ", duration=" +
               duration +
-              ", block=False)",
+              ", block=False)"
           );
         } else if (animation === "rainbow") {
           this.addLine(
@@ -4837,7 +4934,7 @@
               duration +
               ", sleeptime=" +
               sleeptime +
-              ", block=False)",
+              ", block=False)"
           );
         } else if (animation === "cycle") {
           this.addLine(
@@ -4849,7 +4946,7 @@
               sleeptime +
               ", duration=" +
               duration +
-              ", block=False)",
+              ", block=False)"
           );
         }
       } else if (block.opcode === "scratchtoev3_ev3SetVolume") {
@@ -4858,7 +4955,7 @@
       } else if (block.opcode === "scratchtoev3_ev3PlayTone") {
         const note = this.getInputValue(block, "NOTE", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         const duration = this.getInputValue(block, "DURATION", blocks);
         this.addLine('sound.play_note("' + note + '", ' + duration + ")");
@@ -4866,7 +4963,7 @@
         const song = this.getInputValue(block, "SONG", blocks);
         const tempo = this.getInputValue(block, "TEMPO", blocks);
         this.addLine(
-          "sound.play_song(json.loads(" + song + "), tempo=" + tempo + ")",
+          "sound.play_song(json.loads(" + song + "), tempo=" + tempo + ")"
         );
       } else if (block.opcode === "scratchtoev3_ev3PlayToneSequence") {
         const sequence = this.getInputValue(block, "SEQUENCE", blocks);
@@ -4879,7 +4976,7 @@
             filename.replace(/"/g, "") +
             '", volume=' +
             volume +
-            ")",
+            ")"
         );
       } else if (block.opcode === "scratchtoev3_ev3LEDStopAnimation") {
         this.addLine("leds.animate_stop()");
@@ -4916,12 +5013,12 @@
         this.addLine(
           "motor_left.on_for_rotations(SpeedPercent(50), " +
             steps +
-            " / 100, block=False)",
+            " / 100, block=False)"
         );
         this.addLine(
           "motor_right.on_for_rotations(SpeedPercent(50), " +
             steps +
-            " / 100, block=True)",
+            " / 100, block=True)"
         );
         this.indentLevel--;
       } else if (opcode === "motion_turnright") {
@@ -4934,12 +5031,12 @@
         this.addLine(
           "motor_left.on_for_rotations(SpeedPercent(50), " +
             degrees +
-            " / 360, block=False)",
+            " / 360, block=False)"
         );
         this.addLine(
           "motor_right.on_for_rotations(SpeedPercent(-50), " +
             degrees +
-            " / 360, block=True)",
+            " / 360, block=True)"
         );
         this.indentLevel--;
       } else if (opcode === "motion_turnleft") {
@@ -4952,12 +5049,12 @@
         this.addLine(
           "motor_left.on_for_rotations(SpeedPercent(-50), " +
             degrees +
-            " / 360, block=False)",
+            " / 360, block=False)"
         );
         this.addLine(
           "motor_right.on_for_rotations(SpeedPercent(50), " +
             degrees +
-            " / 360, block=True)",
+            " / 360, block=True)"
         );
         this.indentLevel--;
       } else if (opcode === "motion_gotoxy") {
@@ -5060,14 +5157,14 @@
         const broadcastInput = this.getInputValue(
           block,
           "BROADCAST_INPUT",
-          blocks,
+          blocks
         );
         this.addLine("trigger_broadcast(" + broadcastInput + ")");
       } else if (opcode === "event_broadcastandwait") {
         const broadcastInput = this.getInputValue(
           block,
           "BROADCAST_INPUT",
-          blocks,
+          blocks
         );
         this.addLine("trigger_broadcast_wait(" + broadcastInput + ")");
       }
@@ -5110,7 +5207,7 @@
             varName +
             '", 0) + (' +
             value +
-            ")",
+            ")"
         );
       }
 
@@ -5266,7 +5363,7 @@
       else if (block.opcode === "scratchtoev3_ev3TouchSensor") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         return (
           '(get_sensor("' +
@@ -5276,50 +5373,57 @@
           '", "touch") else False)'
         );
       } else if (block.opcode === "scratchtoev3_ev3ConfigurePort") {
-        const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
         const device = this.getInputValue(block, "DEVICE", blocks);
-        
+
         this.addLine(`from ev3dev2.port import LegoPort`);
         this.addLine(`import time`);
         this.addLine(`p = LegoPort("in${port}")`);
-        
+
         if (device === "reset") {
-             this.addLine(`p.mode = "auto"`);
+          this.addLine(`p.mode = "auto"`);
         } else {
-             this.addLine(`p.mode = "nxt-analog"`);
-             this.addLine(`p.set_device = "${device}"`);
+          this.addLine(`p.mode = "nxt-analog"`);
+          this.addLine(`p.set_device = "${device}"`);
         }
         this.addLine(`time.sleep(0.5)`); // Wait for driver load
-      }
-      
-      else if (block.opcode === "scratchtoev3_ev3ColorRGB") {
-          const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
-          const comp = this.getInputValue(block, "COMPONENT", blocks).replace(/"/g, "");
-          
-          let pyCode = "";
-          // Map component to ev3dev2 property and tuple index
-          if (comp === 'red') pyCode = `.rgb[0]`;
-          else if (comp === 'green') pyCode = `.rgb[1]`;
-          else if (comp === 'blue') pyCode = `.rgb[2]`;
-          else if (comp === 'h-hue') pyCode = `.hsv[0]`;
-          else if (comp === 'h-saturation') pyCode = `.hsv[1]`;
-          else if (comp === 'h-value') pyCode = `.hsv[2]`;
-          else if (comp === 'l-hue') pyCode = `.hls[0]`;
-          else if (comp === 'l-lightness') pyCode = `.hls[1]`;
-          else if (comp === 'l-saturation') pyCode = `.hls[2]`;
-          else if (comp === 'lab-l') pyCode = `.lab[0]`;
-          else if (comp === 'lab-a') pyCode = `.lab[1]`;
-          else if (comp === 'lab-b') pyCode = `.lab[2]`;
-          
-          return `(get_sensor("${port}", "color")${pyCode} if get_sensor("${port}", "color") else 0)`;
+      } else if (block.opcode === "scratchtoev3_ev3ColorRGB") {
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
+        const comp = this.getInputValue(block, "COMPONENT", blocks).replace(
+          /"/g,
+          ""
+        );
+
+        let pyCode = "";
+        // Map component to ev3dev2 property and tuple index
+        if (comp === "red") pyCode = `.rgb[0]`;
+        else if (comp === "green") pyCode = `.rgb[1]`;
+        else if (comp === "blue") pyCode = `.rgb[2]`;
+        else if (comp === "h-hue") pyCode = `.hsv[0]`;
+        else if (comp === "h-saturation") pyCode = `.hsv[1]`;
+        else if (comp === "h-value") pyCode = `.hsv[2]`;
+        else if (comp === "l-hue") pyCode = `.hls[0]`;
+        else if (comp === "l-lightness") pyCode = `.hls[1]`;
+        else if (comp === "l-saturation") pyCode = `.hls[2]`;
+        else if (comp === "lab-l") pyCode = `.lab[0]`;
+        else if (comp === "lab-a") pyCode = `.lab[1]`;
+        else if (comp === "lab-b") pyCode = `.lab[2]`;
+
+        return `(get_sensor("${port}", "color")${pyCode} if get_sensor("${port}", "color") else 0)`;
       } else if (block.opcode === "scratchtoev3_ev3ColorSensor") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         const mode = this.getInputValue(block, "MODE", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         return (
           '(get_sensor("' +
@@ -5333,7 +5437,7 @@
       } else if (block.opcode === "scratchtoev3_ev3UltrasonicSensor") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         return (
           '(get_sensor("' +
@@ -5343,19 +5447,19 @@
           '", "ultrasonic") else 0)'
         );
       } else if (block.opcode === "scratchtoev3_ev3UltrasonicPresence") {
-          const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
-          return `(get_sensor("${port}", "ultrasonic").other_sensor_present if get_sensor("${port}", "ultrasonic") else False)`;
-      }
-      
-      
-      else if (block.opcode === "scratchtoev3_ev3GyroSensor") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
-          "",
+          ""
+        );
+        return `(get_sensor("${port}", "ultrasonic").other_sensor_present if get_sensor("${port}", "ultrasonic") else False)`;
+      } else if (block.opcode === "scratchtoev3_ev3GyroSensor") {
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
         );
         const mode = this.getInputValue(block, "MODE", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         const prop = mode === "angle" ? "angle" : "rate";
         return (
@@ -5368,17 +5472,19 @@
           '", "gyro") else 0)'
         );
       } else if (block.opcode === "scratchtoev3_ev3GyroReset") {
-          const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
-          this.addLine(`s = get_sensor("${port}", "gyro")`);
-          this.addLine(`if s: s.reset()`); 
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
+        this.addLine(`s = get_sensor("${port}", "gyro")`);
+        this.addLine(`if s: s.reset()`);
       }
-
 
       // Infrared reporters
       else if (block.opcode === "scratchtoev3_ev3InfraredProximity") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         return (
           '(get_sensor("' +
@@ -5390,7 +5496,7 @@
       } else if (block.opcode === "scratchtoev3_ev3InfraredBeaconHeading") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         const channel = this.getInputValue(block, "CHANNEL", blocks);
         return (
@@ -5405,7 +5511,7 @@
       } else if (block.opcode === "scratchtoev3_ev3InfraredBeaconDistance") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         const channel = this.getInputValue(block, "CHANNEL", blocks);
         return (
@@ -5420,12 +5526,12 @@
       } else if (block.opcode === "scratchtoev3_ev3InfraredRemoteButton") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         const channel = this.getInputValue(block, "CHANNEL", blocks);
         const button = this.getInputValue(block, "BUTTON", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         return (
           '(get_sensor("' +
@@ -5443,7 +5549,7 @@
       else if (block.opcode === "scratchtoev3_ev3ButtonPressed") {
         const button = this.getInputValue(block, "BUTTON", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         return "buttons." + button;
       }
@@ -5451,7 +5557,7 @@
       else if (block.opcode === "scratchtoev3_ev3MotorPosition") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         return (
           '(get_motor("' +
@@ -5463,7 +5569,7 @@
       } else if (block.opcode === "scratchtoev3_ev3MotorSpeed") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
         return (
           '(get_motor("' +
@@ -5473,12 +5579,17 @@
           '") else 0)'
         );
       } else if (block.opcode === "scratchtoev3_ev3MotorIsRunning") {
-          const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
-          return `("running" in get_motor("${port}").state if get_motor("${port}") else False)`;
-      }
-      else if (block.opcode === "scratchtoev3_ev3MotorIsStalled") {
-          const port = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
-          return `("stalled" in get_motor("${port}").state if get_motor("${port}") else False)`;
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
+        return `("running" in get_motor("${port}").state if get_motor("${port}") else False)`;
+      } else if (block.opcode === "scratchtoev3_ev3MotorIsStalled") {
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
+        return `("stalled" in get_motor("${port}").state if get_motor("${port}") else False)`;
       }
       // Battery
       else if (block.opcode === "scratchtoev3_ev3BatteryLevel") {
@@ -5672,7 +5783,7 @@ ${this.soundFiles
     (f) => `
 if [ -f "${f}" ]; then
     scp "${f}" $EV3_USER@$EV3_IP:$EV3_SOUNDS_DIR/
-fi`,
+fi`
   )
   .join("")}
 `
@@ -5696,7 +5807,7 @@ echo "Stop: echo 'STOPSCRIPT' | nc -u $EV3_IP 5555"
       URL.revokeObjectURL(url);
 
       alert(
-        t("downloaded") + " upload_to_ev3.sh\n\n" + t("uploaderInstructions"),
+        t("downloaded") + " upload_to_ev3.sh\n\n" + t("uploaderInstructions")
       );
     }
   }

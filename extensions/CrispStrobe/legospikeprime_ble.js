@@ -575,7 +575,7 @@
           },
           (error) => {
             this._sendResponse(id, null, error);
-          },
+          }
         );
       }
     }
@@ -590,7 +590,7 @@
       extensionId,
       peripheralOptions,
       connectCallback,
-      resetCallback = null,
+      resetCallback = null
     ) {
       super();
 
@@ -623,7 +623,7 @@
       }
       this._discoverTimeoutID = window.setTimeout(
         this._handleDiscoverTimeout.bind(this),
-        15000,
+        15000
       );
 
       this.sendRemoteRequest("discover", this._peripheralOptions).catch((e) => {
@@ -666,7 +666,7 @@
     startNotifications(
       serviceId,
       characteristicId,
-      onCharacteristicChanged = null,
+      onCharacteristicChanged = null
     ) {
       const params = {
         serviceId,
@@ -683,7 +683,7 @@
       characteristicId,
       message,
       encoding = null,
-      withResponse = null,
+      withResponse = null
     ) {
       const params = { serviceId, characteristicId, message };
       if (encoding) {
@@ -703,7 +703,7 @@
           this._availablePeripherals[params.peripheralId] = params;
           this._runtime.emit(
             this._runtime.constructor.PERIPHERAL_LIST_UPDATE,
-            this._availablePeripherals,
+            this._availablePeripherals
           );
           if (this._discoverTimeoutID) {
             window.clearTimeout(this._discoverTimeoutID);
@@ -713,7 +713,7 @@
           this._availablePeripherals[params.peripheralId] = params;
           this._runtime.emit(
             this._runtime.constructor.USER_PICKED_PERIPHERAL,
-            this._availablePeripherals,
+            this._availablePeripherals
           );
           if (this._discoverTimeoutID) {
             window.clearTimeout(this._discoverTimeoutID);
@@ -749,7 +749,7 @@
         {
           message: `Scratch lost connection to`,
           extensionId: this._extensionId,
-        },
+        }
       );
     }
 
@@ -837,7 +837,7 @@
           this._extensionId,
           bleConfig,
           this._onConnect,
-          this.reset,
+          this.reset
         );
       } catch (error) {
         log.error("Error creating BLE:", error);
@@ -895,7 +895,7 @@
       this._ble.startNotifications(
         SpikeBLE.service,
         SpikeBLE.txChar,
-        this._onMessage,
+        this._onMessage
       );
 
       setTimeout(() => {
@@ -954,7 +954,6 @@
           log.info("Console output:", message);
           this._replOutput += message;
           break;
-
         }
         case MessageType.PROGRAM_FLOW_RESPONSE:
         case MessageType.PROGRAM_FLOW_NOTIFICATION:
@@ -971,7 +970,7 @@
         const deviceType = data[offset];
         log.sensor(
           "Device notification, type:",
-          `0x${deviceType.toString(16)}`,
+          `0x${deviceType.toString(16)}`
         );
 
         switch (deviceType) {
@@ -1016,7 +1015,7 @@
                 "Motor port",
                 port,
                 "updated:",
-                this._sensors.motors[port],
+                this._sensors.motors[port]
               );
               offset += 12;
             }
@@ -1083,7 +1082,7 @@
         SpikeBLE.service,
         SpikeBLE.rxChar,
         base64,
-        "base64",
+        "base64"
       );
     }
 
@@ -1329,32 +1328,32 @@
       // SPIKE Sensor reporters
       else if (block.opcode === "spikeprime_getMotorPosition") {
         const port = this.fixPortValue(
-          this.getInputValue(block, "PORT", blocks),
+          this.getInputValue(block, "PORT", blocks)
         );
         return `(get_motor_position(port.${port}))`;
       } else if (block.opcode === "spikeprime_getMotorSpeed") {
         const port = this.fixPortValue(
-          this.getInputValue(block, "PORT", blocks),
+          this.getInputValue(block, "PORT", blocks)
         );
         return `(get_motor_speed(port.${port}))`;
       } else if (block.opcode === "spikeprime_getColorSensorColor") {
         const port = this.fixPortValue(
-          this.getInputValue(block, "PORT", blocks),
+          this.getInputValue(block, "PORT", blocks)
         );
         return `(get_color(port.${port}))`;
       } else if (block.opcode === "spikeprime_getDistanceSensor") {
         const port = this.fixPortValue(
-          this.getInputValue(block, "PORT", blocks),
+          this.getInputValue(block, "PORT", blocks)
         );
         return `(get_distance(port.${port}))`;
       } else if (block.opcode === "spikeprime_getForceSensor") {
         const port = this.fixPortValue(
-          this.getInputValue(block, "PORT", blocks),
+          this.getInputValue(block, "PORT", blocks)
         );
         return `(get_force(port.${port}))`;
       } else if (block.opcode === "spikeprime_isForceSensorPressed") {
         const port = this.fixPortValue(
-          this.getInputValue(block, "PORT", blocks),
+          this.getInputValue(block, "PORT", blocks)
         );
         return `(is_force_pressed(port.${port}))`;
       } else if (block.opcode === "spikeprime_getYaw") {
@@ -1465,12 +1464,12 @@
       // SPIKE Motor blocks
       if (opcode === "spikeprime_motorRun") {
         const port = this.fixPortValue(
-          this.getInputValue(block, "PORT", blocks),
+          this.getInputValue(block, "PORT", blocks)
         );
         const direction = this.getInputValue(
           block,
           "DIRECTION",
-          blocks,
+          blocks
         ).replace(/"/g, "");
         const speed = direction === "forward" ? "750" : "-750";
         this.addImport("import motor");
@@ -1478,17 +1477,17 @@
         this.addLine(`motor.run(port.${port}, ${speed})`);
       } else if (opcode === "spikeprime_motorRunForTime") {
         const port = this.fixPortValue(
-          this.getInputValue(block, "PORT", blocks),
+          this.getInputValue(block, "PORT", blocks)
         );
         const direction = this.getInputValue(
           block,
           "DIRECTION",
-          blocks,
+          blocks
         ).replace(/"/g, "");
         const value = this.getInputValue(block, "VALUE", blocks);
         const unit = this.getInputValue(block, "UNIT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
 
         let speed = direction === "forward" ? "750" : "-750";
@@ -1502,34 +1501,34 @@
         this.addImport("import motor");
         this.addImport("from hub import port");
         this.addLine(
-          `await motor.run_for_time(port.${port}, ${duration}, ${speed})`,
+          `await motor.run_for_time(port.${port}, ${duration}, ${speed})`
         );
       } else if (opcode === "spikeprime_motorStop") {
         const port = this.fixPortValue(
-          this.getInputValue(block, "PORT", blocks),
+          this.getInputValue(block, "PORT", blocks)
         );
         this.addImport("import motor");
         this.addImport("from hub import port");
         this.addLine(`motor.stop(port.${port})`);
       } else if (opcode === "spikeprime_resetMotorPosition") {
         const port = this.fixPortValue(
-          this.getInputValue(block, "PORT", blocks),
+          this.getInputValue(block, "PORT", blocks)
         );
         const position = this.getInputValue(block, "POSITION", blocks);
         this.addImport("import motor");
         this.addImport("from hub import port");
         this.addLine(
-          `motor.reset_relative_position(port.${port}, ${position})`,
+          `motor.reset_relative_position(port.${port}, ${position})`
         );
       }
 
       // Motor Pair blocks
       else if (opcode === "spikeprime_setMovementMotors") {
         const portA = this.fixPortValue(
-          this.getInputValue(block, "PORT_A", blocks),
+          this.getInputValue(block, "PORT_A", blocks)
         );
         const portB = this.fixPortValue(
-          this.getInputValue(block, "PORT_B", blocks),
+          this.getInputValue(block, "PORT_B", blocks)
         );
 
         this.movementMotors = { left: portA, right: portB };
@@ -1537,18 +1536,18 @@
         this.addImport("from hub import port");
         this.addLine(`motor_pair.unpair(motor_pair.PAIR_1)`);
         this.addLine(
-          `motor_pair.pair(motor_pair.PAIR_1, port.${portA}, port.${portB})`,
+          `motor_pair.pair(motor_pair.PAIR_1, port.${portA}, port.${portB})`
         );
       } else if (opcode === "spikeprime_motorPairMoveForTime") {
         const direction = this.getInputValue(
           block,
           "DIRECTION",
-          blocks,
+          blocks
         ).replace(/"/g, "");
         const value = this.getInputValue(block, "VALUE", blocks);
         const unit = this.getInputValue(block, "UNIT", blocks).replace(
           /"/g,
-          "",
+          ""
         );
 
         let duration =
@@ -1562,7 +1561,7 @@
         this.addImport("import motor_pair");
         this.addImport("from hub import port");
         this.addLine(
-          `await motor_pair.move_for_time(motor_pair.PAIR_1, 0, ${duration}, velocity=${speed})`,
+          `await motor_pair.move_for_time(motor_pair.PAIR_1, 0, ${duration}, velocity=${speed})`
         );
       } else if (opcode === "spikeprime_motorPairMove") {
         const steering = this.getInputValue(block, "STEERING", blocks);
@@ -1570,7 +1569,7 @@
         this.addImport("import motor_pair");
         this.addImport("from hub import port");
         this.addLine(
-          `motor_pair.move(motor_pair.PAIR_1, ${steering}, velocity=${speed * 10})`,
+          `motor_pair.move(motor_pair.PAIR_1, ${steering}, velocity=${speed * 10})`
         );
       } else if (opcode === "spikeprime_stopMovement") {
         this.addImport("import motor_pair");
@@ -1629,7 +1628,7 @@
         this.addImport("from hub import port");
         this.addLine(`# Move ${steps} steps`);
         this.addLine(
-          `await motor_pair.move_for_degrees(motor_pair.PAIR_1, 0, int(${steps}) * 5)`,
+          `await motor_pair.move_for_degrees(motor_pair.PAIR_1, 0, int(${steps}) * 5)`
         );
       } else if (opcode === "motion_turnright") {
         const degrees = this.getInputValue(block, "DEGREES", blocks);
@@ -1637,7 +1636,7 @@
         this.addImport("from hub import port");
         this.addLine(`# Turn right ${degrees} degrees`);
         this.addLine(
-          `await motor_pair.move_for_degrees(motor_pair.PAIR_1, 100, int(${degrees}) * 2)`,
+          `await motor_pair.move_for_degrees(motor_pair.PAIR_1, 100, int(${degrees}) * 2)`
         );
       } else if (opcode === "motion_turnleft") {
         const degrees = this.getInputValue(block, "DEGREES", blocks);
@@ -1645,7 +1644,7 @@
         this.addImport("from hub import port");
         this.addLine(`# Turn left ${degrees} degrees`);
         this.addLine(
-          `await motor_pair.move_for_degrees(motor_pair.PAIR_1, -100, int(${degrees}) * 2)`,
+          `await motor_pair.move_for_degrees(motor_pair.PAIR_1, -100, int(${degrees}) * 2)`
         );
       }
 
@@ -1742,14 +1741,14 @@
         const broadcastInput = this.getInputValue(
           block,
           "BROADCAST_INPUT",
-          blocks,
+          blocks
         );
         this.addLine(`trigger_broadcast(${broadcastInput})`);
       } else if (opcode === "event_broadcastandwait") {
         const broadcastInput = this.getInputValue(
           block,
           "BROADCAST_INPUT",
-          blocks,
+          blocks
         );
         this.addLine(`await trigger_broadcast_wait(${broadcastInput})`);
       }
@@ -1763,7 +1762,7 @@
         const varName = this.getFieldValue(block, "VARIABLE");
         const value = this.getInputValue(block, "VALUE", blocks);
         this.addLine(
-          `variables["${varName}"] = variables.get("${varName}", 0) + (${value})`,
+          `variables["${varName}"] = variables.get("${varName}", 0) + (${value})`
         );
       }
 
@@ -1776,7 +1775,7 @@
           this.addImport("from hub import sound");
           this.addLine(`# Play sound: ${soundName}`);
           this.addLine(
-            `sound.beep(440, 200, 100)  # Placeholder for ${soundName}`,
+            `sound.beep(440, 200, 100)  # Placeholder for ${soundName}`
           );
         }
       }
@@ -1971,7 +1970,7 @@
       this.increaseIndent();
       this.addLine("c = color_sensor.color(p)");
       this.addLine(
-        "color_map = {0:'black', 1:'magenta', 3:'blue', 5:'turquoise', 6:'green', 7:'yellow', 9:'red', 10:'white'}",
+        "color_map = {0:'black', 1:'magenta', 3:'blue', 5:'turquoise', 6:'green', 7:'yellow', 9:'red', 10:'white'}"
       );
       this.addLine("return color_map.get(c, 'none')");
       this.decreaseIndent();
@@ -2028,7 +2027,7 @@
       this.addLine("def trigger_broadcast(message):");
       this.increaseIndent();
       this.addLine(
-        '"""Trigger all handlers for broadcast (fire-and-forget)"""',
+        '"""Trigger all handlers for broadcast (fire-and-forget)"""'
       );
       this.addLine("if message in broadcasts:");
       this.increaseIndent();
@@ -2080,7 +2079,7 @@
         this.increaseIndent();
         this.addLine("import motor, motor_pair");
         this.addLine(
-          "motor.stop(port.A, port.B, port.C, port.D, port.E, port.F)",
+          "motor.stop(port.A, port.B, port.C, port.D, port.E, port.F)"
         );
         this.addLine("motor_pair.stop(motor_pair.PAIR_1)");
         this.decreaseIndent();
@@ -2126,7 +2125,7 @@
             if (block.opcode === "event_whenbroadcastreceived") {
               const broadcastName = this.getFieldValue(
                 block,
-                "BROADCAST_OPTION",
+                "BROADCAST_OPTION"
               );
               if (broadcastName && !this.broadcasts.includes(broadcastName)) {
                 this.broadcasts.push(broadcastName);

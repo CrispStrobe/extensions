@@ -6,7 +6,6 @@
 (function (Scratch) {
   "use strict";
 
-
   // ============================================================================
   // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
   //
@@ -165,11 +164,25 @@
 
   function detectLanguage() {
     const candidates = [];
-    try { if (typeof window !== "undefined" && window.ReduxStore?.getState) { candidates.push(window.ReduxStore.getState().locales?.locale); } } catch (e) {}
-    try { candidates.push(localStorage.getItem("tw:language")); } catch (e) {}
-    try { if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) { candidates.push(Scratch.vm.runtime.getLocale()); } } catch (e) {}
-    try { candidates.push(document.documentElement.lang); } catch (e) {}
-    try { candidates.push(navigator.language); } catch (e) {}
+    try {
+      if (typeof window !== "undefined" && window.ReduxStore?.getState) {
+        candidates.push(window.ReduxStore.getState().locales?.locale);
+      }
+    } catch (e) {}
+    try {
+      candidates.push(localStorage.getItem("tw:language"));
+    } catch (e) {}
+    try {
+      if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) {
+        candidates.push(Scratch.vm.runtime.getLocale());
+      }
+    } catch (e) {}
+    try {
+      candidates.push(document.documentElement.lang);
+    } catch (e) {}
+    try {
+      candidates.push(navigator.language);
+    } catch (e) {}
     for (const c of candidates) {
       if (typeof c !== "string" || !c) continue;
       const lower = c.toLowerCase();
@@ -197,7 +210,11 @@
           if (locale && locale !== lastKnownLocale) {
             lastKnownLocale = locale;
             const lower = locale.toLowerCase();
-            const newLang = lower.startsWith("de") ? "de" : lower.startsWith("fr") ? "fr" : "en";
+            const newLang = lower.startsWith("de")
+              ? "de"
+              : lower.startsWith("fr")
+                ? "fr"
+                : "en";
             if (newLang !== currentLang) currentLang = newLang;
           }
         }
@@ -215,7 +232,7 @@
   // ============================================================================
   // DEBUG LOGGER
   // ============================================================================
-  
+
   class DebugLogger {
     constructor(prefix = "[LEGO Powered Up]", enabled = true) {
       this.prefix = prefix;
@@ -225,13 +242,14 @@
         WARN: 1,
         INFO: 2,
         DEBUG: 3,
-        TRACE: 4
+        TRACE: 4,
       };
       this.currentLevel = this.logLevel.DEBUG;
     }
 
     setLevel(level) {
-      this.currentLevel = this.logLevel[level.toUpperCase()] || this.logLevel.DEBUG;
+      this.currentLevel =
+        this.logLevel[level.toUpperCase()] || this.logLevel.DEBUG;
     }
 
     error(...args) {
@@ -296,17 +314,29 @@
       let r, g, b;
 
       if (h >= 0 && h < 60) {
-        r = c; g = x; b = 0;
+        r = c;
+        g = x;
+        b = 0;
       } else if (h >= 60 && h < 120) {
-        r = x; g = c; b = 0;
+        r = x;
+        g = c;
+        b = 0;
       } else if (h >= 120 && h < 180) {
-        r = 0; g = c; b = x;
+        r = 0;
+        g = c;
+        b = x;
       } else if (h >= 180 && h < 240) {
-        r = 0; g = x; b = c;
+        r = 0;
+        g = x;
+        b = c;
       } else if (h >= 240 && h < 300) {
-        r = x; g = 0; b = c;
+        r = x;
+        g = 0;
+        b = c;
       } else {
-        r = c; g = 0; b = x;
+        r = c;
+        g = 0;
+        b = x;
       }
 
       return {
@@ -418,7 +448,7 @@
   const ConnectionType = {
     BLE: "ble",
     SCRATCH_LINK: "scratchlink",
-    BRIDGE: "bridge"
+    BRIDGE: "bridge",
   };
 
   const PoweredUpBLE = {
@@ -434,14 +464,14 @@
   const HubType = {
     UNKNOWN: 0,
     WEDO2_SMART_HUB: 1,
-    MOVE_HUB: 2,              // Boost Move Hub
-    HUB: 3,                   // Powered Up Hub
+    MOVE_HUB: 2, // Boost Move Hub
+    HUB: 3, // Powered Up Hub
     REMOTE_CONTROL: 4,
     DUPLO_TRAIN_BASE: 5,
-    TECHNIC_MEDIUM_HUB: 6,    // Also called Control+ Hub
+    TECHNIC_MEDIUM_HUB: 6, // Also called Control+ Hub
     MARIO: 7,
     TECHNIC_SMALL_HUB: 8,
-    };
+  };
 
   const HubTypeName = {
     [HubType.UNKNOWN]: "Unknown Hub",
@@ -450,10 +480,10 @@
     [HubType.HUB]: "Powered Up Hub",
     [HubType.REMOTE_CONTROL]: "Powered Up Remote",
     [HubType.DUPLO_TRAIN_BASE]: "Duplo Train Hub",
-    [HubType.TECHNIC_MEDIUM_HUB]: "Control+ Hub",  // Also Technic Medium Hub
+    [HubType.TECHNIC_MEDIUM_HUB]: "Control+ Hub", // Also Technic Medium Hub
     [HubType.MARIO]: "Mario",
     [HubType.TECHNIC_SMALL_HUB]: "Technic Small Hub",
-    };
+  };
 
   // Device Types (all Powered Up compatible devices)
   const DeviceType = {
@@ -499,10 +529,10 @@
     MARIO_HUB_GESTURE_SENSOR: 0x54,
 
     // Short-form aliases (same device IDs as above, different community names)
-    MOVE_HUB_TILT_SENSOR: 0x28,              // alias for INTERNAL_TILT
-    MARIO_ACCELEROMETER: 0x47,               // alias for MARIO_HUB_ACCELEROMETER
-    MARIO_BARCODE_SENSOR: 0x49,              // alias for MARIO_HUB_BARCODE_SENSOR
-    MARIO_PANTS_SENSOR: 0x4a,                // alias for MARIO_HUB_PANTS_SENSOR
+    MOVE_HUB_TILT_SENSOR: 0x28, // alias for INTERNAL_TILT
+    MARIO_ACCELEROMETER: 0x47, // alias for MARIO_HUB_ACCELEROMETER
+    MARIO_BARCODE_SENSOR: 0x49, // alias for MARIO_HUB_BARCODE_SENSOR
+    MARIO_PANTS_SENSOR: 0x4a, // alias for MARIO_HUB_PANTS_SENSOR
   };
 
   const DeviceTypeName = {
@@ -532,8 +562,10 @@
     [DeviceType.DUPLO_TRAIN_BASE_SPEAKER]: "Duplo Train Speaker",
     [DeviceType.DUPLO_TRAIN_BASE_COLOR]: "Duplo Train Color Sensor",
     [DeviceType.DUPLO_TRAIN_BASE_SPEEDOMETER]: "Duplo Train Speedometer",
-    [DeviceType.TECHNIC_MEDIUM_ANGULAR_MOTOR_GREY]: "Technic Medium Angular Motor",
-    [DeviceType.TECHNIC_LARGE_ANGULAR_MOTOR_GREY]: "Technic Large Angular Motor",
+    [DeviceType.TECHNIC_MEDIUM_ANGULAR_MOTOR_GREY]:
+      "Technic Medium Angular Motor",
+    [DeviceType.TECHNIC_LARGE_ANGULAR_MOTOR_GREY]:
+      "Technic Large Angular Motor",
     [DeviceType.VOLTAGE_SENSOR]: "Voltage Sensor",
     [DeviceType.CURRENT_SENSOR]: "Current Sensor",
     [DeviceType.PIEZO_BUZZER]: "Piezo Buzzer",
@@ -545,40 +577,40 @@
     [DeviceType.TECHNIC_MEDIUM_HUB_ACCELEROMETER]: "Hub Accelerometer",
     [DeviceType.TECHNIC_MEDIUM_HUB_GYRO_SENSOR]: "Hub Gyro Sensor",
     [DeviceType.TECHNIC_MEDIUM_HUB_TILT_SENSOR]: "Hub Tilt Sensor",
-    [DeviceType.TECHNIC_MEDIUM_HUB_TEMPERATURE_SENSOR]: "Hub Temperature Sensor",
+    [DeviceType.TECHNIC_MEDIUM_HUB_TEMPERATURE_SENSOR]:
+      "Hub Temperature Sensor",
     [DeviceType.MARIO_ACCELEROMETER]: "Mario Accelerometer",
     [DeviceType.MARIO_BARCODE_SENSOR]: "Mario Barcode Sensor",
     [DeviceType.MARIO_PANTS_SENSOR]: "Mario Pants Sensor",
-    };
-
+  };
 
   // Check if device is a motor
   const isMotor = (deviceType) => {
     return [
-        DeviceType.SIMPLE_MEDIUM_LINEAR_MOTOR,
-        DeviceType.TRAIN_MOTOR,
-        DeviceType.EXTERNAL_MOTOR_TACHO,
-        DeviceType.INTERNAL_MOTOR_TACHO,
-        DeviceType.MEDIUM_LINEAR_MOTOR,         
-        DeviceType.MOVE_HUB_MEDIUM_LINEAR_MOTOR, 
-        DeviceType.DUPLO_TRAIN_BASE_MOTOR,
-        DeviceType.CONTROL_PLUS_LARGE_MOTOR,
-        DeviceType.CONTROL_PLUS_XLARGE_MOTOR,
-        DeviceType.SPIKE_MEDIUM_MOTOR,
-        DeviceType.SPIKE_LARGE_MOTOR,
-        DeviceType.SPIKE_SMALL_MOTOR,
-        DeviceType.TECHNIC_MEDIUM_ANGULAR_MOTOR_GREY,
-        DeviceType.TECHNIC_LARGE_ANGULAR_MOTOR_GREY,
+      DeviceType.SIMPLE_MEDIUM_LINEAR_MOTOR,
+      DeviceType.TRAIN_MOTOR,
+      DeviceType.EXTERNAL_MOTOR_TACHO,
+      DeviceType.INTERNAL_MOTOR_TACHO,
+      DeviceType.MEDIUM_LINEAR_MOTOR,
+      DeviceType.MOVE_HUB_MEDIUM_LINEAR_MOTOR,
+      DeviceType.DUPLO_TRAIN_BASE_MOTOR,
+      DeviceType.CONTROL_PLUS_LARGE_MOTOR,
+      DeviceType.CONTROL_PLUS_XLARGE_MOTOR,
+      DeviceType.SPIKE_MEDIUM_MOTOR,
+      DeviceType.SPIKE_LARGE_MOTOR,
+      DeviceType.SPIKE_SMALL_MOTOR,
+      DeviceType.TECHNIC_MEDIUM_ANGULAR_MOTOR_GREY,
+      DeviceType.TECHNIC_LARGE_ANGULAR_MOTOR_GREY,
     ].includes(deviceType);
-    };
+  };
 
   // Check if motor has tacho (position sensing)
   const hasTacho = (deviceType) => {
     return [
       DeviceType.EXTERNAL_MOTOR_TACHO,
       DeviceType.INTERNAL_MOTOR_TACHO,
-      DeviceType.MEDIUM_LINEAR_MOTOR,             
-      DeviceType.MOVE_HUB_MEDIUM_LINEAR_MOTOR,   
+      DeviceType.MEDIUM_LINEAR_MOTOR,
+      DeviceType.MOVE_HUB_MEDIUM_LINEAR_MOTOR,
       DeviceType.CONTROL_PLUS_LARGE_MOTOR,
       DeviceType.CONTROL_PLUS_XLARGE_MOTOR,
       DeviceType.SPIKE_MEDIUM_MOTOR,
@@ -734,9 +766,9 @@
 
   const MotorEndState = {
     FLOAT: 0,
-    HOLD: 127,    
-    BRAKE: 128,  
-    };
+    HOLD: 127,
+    BRAKE: 128,
+  };
 
   const MotorProfile = {
     DO_NOT_USE: 0x00,
@@ -757,13 +789,13 @@
     MOTOR_SPEED: 1,
     MOTOR_POSITION: 2,
     MOTOR_ABSOLUTE_POSITION: 3,
-    
+
     // Tilt sensor modes
     TILT_ANGLE: 0,
     TILT_DIRECTION: 1,
     TILT_IMPACT: 2,
     TILT_ACCELERATION: 3,
-    
+
     // Color/Distance sensor modes
     COLOR: 0,
     DISTANCE: 1,
@@ -774,24 +806,24 @@
     IR: 6,
     DEBUG: 7,
     CALIBRATION: 8,
-    
+
     // LED modes
     LED_COLOR: 0,
     LED_RGB: 1,
-    
+
     // Motion sensor
     MOTION_DISTANCE: 0,
     MOTION_COUNT: 1,
-    
+
     // Force sensor
     FORCE: 0,
     TOUCHED: 1,
     TAPPED: 2,
-    
+
     // Voltage/Current
     VOLTAGE: 0,
     CURRENT: 0,
-    
+
     // Train motor
     TRAIN_SPEED: 0,
   };
@@ -842,7 +874,7 @@
       this._modes = {};
       this._currentMode = null;
       this._values = {};
-      
+
       logger.debug(`Device created: ${this._deviceName} on port ${portId}`);
     }
 
@@ -871,7 +903,7 @@
   class PoweredUpMotor extends PoweredUpDevice {
     constructor(parent, portId, deviceType) {
       super(parent, portId, deviceType);
-      
+
       this._direction = 1;
       this._power = 50;
       this._position = 0;
@@ -884,7 +916,7 @@
       this._accelerationTime = 0;
       this._decelerationTime = 0;
       this._hasTacho = hasTacho(deviceType);
-      
+
       logger.debug(`Motor ${portId} initialized (tacho: ${this._hasTacho})`);
     }
 
@@ -953,7 +985,9 @@
     }
 
     turnOnForever() {
-      logger.debug(`Motor ${this._portId} turn on forever at power ${this._power}`);
+      logger.debug(
+        `Motor ${this._portId} turn on forever at power ${this._power}`
+      );
       if (this._pendingDurationTimeoutId) {
         clearTimeout(this._pendingDurationTimeoutId);
         this._pendingDurationTimeoutId = null;
@@ -966,15 +1000,21 @@
         this._portId,
         OutputExecution.EXECUTE_IMMEDIATELY + OutputExecution.COMMAND_FEEDBACK,
         OutputSubCommand.START_SPEED,
-        [MathUtil.clamp(this._power * this._direction, -100, 100), 100, MotorProfile.DO_NOT_USE]
+        [
+          MathUtil.clamp(this._power * this._direction, -100, 100),
+          100,
+          MotorProfile.DO_NOT_USE,
+        ]
       );
 
       this._parent.send(PoweredUpBLE.characteristic, cmd);
     }
 
     turnOnFor(time) {
-      logger.debug(`Motor ${this._portId} turn on for ${time}ms at power ${this._power}`);
-      
+      logger.debug(
+        `Motor ${this._portId} turn on for ${time}ms at power ${this._power}`
+      );
+
       if (this._pendingDurationTimeoutId) {
         clearTimeout(this._pendingDurationTimeoutId);
       }
@@ -1011,14 +1051,16 @@
         return;
       }
 
-      logger.debug(`Motor ${this._portId} turn on for ${degrees}° at power ${this._power}`);
-      
+      logger.debug(
+        `Motor ${this._portId} turn on for ${degrees}° at power ${this._power}`
+      );
+
       if (this._pendingDurationTimeoutId) {
         clearTimeout(this._pendingDurationTimeoutId);
       }
 
       this._status = MotorState.ON_FOR_ROTATION;
-      
+
       const cmd = this._parent.generateOutputCommand(
         this._portId,
         OutputExecution.EXECUTE_IMMEDIATELY + OutputExecution.COMMAND_FEEDBACK,
@@ -1036,7 +1078,7 @@
 
     turnOff() {
       logger.debug(`Motor ${this._portId} turn off`);
-      
+
       if (this._pendingDurationTimeoutId) {
         clearTimeout(this._pendingDurationTimeoutId);
         this._pendingDurationTimeoutId = null;
@@ -1125,14 +1167,14 @@
     setBrightness(brightness) {
       this._brightness = MathUtil.clamp(brightness, 0, 100);
       logger.debug(`LED ${this._portId} brightness set to ${this._brightness}`);
-      
+
       const cmd = this._parent.generateOutputCommand(
         this._portId,
         OutputExecution.EXECUTE_IMMEDIATELY,
         OutputSubCommand.WRITE_DIRECT_MODE_DATA,
         [0, this._brightness]
       );
-      
+
       this._parent.send(PoweredUpBLE.characteristic, cmd);
     }
   }
@@ -1148,31 +1190,35 @@
     setPixel(index, colorIndex) {
       if (index < 0 || index >= 9) return;
       this._pixels[index] = colorIndex;
-      
-      logger.debug(`Matrix ${this._portId} pixel ${index} set to color ${colorIndex}`);
-      
+
+      logger.debug(
+        `Matrix ${this._portId} pixel ${index} set to color ${colorIndex}`
+      );
+
       const cmd = this._parent.generateOutputCommand(
         this._portId,
         OutputExecution.EXECUTE_IMMEDIATELY,
         OutputSubCommand.WRITE_DIRECT_MODE_DATA,
         [0, ...this._pixels]
       );
-      
+
       this._parent.send(PoweredUpBLE.characteristic, cmd);
     }
 
     setAllPixels(colorIndex) {
       this._pixels.fill(colorIndex);
-      
-      logger.debug(`Matrix ${this._portId} all pixels set to color ${colorIndex}`);
-      
+
+      logger.debug(
+        `Matrix ${this._portId} all pixels set to color ${colorIndex}`
+      );
+
       const cmd = this._parent.generateOutputCommand(
         this._portId,
         OutputExecution.EXECUTE_IMMEDIATELY,
         OutputSubCommand.WRITE_DIRECT_MODE_DATA,
         [0, ...this._pixels]
       );
-      
+
       this._parent.send(PoweredUpBLE.characteristic, cmd);
     }
 
@@ -1192,14 +1238,17 @@
       this._onMessageCallback = null;
     }
 
+    // eslint-disable-next-line require-await
     async connect() {
       throw new Error("connect() must be implemented by subclass");
     }
 
+    // eslint-disable-next-line require-await
     async disconnect() {
       throw new Error("disconnect() must be implemented by subclass");
     }
 
+    // eslint-disable-next-line require-await
     async send(characteristic, data) {
       throw new Error("send() must be implemented by subclass");
     }
@@ -1228,7 +1277,7 @@
       logger.group("BLE Connection");
       try {
         logger.info("Requesting Bluetooth device...");
-        
+
         this._device = await navigator.bluetooth.requestDevice({
           filters: [
             {
@@ -1246,10 +1295,12 @@
 
         logger.info("Connecting to GATT server...");
         this._server = await this._device.gatt.connect();
-        
+
         logger.info("Getting primary service...");
-        this._service = await this._server.getPrimaryService(PoweredUpBLE.service);
-        
+        this._service = await this._server.getPrimaryService(
+          PoweredUpBLE.service
+        );
+
         logger.info("Getting characteristic...");
         this._characteristic = await this._service.getCharacteristic(
           PoweredUpBLE.characteristic
@@ -1257,7 +1308,7 @@
 
         logger.info("Starting notifications...");
         await this._characteristic.startNotifications();
-        
+
         this._characteristic.addEventListener(
           "characteristicvaluechanged",
           (event) => {
@@ -1299,7 +1350,7 @@
         logger.error("Cannot send: not connected");
         throw new Error("Not connected");
       }
-      
+
       logger.trace("Sending BLE data:", Array.from(data));
       await this._characteristic.writeValue(data);
     }
@@ -1316,26 +1367,31 @@
       this._requests = new Map();
       logger.info("Scratch Link Adapter initialized", {
         hasRuntime: !!runtime,
-        extensionId
+        extensionId,
       });
     }
 
-    async connect() {
+    connect() {
       logger.group("Scratch Link Connection");
       try {
         logger.info("Connecting to Scratch Link WebSocket...");
-        
+
         return new Promise((resolve, reject) => {
-          this._ws = new WebSocket("wss://device-manager.scratch.mit.edu:20110/scratch/ble");
+          // eslint-disable-next-line extension/check-can-fetch -- talks to user-configured local bridge/brick endpoint set explicitly via a block; canFetch's prompt is UX-degrading and redundant here
+          this._ws = new WebSocket(
+            "wss://device-manager.scratch.mit.edu:20110/scratch/ble"
+          );
 
           this._ws.onopen = () => {
             logger.info("✓ WebSocket connected");
-            
+
             // Emit that we're ready to discover
             if (this._runtime) {
-              this._runtime.emit(this._runtime.constructor.PERIPHERAL_SCAN_TIMEOUT);
+              this._runtime.emit(
+                this._runtime.constructor.PERIPHERAL_SCAN_TIMEOUT
+              );
             }
-            
+
             this._sendRequest("discover", {
               filters: [
                 {
@@ -1345,7 +1401,7 @@
             })
               .then((device) => {
                 logger.info(`Device discovered: ${device.name || "Unknown"}`);
-                
+
                 // Emit peripheral list update
                 if (this._runtime) {
                   this._runtime.emit(
@@ -1353,8 +1409,10 @@
                     { [device.peripheralId]: device }
                   );
                 }
-                
-                return this._sendRequest("connect", { peripheralId: device.peripheralId });
+
+                return this._sendRequest("connect", {
+                  peripheralId: device.peripheralId,
+                });
               })
               .then(() => {
                 logger.info("✓ Connected to device");
@@ -1366,12 +1424,14 @@
               .then(() => {
                 logger.info("✓ Notifications started");
                 this._connected = true;
-                
+
                 // Emit connected event
                 if (this._runtime) {
-                  this._runtime.emit(this._runtime.constructor.PERIPHERAL_CONNECTED);
+                  this._runtime.emit(
+                    this._runtime.constructor.PERIPHERAL_CONNECTED
+                  );
                 }
-                
+
                 resolve(true);
               })
               .catch(reject);
@@ -1379,14 +1439,17 @@
 
           this._ws.onerror = (error) => {
             logger.error("WebSocket error:", error);
-            
+
             if (this._runtime) {
-              this._runtime.emit(this._runtime.constructor.PERIPHERAL_REQUEST_ERROR, {
-                message: "Scratch lost connection to LEGO Powered Up",
-                extensionId: this._extensionId,
-              });
+              this._runtime.emit(
+                this._runtime.constructor.PERIPHERAL_REQUEST_ERROR,
+                {
+                  message: "Scratch lost connection to LEGO Powered Up",
+                  extensionId: this._extensionId,
+                }
+              );
             }
-            
+
             reject(error);
           };
 
@@ -1396,7 +1459,9 @@
 
             if (message.jsonrpc === "2.0") {
               if (message.method === "characteristicDidChange") {
-                const data = Base64Util.base64ToUint8Array(message.params.message);
+                const data = Base64Util.base64ToUint8Array(
+                  message.params.message
+                );
                 logger.trace("Data received:", Array.from(data));
                 if (this._onMessageCallback) {
                   this._onMessageCallback(data);
@@ -1418,12 +1483,15 @@
           this._ws.onclose = () => {
             logger.warn("WebSocket closed");
             this._connected = false;
-            
+
             if (this._runtime) {
-              this._runtime.emit(this._runtime.constructor.PERIPHERAL_CONNECTION_LOST_ERROR, {
-                message: "Scratch lost connection to LEGO Powered Up",
-                extensionId: this._extensionId,
-              });
+              this._runtime.emit(
+                this._runtime.constructor.PERIPHERAL_CONNECTION_LOST_ERROR,
+                {
+                  message: "Scratch lost connection to LEGO Powered Up",
+                  extensionId: this._extensionId,
+                }
+              );
             }
           };
         });
@@ -1435,7 +1503,7 @@
       }
     }
 
-    async disconnect() {
+    disconnect() {
       logger.info("Disconnecting Scratch Link...");
       if (this._ws) {
         this._ws.close();
@@ -1453,7 +1521,7 @@
       }
 
       logger.trace("Sending data via Scratch Link:", Array.from(data));
-      
+
       await this._sendRequest("write", {
         serviceId: PoweredUpBLE.service,
         characteristicId: characteristic,
@@ -1494,18 +1562,18 @@
       logger.group("Bridge Connection");
       try {
         logger.info("Scanning for devices via bridge...");
-        
-        const scanResponse = await fetch(`${this._bridgeUrl}/scan`, {
+
+        const scanResponse = await Scratch.fetch(`${this._bridgeUrl}/scan`, {
           method: "POST",
         });
-        
+
         if (!scanResponse.ok) {
           throw new Error(`Scan failed: ${scanResponse.statusText}`);
         }
 
         const devices = await scanResponse.json();
         logger.info(`Found ${devices.length} devices`);
-        
+
         if (devices.length === 0) {
           throw new Error("No LEGO Powered Up devices found");
         }
@@ -1513,11 +1581,14 @@
         this._deviceId = devices[0].id;
         logger.info(`Connecting to device: ${this._deviceId}`);
 
-        const connectResponse = await fetch(`${this._bridgeUrl}/connect`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ deviceId: this._deviceId }),
-        });
+        const connectResponse = await Scratch.fetch(
+          `${this._bridgeUrl}/connect`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ deviceId: this._deviceId }),
+          }
+        );
 
         if (!connectResponse.ok) {
           throw new Error(`Connection failed: ${connectResponse.statusText}`);
@@ -1528,7 +1599,7 @@
         // Start polling for notifications
         this._startPolling();
         this._connected = true;
-        
+
         logger.info("✓ Bridge connection established");
         return true;
       } catch (error) {
@@ -1541,7 +1612,7 @@
 
     async disconnect() {
       logger.info("Disconnecting bridge...");
-      
+
       if (this._pollingInterval) {
         clearInterval(this._pollingInterval);
         this._pollingInterval = null;
@@ -1549,7 +1620,7 @@
 
       if (this._deviceId) {
         try {
-          await fetch(`${this._bridgeUrl}/disconnect`, {
+          await Scratch.fetch(`${this._bridgeUrl}/disconnect`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ deviceId: this._deviceId }),
@@ -1572,7 +1643,7 @@
 
       logger.trace("Sending data via bridge:", Array.from(data));
 
-      const response = await fetch(`${this._bridgeUrl}/write`, {
+      const response = await Scratch.fetch(`${this._bridgeUrl}/write`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1589,13 +1660,13 @@
 
     _startPolling() {
       logger.info("Starting notification polling...");
-      
+
       this._pollingInterval = setInterval(async () => {
         try {
-          const response = await fetch(
+          const response = await Scratch.fetch(
             `${this._bridgeUrl}/notifications?deviceId=${this._deviceId}`
           );
-          
+
           if (response.ok) {
             const notifications = await response.json();
             for (const notification of notifications) {
@@ -1619,11 +1690,13 @@
 
   class PoweredUpHub {
     constructor(runtime, extensionId, connectionType, bridgeUrl) {
-      logger.info(`Initializing Powered Up Hub with connection type: ${connectionType}`);
-      
+      logger.info(
+        `Initializing Powered Up Hub with connection type: ${connectionType}`
+      );
+
       this._runtime = runtime;
       this._extensionId = extensionId;
-      
+
       // Only register if runtime is available
       if (this._runtime) {
         try {
@@ -1634,9 +1707,11 @@
           logger.warn("Could not register peripheral extension:", error);
         }
       } else {
-        logger.warn("No runtime available - peripheral features may be limited");
+        logger.warn(
+          "No runtime available - peripheral features may be limited"
+        );
       }
-      
+
       // Create appropriate connection adapter
       switch (connectionType) {
         case ConnectionType.BLE:
@@ -1714,7 +1789,7 @@
       const connected = this.isConnected();
       return {
         status: connected ? 2 : 1,
-        msg: connected ? "Connected" : "Disconnected"
+        msg: connected ? "Connected" : "Disconnected",
       };
     }
 
@@ -1724,16 +1799,14 @@
       if (!this.isConnected()) return;
       this.stopAllMotors();
     }
-    
+
     stopAllMotors() {
-      Object.values(this._devices).forEach(device => {
+      Object.values(this._devices).forEach((device) => {
         if (device instanceof PoweredUpMotor) {
           device.turnOff(false);
         }
       });
     }
-
-
 
     async connect() {
       logger.info("Connecting Powered Up Hub...");
@@ -1802,18 +1875,18 @@
 
     async disconnect() {
       logger.info("Disconnecting Powered Up Hub...");
-      
+
       if (this._pingIntervalId) {
         clearInterval(this._pingIntervalId);
         this._pingIntervalId = null;
       }
 
       await this._connection.disconnect();
-      
+
       this._devices = {};
       this._ports = {};
       this._portModes = {};
-      
+
       logger.info("✓ Powered Up Hub disconnected");
     }
 
@@ -1859,7 +1932,7 @@
       }
 
       logger.debug(`Setting port ${portId} to mode ${mode}`);
-      
+
       const cmd = [
         0x0a,
         0x00,
@@ -1882,7 +1955,7 @@
       if (!this._rateLimiter.okayToSend()) {
         logger.trace("Rate limiter: message queued");
       }
-      
+
       return this._connection.send(characteristic, data);
     }
 
@@ -1896,65 +1969,60 @@
         subCommand,
       ].concat(payload);
       cmd[0] = cmd.length;
-      
+
       logger.trace(`Generated output command for port ${portID}:`, cmd);
       return new Uint8Array(cmd);
     }
 
     setHubLED(rgbDecimal) {
-        logger.debug(`Setting Hub LED to color: ${rgbDecimal.toString(16)}`);
-        
-        // Find the hub LED port (usually port 50 or 0x32, but can vary)
-        let ledPort = null;
-        for (const [port, deviceType] of Object.entries(this._ports)) {
-            if (deviceType === DeviceType.HUB_LED) {
-            ledPort = parseInt(port);
+      logger.debug(`Setting Hub LED to color: ${rgbDecimal.toString(16)}`);
+
+      // Find the hub LED port (usually port 50 or 0x32, but can vary)
+      let ledPort = null;
+      for (const [port, deviceType] of Object.entries(this._ports)) {
+        if (deviceType === DeviceType.HUB_LED) {
+          ledPort = parseInt(port);
+          break;
+        }
+      }
+
+      if (ledPort === null) {
+        // Try common LED port locations
+        const commonLEDPorts = [0x32, 50, 0x17, 23];
+        for (const port of commonLEDPorts) {
+          if (this._ports[port] === DeviceType.HUB_LED) {
+            ledPort = port;
             break;
-            }
+          }
         }
+      }
 
-        if (ledPort === null) {
-            // Try common LED port locations
-            const commonLEDPorts = [0x32, 50, 0x17, 23];
-            for (const port of commonLEDPorts) {
-            if (this._ports[port] === DeviceType.HUB_LED) {
-                ledPort = port;
-                break;
-            }
-            }
-        }
+      if (ledPort === null) {
+        logger.warn("Hub LED not found on any port");
+        return;
+      }
 
-        if (ledPort === null) {
-            logger.warn("Hub LED not found on any port");
-            return;
-        }
-        
-        const cmd = this.generateOutputCommand(
-            ledPort,
-            OutputExecution.EXECUTE_IMMEDIATELY,
-            OutputSubCommand.WRITE_DIRECT_MODE_DATA,
-            [0x00, rgbDecimal >> 16, (rgbDecimal >> 8) & 0xff, rgbDecimal & 0xff]
-        );
-        
-        this.send(PoweredUpBLE.characteristic, cmd);
-        }
+      const cmd = this.generateOutputCommand(
+        ledPort,
+        OutputExecution.EXECUTE_IMMEDIATELY,
+        OutputSubCommand.WRITE_DIRECT_MODE_DATA,
+        [0x00, rgbDecimal >> 16, (rgbDecimal >> 8) & 0xff, rgbDecimal & 0xff]
+      );
+
+      this.send(PoweredUpBLE.characteristic, cmd);
+    }
 
     shutdown() {
       logger.info("Shutting down hub...");
-      
-      const cmd = [
-        0x04,
-        0x00,
-        Message.HUB_ACTIONS,
-        HubAction.SWITCH_OFF_HUB,
-      ];
-      
+
+      const cmd = [0x04, 0x00, Message.HUB_ACTIONS, HubAction.SWITCH_OFF_HUB];
+
       this.send(PoweredUpBLE.characteristic, new Uint8Array(cmd));
     }
 
     _requestHubPropertyValue(property) {
       logger.debug(`Requesting hub property: ${property}`);
-      
+
       const cmd = [
         0x05,
         0x00,
@@ -1962,13 +2030,13 @@
         property,
         HubPropertyOperation.REQUEST_UPDATE,
       ];
-      
+
       this.send(PoweredUpBLE.characteristic, new Uint8Array(cmd));
     }
 
     _enableHubPropertyReports(property) {
       logger.debug(`Enabling reports for hub property: ${property}`);
-      
+
       const cmd = [
         0x05,
         0x00,
@@ -1976,13 +2044,13 @@
         property,
         HubPropertyOperation.ENABLE_UPDATES,
       ];
-      
+
       this.send(PoweredUpBLE.characteristic, new Uint8Array(cmd));
     }
 
     _enableAlertReports(alert) {
       logger.debug(`Enabling reports for alert: ${alert}`);
-      
+
       const cmd = [
         0x05,
         0x00,
@@ -1990,7 +2058,7 @@
         alert,
         AlertOperation.ENABLE_UPDATES,
       ];
-      
+
       this.send(PoweredUpBLE.characteristic, new Uint8Array(cmd));
     }
 
@@ -1998,13 +2066,13 @@
       this._pingIntervalId = setInterval(() => {
         this._requestHubPropertyValue(HubProperty.RSSI);
       }, PoweredUpPingInterval);
-      
+
       logger.debug("Ping interval started");
     }
 
     _onMessage(data) {
       logger.trace("Processing message:", Array.from(data));
-      
+
       const messageType = data[2];
 
       switch (messageType) {
@@ -2037,7 +2105,9 @@
       const deviceType = data[5];
 
       logger.group(`Device event on port ${portId}`);
-      logger.debug(`Event: ${event}, Device type: ${deviceType} (${DeviceTypeName[deviceType] || "Unknown"})`);
+      logger.debug(
+        `Event: ${event}, Device type: ${deviceType} (${DeviceTypeName[deviceType] || "Unknown"})`
+      );
 
       if (event === IOEvent.ATTACHED) {
         this._ports[portId] = deviceType;
@@ -2046,7 +2116,7 @@
         if (isMotor(deviceType)) {
           logger.info(`Motor attached: ${DeviceTypeName[deviceType]}`);
           this._devices[portId] = new PoweredUpMotor(this, portId, deviceType);
-          
+
           // Enable position updates for motors with tacho
           if (hasTacho(deviceType)) {
             this._setInputMode(portId, Mode.MOTOR_POSITION);
@@ -2084,7 +2154,11 @@
           this._devices[portId] = new PoweredUpLED(this, portId, deviceType);
         } else if (deviceType === DeviceType.SPIKE_3x3_COLOR_LIGHT_MATRIX) {
           logger.info("SPIKE 3x3 Color Matrix attached");
-          this._devices[portId] = new PoweredUp3x3Matrix(this, portId, deviceType);
+          this._devices[portId] = new PoweredUp3x3Matrix(
+            this,
+            portId,
+            deviceType
+          );
         } else if (deviceType === DeviceType.HUB_LED) {
           logger.info("Hub LED registered");
           this._devices[portId] = new PoweredUpLED(this, portId, deviceType);
@@ -2113,9 +2187,9 @@
       switch (property) {
         case HubProperty.SYSTEM_TYPE_ID:
           this.hubType = data[5];
-            this.hubName = HubTypeName[this.hubType] || "Unknown Hub";
-            logger.info(`Hub type: ${this.hubName} (ID: ${this.hubType})`);
-            break;
+          this.hubName = HubTypeName[this.hubType] || "Unknown Hub";
+          logger.info(`Hub type: ${this.hubName} (ID: ${this.hubType})`);
+          break;
         case HubProperty.BUTTON:
           this.hubStatus.buttonPressed = data[5] === 1;
           logger.debug(`Button pressed: ${this.hubStatus.buttonPressed}`);
@@ -2129,7 +2203,12 @@
           logger.trace(`RSSI: ${this.hubStatus.rssi} dBm`);
           break;
         case HubProperty.FW_VERSION: {
-          const version = int32ArrayToNumber([data[5], data[6], data[7], data[8]]);
+          const version = int32ArrayToNumber([
+            data[5],
+            data[6],
+            data[7],
+            data[8],
+          ]);
           this.hubStatus.fwVersion = decodeVersion(version);
           logger.info(`Firmware version: ${this.hubStatus.fwVersion}`);
           break;
@@ -2176,21 +2255,23 @@
       switch (deviceType) {
         case DeviceType.INTERNAL_TILT:
         case DeviceType.EXTERNAL_TILT_SENSOR:
-        case DeviceType.MOVE_HUB_TILT_SENSOR: 
+        case DeviceType.MOVE_HUB_TILT_SENSOR:
         case DeviceType.TECHNIC_MEDIUM_HUB_TILT_SENSOR:
           if (mode === Mode.TILT_ANGLE) {
             this.tiltX = data[4] > 127 ? data[4] - 256 : data[4];
             this.tiltY = data[5] > 127 ? data[5] - 256 : data[5];
             // Check if Z axis is available (some sensors have 3 axes)
             if (data.length > 6) {
-            this.tiltZ = data[6] > 127 ? data[6] - 256 : data[6];
+              this.tiltZ = data[6] > 127 ? data[6] - 256 : data[6];
             }
-            logger.trace(`Tilt: X=${this.tiltX}, Y=${this.tiltY}, Z=${this.tiltZ}`);
+            logger.trace(
+              `Tilt: X=${this.tiltX}, Y=${this.tiltY}, Z=${this.tiltZ}`
+            );
             device.setValue("tiltX", this.tiltX);
             device.setValue("tiltY", this.tiltY);
             device.setValue("tiltZ", this.tiltZ);
-        }
-        break;
+          }
+          break;
 
         case DeviceType.COLOR_DISTANCE_SENSOR:
         case DeviceType.SPIKE_COLOR_SENSOR:
@@ -2223,11 +2304,11 @@
           if (mode === Mode.DISTANCE) {
             // SPIKE sensors report in millimeters as int16
             const distanceMM = data[4] | (data[5] << 8);
-            const distanceCM = distanceMM / 10;  // Convert to cm for consistency
+            const distanceCM = distanceMM / 10; // Convert to cm for consistency
             device.setValue("distance", distanceCM);
             logger.trace(`Distance: ${distanceCM} cm (${distanceMM} mm)`);
-        }
-        break;
+          }
+          break;
 
         case DeviceType.MOTION_SENSOR:
           if (mode === Mode.MOTION_DISTANCE) {
@@ -2259,7 +2340,12 @@
           if (isMotor(deviceType) && hasTacho(deviceType)) {
             const motor = device;
             if (mode === Mode.MOTOR_POSITION) {
-              const position = int32ArrayToNumber([data[4], data[5], data[6], data[7]]);
+              const position = int32ArrayToNumber([
+                data[4],
+                data[5],
+                data[6],
+                data[7],
+              ]);
               motor.position = position;
               logger.trace(`Motor ${portId} position: ${position}`);
             }
@@ -2270,7 +2356,7 @@
     _handlePortFeedback(data) {
       const portId = data[3];
       const feedback = data[4];
-      
+
       logger.trace(`Port ${portId} feedback: ${feedback}`);
 
       switch (feedback) {
@@ -2300,28 +2386,28 @@
       logger.info("=".repeat(60));
       logger.info("LEGO Powered Up Unified Extension");
       logger.info("=".repeat(60));
-      
+
       // Get runtime - try multiple sources
       this._runtime = runtime;
-      
+
       // If runtime not passed, try to get it from Scratch global
       if (!this._runtime && typeof Scratch !== "undefined" && Scratch.vm) {
         this._runtime = Scratch.vm.runtime;
         logger.info("Got runtime from Scratch.vm.runtime");
       }
-      
+
       // Last resort - try vm global
       if (!this._runtime && typeof globalThis.vm !== "undefined") {
         this._runtime = globalThis.vm.runtime;
         logger.info("Got runtime from vm.runtime");
       }
-      
+
       logger.info("Runtime available:", !!this._runtime);
-      
+
       this._hub = null;
       this._connectionType = ConnectionType.SCRATCH_LINK;
       this._bridgeUrl = "http://localhost:8080";
-      
+
       logger.info("Extension initialized");
     }
 
@@ -2998,15 +3084,15 @@
         }
 
         logger.info(`Connection type: ${this._connectionType}`);
-        
+
         // Pass runtime and extensionId to hub
         this._hub = new PoweredUpHub(
           this._runtime,
-          "legopoweredup",  // Must match the id in getInfo()
+          "legopoweredup", // Must match the id in getInfo()
           this._connectionType,
           this._bridgeUrl
         );
-        
+
         await this._hub.connect();
         logger.info("✓ Successfully connected");
       } catch (error) {
@@ -3054,24 +3140,24 @@
 
     getConnectedDevices() {
       if (!this._ensureConnected()) return "Not connected";
-      
+
       const devices = this._hub.getConnectedDevices();
       if (devices.length === 0) {
         return "No devices";
       }
-      
-      return devices.map(d => `Port ${d.portId}: ${d.deviceName}`).join(", ");
+
+      return devices.map((d) => `Port ${d.portId}: ${d.deviceName}`).join(", ");
     }
 
     getDeviceOnPort(args) {
       if (!this._ensureConnected()) return "Not connected";
-      
+
       const portId = this._getPortId(args.PORT);
       if (portId === null) return "Invalid port";
-      
+
       const device = this._hub.getDevice(portId);
       if (!device) return "No device";
-      
+
       return device.deviceName;
     }
 
@@ -3095,7 +3181,7 @@
 
     motorOn(args) {
       if (!this._ensureConnected()) return;
-      
+
       const motor = this._getMotor(args.PORT);
       if (motor) {
         motor.turnOnForever();
@@ -3108,7 +3194,7 @@
 
     motorOff(args) {
       if (!this._ensureConnected()) return;
-      
+
       const motor = this._getMotor(args.PORT);
       if (motor) {
         motor.turnOff();
@@ -3121,10 +3207,10 @@
 
     motorOnFor(args) {
       if (!this._ensureConnected()) return;
-      
+
       const motor = this._getMotor(args.PORT);
       if (!motor) return;
-      
+
       const time = Cast.toNumber(args.TIME) * 1000;
       motor.turnOnFor(time);
 
@@ -3135,15 +3221,16 @@
 
     motorOnForDegrees(args) {
       if (!this._ensureConnected()) return;
-      
+
       const motor = this._getMotor(args.PORT);
       if (!motor) return;
-      
+
       const degrees = Cast.toNumber(args.DEGREES);
       motor.turnOnForDegrees(degrees);
 
       // Estimate time
-      const estimatedTime = (Math.abs(degrees) / 360) * 1000 * (100 / motor.power);
+      const estimatedTime =
+        (Math.abs(degrees) / 360) * 1000 * (100 / motor.power);
       return new Promise((resolve) => {
         setTimeout(() => resolve(), estimatedTime);
       });
@@ -3155,11 +3242,11 @@
 
     setMotorPower(args) {
       if (!this._ensureConnected()) return;
-      
+
       const motor = this._getMotor(args.PORT);
       if (motor) {
         motor.power = MathUtil.clamp(Cast.toNumber(args.POWER), 0, 100);
-        
+
         if (motor.status === MotorState.ON_FOREVER) {
           motor.turnOnForever();
         } else if (motor.status === MotorState.ON_FOR_TIME) {
@@ -3178,7 +3265,7 @@
 
     setMotorDirection(args) {
       if (!this._ensureConnected()) return;
-      
+
       const motor = this._getMotor(args.PORT);
       if (motor) {
         switch (args.DIRECTION) {
@@ -3211,7 +3298,7 @@
 
     setMotorStopAction(args) {
       if (!this._ensureConnected()) return;
-      
+
       const motor = this._getMotor(args.PORT);
       if (motor) {
         const stopModeMap = {
@@ -3225,7 +3312,7 @@
 
     setMotorAcceleration(args) {
       if (!this._ensureConnected()) return;
-      
+
       const motor = this._getMotor(args.PORT);
       if (motor) {
         motor.setAcceleration(Cast.toNumber(args.TIME));
@@ -3234,7 +3321,7 @@
 
     setMotorDeceleration(args) {
       if (!this._ensureConnected()) return;
-      
+
       const motor = this._getMotor(args.PORT);
       if (motor) {
         motor.setDeceleration(Cast.toNumber(args.TIME));
@@ -3243,7 +3330,7 @@
 
     resetMotorPosition(args) {
       if (!this._ensureConnected()) return;
-      
+
       const motor = this._getMotor(args.PORT);
       if (motor) {
         motor.resetPosition(Cast.toNumber(args.POSITION));
@@ -3252,7 +3339,7 @@
 
     getMotorPosition(args) {
       if (!this._ensureConnected()) return 0;
-      
+
       const motor = this._getMotor(args.PORT);
       if (motor) {
         return MathUtil.wrapClamp(motor.position, 0, 360);
@@ -3266,7 +3353,7 @@
 
     async whenColor(args) {
       if (!this._ensureConnected()) return false;
-      
+
       const portId = this._getPortId(args.PORT);
       if (portId === null) return false;
 
@@ -3276,20 +3363,20 @@
       if (!sensor) return false;
 
       const currentColor = sensor.getValue("color");
-      
+
       if (args.COLOR === Color.ANY) {
         return currentColor !== Color.NONE;
       }
       return currentColor === args.COLOR;
     }
 
-    async seeingColor(args) {
+    seeingColor(args) {
       return this.whenColor(args);
     }
 
     async getColor(args) {
       if (!this._ensureConnected()) return Color.NONE;
-      
+
       const portId = this._getPortId(args.PORT);
       if (portId === null) return Color.NONE;
 
@@ -3303,7 +3390,7 @@
 
     async getDistance(args) {
       if (!this._ensureConnected()) return 0;
-      
+
       const portId = this._getPortId(args.PORT);
       if (portId === null) return 0;
 
@@ -3317,7 +3404,7 @@
 
     async getReflection(args) {
       if (!this._ensureConnected()) return 0;
-      
+
       const portId = this._getPortId(args.PORT);
       if (portId === null) return 0;
 
@@ -3331,7 +3418,7 @@
 
     async getForce(args) {
       if (!this._ensureConnected()) return 0;
-      
+
       const portId = this._getPortId(args.PORT);
       if (portId === null) return 0;
 
@@ -3345,7 +3432,7 @@
 
     async isForceSensorPressed(args) {
       if (!this._ensureConnected()) return false;
-      
+
       const portId = this._getPortId(args.PORT);
       if (portId === null) return false;
 
@@ -3400,13 +3487,9 @@
             ? 256 - this._hub.tiltY
             : -this._hub.tiltY;
         case TiltDirection.DOWN:
-          return this._hub.tiltY > 90
-            ? this._hub.tiltY - 256
-            : this._hub.tiltY;
+          return this._hub.tiltY > 90 ? this._hub.tiltY - 256 : this._hub.tiltY;
         case TiltDirection.LEFT:
-          return this._hub.tiltX > 90
-            ? this._hub.tiltX - 256
-            : this._hub.tiltX;
+          return this._hub.tiltX > 90 ? this._hub.tiltX - 256 : this._hub.tiltX;
         case TiltDirection.RIGHT:
           return this._hub.tiltX > 90
             ? 256 - this._hub.tiltX
@@ -3422,7 +3505,7 @@
 
     setHubLED(args) {
       if (!this._ensureConnected()) return;
-      
+
       let inputHue = Cast.toNumber(args.HUE);
       inputHue = MathUtil.wrapClamp(inputHue, 0, 100);
       const hue = (inputHue * 360) / 100;
@@ -3439,7 +3522,7 @@
 
     setLEDBrightness(args) {
       if (!this._ensureConnected()) return;
-      
+
       const portId = this._getPortId(args.PORT);
       if (portId === null) return;
 
@@ -3459,7 +3542,7 @@
 
     setMatrixPixel(args) {
       if (!this._ensureConnected()) return;
-      
+
       const portId = this._getPortId(args.PORT);
       if (portId === null) return;
 
@@ -3476,7 +3559,7 @@
 
     setMatrixAll(args) {
       if (!this._ensureConnected()) return;
-      
+
       const portId = this._getPortId(args.PORT);
       if (portId === null) return;
 
@@ -3493,7 +3576,7 @@
 
     clearMatrix(args) {
       if (!this._ensureConnected()) return;
-      
+
       const portId = this._getPortId(args.PORT);
       if (portId === null) return;
 
@@ -3552,10 +3635,7 @@
 
     whenMotorOverloaded() {
       if (!this._ensureConnected()) return false;
-      return (
-        this._hub.hubStatus.highCurrent ||
-        this._hub.hubStatus.overPower
-      );
+      return this._hub.hubStatus.highCurrent || this._hub.hubStatus.overPower;
     }
 
     // ========================================================================
@@ -3574,17 +3654,18 @@
       // Simple letter to number mapping (A=0, B=1, C=2, D=3, E=4, F=5)
       const label = Cast.toString(portLabel).toUpperCase();
       const charCode = label.charCodeAt(0);
-      
-      if (charCode >= 65 && charCode <= 70) { // A-F
+
+      if (charCode >= 65 && charCode <= 70) {
+        // A-F
         return charCode - 65;
       }
-      
+
       // Try to parse as number
       const num = parseInt(label);
       if (!isNaN(num) && num >= 0 && num <= 255) {
         return num;
       }
-      
+
       return null;
     }
 
@@ -3594,18 +3675,18 @@
         logger.warn(`Invalid port: ${portLabel}`);
         return null;
       }
-      
+
       const motor = this._hub.getMotor(portId);
       if (!motor) {
         logger.warn(`No motor found on port ${portId}`);
         return null;
       }
-      
+
       return motor;
     }
   }
 
   Scratch.extensions.register(new LEGOPoweredUpExtension());
-  
+
   logger.info("🎉 LEGO Powered Up Unified Extension loaded successfully!");
 })(Scratch);

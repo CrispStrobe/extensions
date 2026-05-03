@@ -778,7 +778,7 @@
       this.log(
         `Allocated variable: ${varName} (${fullType})`,
         { isGlobal },
-        "DEBUG",
+        "DEBUG"
       );
       return varName;
     }
@@ -872,7 +872,7 @@
             error: error.message,
             stack: error.stack,
           },
-          "ERROR",
+          "ERROR"
         );
         console.error(error);
         throw error;
@@ -988,7 +988,7 @@
       } else if (opcode === "event_whenbroadcastreceived") {
         const broadcastName = this.getFieldValue(hatBlock, "BROADCAST_OPTION");
         const labelName = this.generateLabel(
-          `ON_${this.sanitizeName(broadcastName)}`,
+          `ON_${this.sanitizeName(broadcastName)}`
         );
 
         this.broadcastHandlers.set(broadcastName, {
@@ -997,7 +997,7 @@
         });
 
         this.log(
-          `Registered broadcast handler: ${broadcastName} -> ${labelName}`,
+          `Registered broadcast handler: ${broadcastName} -> ${labelName}`
         );
       } else if (opcode === "event_whenkeypressed") {
         // Key pressed events not supported in LMS - log warning
@@ -1012,7 +1012,10 @@
       this.addLine("");
       this.addComment("Broadcast handler subcalls");
 
-      for (const [_broadcastName, handler] of this.broadcastHandlers.entries()) {
+      for (const [
+        _broadcastName,
+        handler,
+      ] of this.broadcastHandlers.entries()) {
         this.addLine("");
         this.addLine(`${handler.label}:`);
         this.indentLevel++;
@@ -1040,7 +1043,7 @@
           this.log(
             "Block not found, ending chain",
             { blockId: currentId },
-            "WARN",
+            "WARN"
           );
           break;
         }
@@ -1050,7 +1053,7 @@
           this.log(
             "WARNING: Block chain too long, stopping",
             { chainLength },
-            "WARN",
+            "WARN"
           );
           this.addComment(`WARNING: Chain exceeded ${maxChainLength} blocks`);
           break;
@@ -1248,7 +1251,7 @@
             error: error.message,
             stack: error.stack,
           },
-          "ERROR",
+          "ERROR"
         );
         this.addComment(`ERROR: ${opcode} - ${error.message}`);
       }
@@ -1284,7 +1287,7 @@
 
       // Parameters: layer, motors, power, ramp_up_ms, run_ms, ramp_down_ms, brake
       this.addLine(
-        `OUTPUT_TIME_POWER(0, port, power, ramp_up, time_ms, ramp_down, 1)`,
+        `OUTPUT_TIME_POWER(0, port, power, ramp_up, time_ms, ramp_down, 1)`
       );
     }
 
@@ -1366,11 +1369,11 @@
         this.addLine(`MOVE32_32(${timeMs}, time_ms)`);
         this.addLine(`MOVE8_8(${leftPort}, port)`);
         this.addLine(
-          `OUTPUT_TIME_POWER(0, port, ${left}, ramp_up, time_ms, ramp_down, 0)`,
+          `OUTPUT_TIME_POWER(0, port, ${left}, ramp_up, time_ms, ramp_down, 0)`
         );
         this.addLine(`MOVE8_8(${rightPort}, port)`);
         this.addLine(
-          `OUTPUT_TIME_POWER(0, port, ${right}, ramp_up, time_ms, ramp_down, 1)`,
+          `OUTPUT_TIME_POWER(0, port, ${right}, ramp_up, time_ms, ramp_down, 1)`
         );
       } else if (
         unit === '"rotations"' ||
@@ -1384,7 +1387,7 @@
         this.addLine(`OUTPUT_STEP_POWER(0, port, ${left}, 30, degrees, 30, 0)`);
         this.addLine(`MOVE8_8(${rightPort}, port)`);
         this.addLine(
-          `OUTPUT_STEP_POWER(0, port, ${right}, 30, degrees, 30, 1)`,
+          `OUTPUT_STEP_POWER(0, port, ${right}, 30, degrees, 30, 1)`
         );
       } else {
         // Degrees - no calculation needed
@@ -1393,7 +1396,7 @@
         this.addLine(`OUTPUT_STEP_POWER(0, port, ${left}, 10, degrees, 10, 0)`);
         this.addLine(`MOVE8_8(${rightPort}, port)`);
         this.addLine(
-          `OUTPUT_STEP_POWER(0, port, ${right}, 10, degrees, 10, 1)`,
+          `OUTPUT_STEP_POWER(0, port, ${right}, 10, degrees, 10, 1)`
         );
       }
     }
@@ -1405,7 +1408,7 @@
       const unit = this.getInputValue(block, "UNIT", blocks);
 
       this.addComment(
-        `Steer drive steering:${steering} speed:${speed} for ${value} ${unit}`,
+        `Steer drive steering:${steering} speed:${speed} for ${value} ${unit}`
       );
 
       // Calculate left and right power from steering
@@ -1452,22 +1455,22 @@
         this.addLine(`MOVE32_32(${timeMs}, time_ms)`);
         this.addLine(`MOVE8_8(${leftPort}, port)`);
         this.addLine(
-          `OUTPUT_TIME_POWER(0, port, ${leftVar}, ramp_up, time_ms, ramp_down, 0)`,
+          `OUTPUT_TIME_POWER(0, port, ${leftVar}, ramp_up, time_ms, ramp_down, 0)`
         );
         this.addLine(`MOVE8_8(${rightPort}, port)`);
         this.addLine(
-          `OUTPUT_TIME_POWER(0, port, ${rightVar}, ramp_up, time_ms, ramp_down, 1)`,
+          `OUTPUT_TIME_POWER(0, port, ${rightVar}, ramp_up, time_ms, ramp_down, 1)`
         );
       } else {
         const degreesValue = this.evaluateExpression(value, "*", 360, 32);
         this.addLine(`MOVE32_32(${degreesValue}, degrees)`);
         this.addLine(`MOVE8_8(${leftPort}, port)`);
         this.addLine(
-          `OUTPUT_STEP_POWER(0, port, ${leftVar}, 30, degrees, 30, 0)`,
+          `OUTPUT_STEP_POWER(0, port, ${leftVar}, 30, degrees, 30, 0)`
         );
         this.addLine(`MOVE8_8(${rightPort}, port)`);
         this.addLine(
-          `OUTPUT_STEP_POWER(0, port, ${rightVar}, 30, degrees, 30, 1)`,
+          `OUTPUT_STEP_POWER(0, port, ${rightVar}, 30, degrees, 30, 1)`
         );
       }
     }
@@ -1658,7 +1661,7 @@
     transpilePlaySound(block, blocks) {
       this.addComment("Play sound file");
       this.addComment(
-        "NOTE: Sound file playback requires file name - using beep instead",
+        "NOTE: Sound file playback requires file name - using beep instead"
       );
       this.addLine(`SOUND(TONE, 100, 1000, 200)`);
     }
@@ -1799,7 +1802,7 @@
       const resultVar = this.allocateVariable(16, "rgb_component");
 
       this.addComment(
-        `Read color sensor RGB on port ${port} component ${component}`,
+        `Read color sensor RGB on port ${port} component ${component}`
       );
       this.addLine(`MOVE8_8(${portNum}, port)`);
       this.addLine(`MOVE8_8(${this.SENSOR_TYPE.EV3_COLOR}, type)`);
@@ -1928,7 +1931,7 @@
       const resultVar = this.allocateVariable(8, "ir_heading");
 
       this.addComment(
-        `Read IR beacon heading on port ${port} channel ${channel}`,
+        `Read IR beacon heading on port ${port} channel ${channel}`
       );
       this.addLine(`MOVE8_8(${portNum}, port)`);
       this.addLine(`MOVE8_8(${this.SENSOR_TYPE.EV3_IR}, type)`);
@@ -1953,7 +1956,7 @@
       const resultVar = this.allocateVariable(8, "ir_distance");
 
       this.addComment(
-        `Read IR beacon distance on port ${port} channel ${channel}`,
+        `Read IR beacon distance on port ${port} channel ${channel}`
       );
       this.addLine(`MOVE8_8(${portNum}, port)`);
       this.addLine(`MOVE8_8(${this.SENSOR_TYPE.EV3_IR}, type)`);
@@ -1979,7 +1982,7 @@
       const resultVar = this.allocateVariable(8, "ir_button");
 
       this.addComment(
-        `Check IR remote button on port ${port} channel ${channel} button ${button}`,
+        `Check IR remote button on port ${port} channel ${channel} button ${button}`
       );
       this.addLine(`MOVE8_8(${portNum}, port)`);
       this.addLine(`MOVE8_8(${this.SENSOR_TYPE.EV3_IR}, type)`);
@@ -1994,7 +1997,7 @@
       const channelIndex = `(${channel} - 1)`;
       const channelValue = this.allocateVariable(8, "ir_chan_val");
       this.addLine(
-        `ARRAY_READ(${arrayName}, ${channelIndex}, ${channelValue})`,
+        `ARRAY_READ(${arrayName}, ${channelIndex}, ${channelValue})`
       );
 
       // Check if specific button is pressed (button codes: 0=none, 1-11=buttons)
@@ -2207,7 +2210,7 @@
       const broadcastInput = this.getInputValue(
         block,
         "BROADCAST_INPUT",
-        blocks,
+        blocks
       );
       const broadcastName = broadcastInput.replace(/'/g, "").replace(/"/g, "");
 
@@ -2220,7 +2223,7 @@
         this.log(
           `WARNING: No handler for broadcast: ${broadcastName}`,
           null,
-          "WARN",
+          "WARN"
         );
       }
     }
@@ -2657,7 +2660,7 @@
           this.log(
             `WARNING: Unsupported math operation: ${operator}`,
             null,
-            "WARN",
+            "WARN"
           );
           return num;
         }
@@ -2763,7 +2766,7 @@
         this.log(
           `Menu block ${opcode} has no fields, using empty string`,
           null,
-          "DEBUG",
+          "DEBUG"
         );
         return "''";
       }
@@ -2839,12 +2842,12 @@
         const cond1 = this.evaluateCondition(
           conditionBlock,
           "OPERAND1",
-          blocks,
+          blocks
         );
         const cond2 = this.evaluateCondition(
           conditionBlock,
           "OPERAND2",
-          blocks,
+          blocks
         );
         const resultVar = this.allocateVariable(8);
         this.addLine(`AND8(${cond1}, ${cond2}, ${resultVar})`);
@@ -2853,12 +2856,12 @@
         const cond1 = this.evaluateCondition(
           conditionBlock,
           "OPERAND1",
-          blocks,
+          blocks
         );
         const cond2 = this.evaluateCondition(
           conditionBlock,
           "OPERAND2",
-          blocks,
+          blocks
         );
         const resultVar = this.allocateVariable(8);
         this.addLine(`OR8(${cond1}, ${cond2}, ${resultVar})`);
@@ -3688,7 +3691,7 @@
         const response = await this.fetchWithTimeout(
           url,
           { method: "GET" },
-          2000,
+          2000
         );
 
         if (response.ok) {
@@ -3698,7 +3701,7 @@
           this.log(
             "EV3 connection test failed",
             { status: response.status },
-            "WARN",
+            "WARN"
           );
           return t("notConnected");
         }
@@ -3706,7 +3709,7 @@
         this.log(
           "EV3 connection test error",
           { error: error.message },
-          "ERROR",
+          "ERROR"
         );
         return t("notConnected");
       }
@@ -3718,7 +3721,7 @@
         const response = await this.fetchWithTimeout(
           url,
           { method: "GET" },
-          2000,
+          2000
         );
 
         if (response.ok) {
@@ -3728,7 +3731,7 @@
           this.log(
             "Compiler connection test failed",
             { status: response.status },
-            "WARN",
+            "WARN"
           );
           return t("notConnected");
         }
@@ -3736,7 +3739,7 @@
         this.log(
           "Compiler connection test error",
           { error: error.message },
-          "ERROR",
+          "ERROR"
         );
         return t("notConnected");
       }
@@ -3789,7 +3792,7 @@
             error: error.message,
             stack: error.stack,
           },
-          "ERROR",
+          "ERROR"
         );
         alert("❌ Transpilation failed:\n" + error.message);
       }
@@ -3802,7 +3805,7 @@
       console.log("Warnings:", this.transpiler?.warnings);
       console.log(
         "showFullDiagnostics method exists:",
-        typeof this.showFullDiagnostics,
+        typeof this.showFullDiagnostics
       );
 
       if (typeof this.showFullDiagnostics === "function") {
@@ -3890,7 +3893,7 @@
 
       console.log(
         "Full report generated:",
-        fullReport.substring(0, 200) + "...",
+        fullReport.substring(0, 200) + "..."
       ); // Debug
       this.showModal("Full Diagnostic Report", fullReport);
     }
@@ -3937,23 +3940,23 @@
       const formattedMessage = message
         .replace(
           /✅/g,
-          '<span style="color: green; font-weight: bold;">✅</span>',
+          '<span style="color: green; font-weight: bold;">✅</span>'
         )
         .replace(
           /❌/g,
-          '<span style="color: red; font-weight: bold;">❌</span>',
+          '<span style="color: red; font-weight: bold;">❌</span>'
         )
         .replace(
           /⚠️/g,
-          '<span style="color: orange; font-weight: bold;">⚠️</span>',
+          '<span style="color: orange; font-weight: bold;">⚠️</span>'
         )
         .replace(
           /ERROR\(S\):/g,
-          '<span style="color: red; font-weight: bold;">ERROR(S):</span>',
+          '<span style="color: red; font-weight: bold;">ERROR(S):</span>'
         )
         .replace(
           /WARNING\(S\):/g,
-          '<span style="color: orange; font-weight: bold;">WARNING(S):</span>',
+          '<span style="color: orange; font-weight: bold;">WARNING(S):</span>'
         );
 
       contentDiv.innerHTML = formattedMessage;
@@ -4006,7 +4009,7 @@
             this.log(
               "Failed to copy to clipboard",
               { error: err.message },
-              "ERROR",
+              "ERROR"
             );
             // Fallback method
             this.fallbackCopyToClipboard(text);
@@ -4050,7 +4053,7 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ code: this.lmsCode }),
           },
-          this.COMPILE_TIMEOUT_MS,
+          this.COMPILE_TIMEOUT_MS
         );
 
         if (!response.ok) {
@@ -4129,7 +4132,7 @@
       this.downloadFile(
         "program.rbf",
         this.rbfBytecode,
-        "application/octet-stream",
+        "application/octet-stream"
       );
       alert(t("downloaded") + " program.rbf");
     }
@@ -4151,7 +4154,7 @@
       this.log(
         "motorRunRotations called (no-op in transpile mode)",
         args,
-        "DEBUG",
+        "DEBUG"
       );
     }
 
@@ -4159,7 +4162,7 @@
       this.log(
         "motorRunDegrees called (no-op in transpile mode)",
         args,
-        "DEBUG",
+        "DEBUG"
       );
     }
 
@@ -4202,7 +4205,7 @@
       this.log(
         "touchSensorBumped called (no-op in transpile mode)",
         args,
-        "DEBUG",
+        "DEBUG"
       );
       return false;
     }
@@ -4216,7 +4219,7 @@
       this.log(
         "colorSensorRGB called (no-op in transpile mode)",
         args,
-        "DEBUG",
+        "DEBUG"
       );
       return 0;
     }
@@ -4225,7 +4228,7 @@
       this.log(
         "ultrasonicSensor called (no-op in transpile mode)",
         args,
-        "DEBUG",
+        "DEBUG"
       );
       return 0;
     }
@@ -4234,7 +4237,7 @@
       this.log(
         "ultrasonicListen called (no-op in transpile mode)",
         args,
-        "DEBUG",
+        "DEBUG"
       );
       return false;
     }
@@ -4257,7 +4260,7 @@
       this.log(
         "irBeaconHeading called (no-op in transpile mode)",
         args,
-        "DEBUG",
+        "DEBUG"
       );
       return 0;
     }
@@ -4266,7 +4269,7 @@
       this.log(
         "irBeaconDistance called (no-op in transpile mode)",
         args,
-        "DEBUG",
+        "DEBUG"
       );
       return 0;
     }
@@ -4275,7 +4278,7 @@
       this.log(
         "irRemoteButton called (no-op in transpile mode)",
         args,
-        "DEBUG",
+        "DEBUG"
       );
       return false;
     }
@@ -4301,7 +4304,7 @@
       this.log(
         "screenTextLarge called (no-op in transpile mode)",
         args,
-        "DEBUG",
+        "DEBUG"
       );
     }
 
@@ -4371,7 +4374,7 @@
       this.log(
         "batteryCurrent called (no-op in transpile mode)",
         null,
-        "DEBUG",
+        "DEBUG"
       );
       return 0;
     }
@@ -4380,7 +4383,7 @@
       this.log(
         "batteryVoltage called (no-op in transpile mode)",
         null,
-        "DEBUG",
+        "DEBUG"
       );
       return 9.0;
     }
@@ -4416,7 +4419,7 @@
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
-        const response = await fetch(url, {
+        const response = await Scratch.fetch(url, {
           ...options,
           signal: controller.signal,
         });

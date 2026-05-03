@@ -411,7 +411,7 @@
         results.scratchTranslate = window.scratchTranslate.locale;
         console.log(
           "7. window.scratchTranslate.locale:",
-          window.scratchTranslate.locale,
+          window.scratchTranslate.locale
         );
       } else {
         results.scratchTranslate = "not available";
@@ -459,7 +459,7 @@
     // Method 10: Check meta tags
     try {
       const metaLang = document.querySelector(
-        'meta[http-equiv="content-language"]',
+        'meta[http-equiv="content-language"]'
       );
       const metaContent = metaLang ? metaLang.getAttribute("content") : null;
       results.metaTag = metaContent;
@@ -507,7 +507,7 @@
     ) {
       console.log(
         "✓ Using TurboWarp localStorage:",
-        results.turboWarpLocalStorage,
+        results.turboWarpLocalStorage
       );
       finalLanguage = extractLangCode(results.turboWarpLocalStorage);
     }
@@ -539,7 +539,7 @@
     ) {
       console.log(
         "✓ Using document.documentElement.lang:",
-        results.documentLang,
+        results.documentLang
       );
       finalLanguage = extractLangCode(results.documentLang);
     }
@@ -580,7 +580,7 @@
     ) {
       console.log(
         "✓ Using navigator.languages[0]:",
-        results.navigatorLanguages[0],
+        results.navigatorLanguages[0]
       );
       finalLanguage = extractLangCode(results.navigatorLanguages[0]);
     }
@@ -611,7 +611,7 @@
         finalLanguage: finalLanguage,
       };
       console.log(
-        "Debug info stored in: window._planeteMathsLanguageDetection",
+        "Debug info stored in: window._planeteMathsLanguageDetection"
       );
     }
 
@@ -661,7 +661,7 @@
               currentLang = newLang;
               console.log(
                 "[PlaneteMaths] Redux locale changed → currentLang =",
-                currentLang,
+                currentLang
               );
             }
           }
@@ -856,7 +856,7 @@
             opcode: "angleconvert",
             text: this._translate(
               "pm.angleconvert",
-              "convert [NUM1] from [FROM] to [TO]",
+              "convert [NUM1] from [FROM] to [TO]"
             ),
             blockType: Scratch.BlockType.REPORTER,
             arguments: {
@@ -878,7 +878,7 @@
             opcode: "mathopdiv",
             text: this._translate(
               "pm.mathopdiv",
-              "[OPERATOR] of [NUM1] divided by [NUM2]",
+              "[OPERATOR] of [NUM1] divided by [NUM2]"
             ),
             blockType: Scratch.BlockType.REPORTER,
             arguments: {
@@ -895,7 +895,7 @@
             opcode: "mathop2",
             text: this._translate(
               "pm.mathop2",
-              "[OPERATOR] of [NUM1] and [NUM2]",
+              "[OPERATOR] of [NUM1] and [NUM2]"
             ),
             blockType: Scratch.BlockType.REPORTER,
             arguments: {
@@ -912,7 +912,7 @@
             opcode: "multiple",
             text: this._translate(
               "pm.multiple",
-              "[NUM1] is a [choix1] of [NUM2]",
+              "[NUM1] is a [choix1] of [NUM2]"
             ),
             blockType: Scratch.BlockType.BOOLEAN,
             arguments: {
@@ -975,7 +975,7 @@
             opcode: "sommechiffres",
             text: this._translate(
               "pm.sommechiffres",
-              "sum of digits of [NUM1]",
+              "sum of digits of [NUM1]"
             ),
             blockType: Scratch.BlockType.REPORTER,
             arguments: {
@@ -1169,7 +1169,7 @@
             opcode: "contains",
             text: this._translate(
               "pm.contains",
-              "[STRING1] contains [STRING2] ?",
+              "[STRING1] contains [STRING2] ?"
             ),
             blockType: Scratch.BlockType.BOOLEAN,
             arguments: {
@@ -1184,7 +1184,7 @@
             opcode: "extract",
             text: this._translate(
               "pm.extract",
-              "extract characters from [NUM1] to [NUM2] of [STRING]",
+              "extract characters from [NUM1] to [NUM2] of [STRING]"
             ),
             blockType: Scratch.BlockType.REPORTER,
             arguments: {
@@ -1348,14 +1348,14 @@
               {
                 text: this._translate(
                   "text.vad",
-                  "Approximate value by defect of",
+                  "Approximate value by defect of"
                 ),
                 value: "vad",
               },
               {
                 text: this._translate(
                   "text.vae",
-                  "Approximate value by excess of",
+                  "Approximate value by excess of"
                 ),
                 value: "vae",
               },
@@ -1436,7 +1436,7 @@
       try {
         const result = Math.pow(
           Cast.toNumber(args.NUM1),
-          Cast.toNumber(args.NUM2),
+          Cast.toNumber(args.NUM2)
         );
         log(`pow(${args.NUM1}, ${args.NUM2}) = ${result}`);
         return result;
@@ -1506,7 +1506,7 @@
       try {
         const result = Math.min(
           Cast.toNumber(args.NUM1),
-          Cast.toNumber(args.NUM2),
+          Cast.toNumber(args.NUM2)
         );
         log(`min(${args.NUM1}, ${args.NUM2}) = ${result}`);
         return result;
@@ -1520,7 +1520,7 @@
       try {
         const result = Math.max(
           Cast.toNumber(args.NUM1),
-          Cast.toNumber(args.NUM2),
+          Cast.toNumber(args.NUM2)
         );
         log(`max(${args.NUM1}, ${args.NUM2}) = ${result}`);
         return result;

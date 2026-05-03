@@ -6,7 +6,6 @@
 (function (Scratch) {
   "use strict";
 
-
   // ============================================================================
   // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
   //
@@ -57,7 +56,8 @@
       "legospike_bridge.runFor": "[PORT] läuft [DIRECTION] für [VALUE] [UNIT]",
       "legospike_bridge.startMotor": "[PORT] Motor starten [DIRECTION]",
       "legospike_bridge.stopMotor": "[PORT] Motor stoppen",
-      "legospike_bridge.setSpeed": "[PORT] Geschwindigkeit auf [SPEED] % setzen",
+      "legospike_bridge.setSpeed":
+        "[PORT] Geschwindigkeit auf [SPEED] % setzen",
       "legospike_bridge.position": "[PORT] Position",
       "legospike_bridge.writeText": "[TEXT] schreiben",
       "legospike_bridge.turnOn": "[MATRIX] einschalten",
@@ -86,7 +86,8 @@
       "legospike_bridge.connect": "🔌 se connecter à [URL]",
       "legospike_bridge.disconnect": "déconnecter",
       "legospike_bridge.connected": "connecté ?",
-      "legospike_bridge.runFor": "[PORT] tourne [DIRECTION] pendant [VALUE] [UNIT]",
+      "legospike_bridge.runFor":
+        "[PORT] tourne [DIRECTION] pendant [VALUE] [UNIT]",
       "legospike_bridge.startMotor": "[PORT] démarrer moteur [DIRECTION]",
       "legospike_bridge.stopMotor": "[PORT] arrêter moteur",
       "legospike_bridge.setSpeed": "[PORT] définir vitesse sur [SPEED] %",
@@ -117,11 +118,25 @@
 
   function detectLanguage() {
     const candidates = [];
-    try { if (typeof window !== "undefined" && window.ReduxStore?.getState) { candidates.push(window.ReduxStore.getState().locales?.locale); } } catch (e) {}
-    try { candidates.push(localStorage.getItem("tw:language")); } catch (e) {}
-    try { if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) { candidates.push(Scratch.vm.runtime.getLocale()); } } catch (e) {}
-    try { candidates.push(document.documentElement.lang); } catch (e) {}
-    try { candidates.push(navigator.language); } catch (e) {}
+    try {
+      if (typeof window !== "undefined" && window.ReduxStore?.getState) {
+        candidates.push(window.ReduxStore.getState().locales?.locale);
+      }
+    } catch (e) {}
+    try {
+      candidates.push(localStorage.getItem("tw:language"));
+    } catch (e) {}
+    try {
+      if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) {
+        candidates.push(Scratch.vm.runtime.getLocale());
+      }
+    } catch (e) {}
+    try {
+      candidates.push(document.documentElement.lang);
+    } catch (e) {}
+    try {
+      candidates.push(navigator.language);
+    } catch (e) {}
     for (const c of candidates) {
       if (typeof c !== "string" || !c) continue;
       const lower = c.toLowerCase();
@@ -149,7 +164,11 @@
           if (locale && locale !== lastKnownLocale) {
             lastKnownLocale = locale;
             const lower = locale.toLowerCase();
-            const newLang = lower.startsWith("de") ? "de" : lower.startsWith("fr") ? "fr" : "en";
+            const newLang = lower.startsWith("de")
+              ? "de"
+              : lower.startsWith("fr")
+                ? "fr"
+                : "en";
             if (newLang !== currentLang) currentLang = newLang;
           }
         }
@@ -257,19 +276,20 @@
 
     // ==================== CONNECTION ====================
 
-    async connect(url) {
+    connect(url) {
       this.lastUrl = url;
       this.shouldReconnect = true;
       return this._connect(url);
     }
 
-    async _connect(url) {
+    _connect(url) {
       return new Promise((resolve, reject) => {
         const wsUrl = url.startsWith("ws://") ? url : `ws://${url}`;
         console.log(
-          `🔌 Connecting to ${wsUrl}... (attempt ${this.reconnectAttempts + 1})`,
+          `🔌 Connecting to ${wsUrl}... (attempt ${this.reconnectAttempts + 1})`
         );
 
+        // eslint-disable-next-line extension/check-can-fetch -- talks to user-configured local bridge/brick endpoint set explicitly via a block; canFetch's prompt is UX-degrading and redundant here
         this.ws = new WebSocket(wsUrl);
 
         const timeout = setTimeout(() => {
@@ -543,7 +563,7 @@ sensor_loop()
         this.replOutput += text + "\n";
         if (this.replOutput.length > 1000) {
           this.replOutput = this.replOutput.substring(
-            this.replOutput.length - 1000,
+            this.replOutput.length - 1000
           );
         }
       }
@@ -569,12 +589,12 @@ sensor_loop()
       return promise;
     }
 
-    async _sendRaw(text) {
+    _sendRaw(text) {
       if (!this.connected || !this.ws) return;
       this.ws.send(text);
     }
 
-    async _sendPythonCommand(code) {
+    _sendPythonCommand(code) {
       return this._sendRaw(code + "\r\n");
     }
 
@@ -585,7 +605,7 @@ sensor_loop()
     // ==================== BLOCK IMPLEMENTATIONS ====================
     // (Keep all the existing block implementations - they don't change!)
 
-    async motorRunFor(args) {
+    motorRunFor(args) {
       const port = Cast.toString(args.PORT).trim().toUpperCase();
       const direction = Cast.toNumber(args.DIRECTION);
       const value = Cast.toNumber(args.VALUE);
@@ -596,33 +616,33 @@ sensor_loop()
       if (unit === "rotations") {
         const degrees = Math.floor(value * 360);
         return this._sendPythonCommand(
-          `import hub; hub.port.${port}.motor.run_for_degrees(${degrees}, ${speed})`,
+          `import hub; hub.port.${port}.motor.run_for_degrees(${degrees}, ${speed})`
         );
       } else if (unit === "degrees") {
         return this._sendPythonCommand(
-          `import hub; hub.port.${port}.motor.run_for_degrees(${Math.floor(value)}, ${speed})`,
+          `import hub; hub.port.${port}.motor.run_for_degrees(${Math.floor(value)}, ${speed})`
         );
       } else if (unit === "seconds") {
         const ms = Math.floor(value * 1000);
         return this._sendPythonCommand(
-          `import hub; hub.port.${port}.motor.run_for_time(${ms}, ${speed})`,
+          `import hub; hub.port.${port}.motor.run_for_time(${ms}, ${speed})`
         );
       }
     }
 
-    async motorStart(args) {
+    motorStart(args) {
       const port = Cast.toString(args.PORT).trim().toUpperCase();
       const direction = Cast.toNumber(args.DIRECTION);
       const speed = this.motorSettings[port].speed * direction;
       return this._sendPythonCommand(
-        `import hub; hub.port.${port}.motor.pwm(${Math.round(speed)})`,
+        `import hub; hub.port.${port}.motor.pwm(${Math.round(speed)})`
       );
     }
 
-    async motorStop(args) {
+    motorStop(args) {
       const port = Cast.toString(args.PORT).trim().toUpperCase();
       return this._sendPythonCommand(
-        `import hub; hub.port.${port}.motor.stop()`,
+        `import hub; hub.port.${port}.motor.stop()`
       );
     }
 
@@ -637,14 +657,14 @@ sensor_loop()
       return this.portValues[port]?.position || 0;
     }
 
-    async displayText(args) {
+    displayText(args) {
       const text = Cast.toString(args.TEXT);
       return this._sendPythonCommand(
-        `import hub; hub.display.show("${text.replace(/"/g, '\\"')}")`,
+        `import hub; hub.display.show("${text.replace(/"/g, '\\"')}")`
       );
     }
 
-    async displayImage(args) {
+    displayImage(args) {
       const matrix = Cast.toString(args.MATRIX);
       const symbol = (matrix.replace(/\D/g, "") + "0".repeat(25)).slice(0, 25);
       const image = symbol
@@ -653,11 +673,11 @@ sensor_loop()
         .match(/.{5}/g)
         .join(":");
       return this._sendPythonCommand(
-        `import hub; hub.display.show(hub.Image("${image}"))`,
+        `import hub; hub.display.show(hub.Image("${image}"))`
       );
     }
 
-    async displayPattern(args) {
+    displayPattern(args) {
       const pattern = Cast.toString(args.PATTERN);
       const patternData = DisplayPatterns[pattern];
       if (patternData) {
@@ -665,11 +685,11 @@ sensor_loop()
       }
     }
 
-    async displayClear() {
+    displayClear() {
       return this._sendPythonCommand('import hub; hub.display.show(" ")');
     }
 
-    async setPixel(args) {
+    setPixel(args) {
       const x = Cast.toNumber(args.X) - 1;
       const y = Cast.toNumber(args.Y) - 1;
       const brightness = Math.round((Cast.toNumber(args.BRIGHTNESS) * 9) / 100);
@@ -677,7 +697,7 @@ sensor_loop()
       if (x < 0 || x > 4 || y < 0 || y > 4) return;
 
       return this._sendPythonCommand(
-        `import hub; hub.display.pixel(${x}, ${y}, ${brightness})`,
+        `import hub; hub.display.pixel(${x}, ${y}, ${brightness})`
       );
     }
 
@@ -691,7 +711,7 @@ sensor_loop()
       return this.acceleration[axis] || 0;
     }
 
-    async resetYaw() {
+    resetYaw() {
       return this._sendPythonCommand("import hub; hub.motion.reset_yaw()");
     }
 
@@ -721,15 +741,15 @@ sensor_loop()
       return this.gestures[gesture] || false;
     }
 
-    async playBeep(args) {
+    playBeep(args) {
       const freq = Cast.toNumber(args.FREQUENCY);
       const duration = Cast.toNumber(args.DURATION);
       return this._sendPythonCommand(
-        `import hub; hub.sound.beep(${freq}, ${duration}, hub.sound.SOUND_SIN)`,
+        `import hub; hub.sound.beep(${freq}, ${duration}, hub.sound.SOUND_SIN)`
       );
     }
 
-    async stopSound() {
+    stopSound() {
       return this._sendPythonCommand("import hub; hub.sound.stop()");
     }
 
@@ -745,7 +765,7 @@ sensor_loop()
       this.timerStart = Date.now();
     }
 
-    async runPythonCommand(args) {
+    runPythonCommand(args) {
       const code = Cast.toString(args.CODE);
       return this._sendPythonCommand(code);
     }

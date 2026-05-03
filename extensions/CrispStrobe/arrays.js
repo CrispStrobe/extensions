@@ -63,7 +63,8 @@
       "arrays.create1D": "1D-Array [NAME] aus JSON [JSON] erstellen",
       "arrays.create2D": "2D-Array [NAME] aus JSON [JSON] erstellen",
       "arrays.createEmpty": "leeres Array [NAME] erstellen",
-      "arrays.createZeros": "Array [NAME] aus Nullen mit Form [SHAPE] erstellen",
+      "arrays.createZeros":
+        "Array [NAME] aus Nullen mit Form [SHAPE] erstellen",
       "arrays.createRange": "Array [NAME] von [START] bis [END] erstellen",
       "arrays.get": "[NAME] an [INDEX]",
       "arrays.get2D": "[NAME] an Zeile [ROW] Spalte [COL]",
@@ -84,7 +85,8 @@
       "arrays.getColumn": "Spalte [COL] aus [NAME]",
       "arrays.map": "[NAME] mit Funktion [FUNC] abbilden",
       "arrays.filter": "[NAME] mit Funktion [FUNC] filtern",
-      "arrays.reduce": "[NAME] mit Funktion [FUNC] und Startwert [INIT] reduzieren",
+      "arrays.reduce":
+        "[NAME] mit Funktion [FUNC] und Startwert [INIT] reduzieren",
       "arrays.sort": "[NAME] [ORDER] sortieren",
       "arrays.reverse": "[NAME] umkehren",
       "arrays.sum": "Summe von [NAME]",

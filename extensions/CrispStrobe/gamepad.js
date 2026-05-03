@@ -132,7 +132,7 @@
       results.turboWarpLocalStorage = twSettings;
       console.log(
         "🌍 [Gamepad] 3. TurboWarp localStorage (tw:language):",
-        twSettings,
+        twSettings
       );
     } catch (e) {
       results.turboWarpLocalStorage = "error: " + e.message;
@@ -162,13 +162,13 @@
       results.documentLang = htmlLang;
       console.log(
         "🌍 [Gamepad] 5. document.documentElement.lang:",
-        htmlLang || "(empty)",
+        htmlLang || "(empty)"
       );
     } catch (e) {
       results.documentLang = "error: " + e.message;
       console.log(
         "🌍 [Gamepad] 5. document.documentElement.lang: ERROR",
-        e.message,
+        e.message
       );
     }
 
@@ -179,7 +179,7 @@
       results.urlParameter = urlLang;
       console.log(
         "🌍 [Gamepad] 6. URL parameter (lang/locale):",
-        urlLang || "(none)",
+        urlLang || "(none)"
       );
     } catch (e) {
       results.urlParameter = "error: " + e.message;
@@ -196,7 +196,7 @@
         results.scratchTranslate = window.scratchTranslate.locale;
         console.log(
           "🌍 [Gamepad] 7. window.scratchTranslate.locale:",
-          window.scratchTranslate.locale,
+          window.scratchTranslate.locale
         );
       } else {
         results.scratchTranslate = "not available";
@@ -244,13 +244,13 @@
     // Method 10: Check meta tags
     try {
       const metaLang = document.querySelector(
-        'meta[http-equiv="content-language"]',
+        'meta[http-equiv="content-language"]'
       );
       const metaContent = metaLang ? metaLang.getAttribute("content") : null;
       results.metaTag = metaContent;
       console.log(
         "🌍 [Gamepad] 10. Meta tag content-language:",
-        metaContent || "(none)",
+        metaContent || "(none)"
       );
     } catch (e) {
       results.metaTag = "error: " + e.message;
@@ -272,7 +272,7 @@
     ) {
       console.log(
         "🌍 [Gamepad] ✓ Using Redux store locale:",
-        results.reduxStore,
+        results.reduxStore
       );
       finalLanguage = results.reduxStore.toLowerCase().startsWith("de")
         ? "de"
@@ -287,7 +287,7 @@
     ) {
       console.log(
         "🌍 [Gamepad] ✓ Using TurboWarp localStorage:",
-        results.turboWarpLocalStorage,
+        results.turboWarpLocalStorage
       );
       finalLanguage = results.turboWarpLocalStorage
         .toLowerCase()
@@ -303,7 +303,7 @@
     ) {
       console.log(
         "🌍 [Gamepad] ✓ Using Scratch VM locale:",
-        results.scratchVMLocale,
+        results.scratchVMLocale
       );
       finalLanguage = results.scratchVMLocale.toLowerCase().startsWith("de")
         ? "de"
@@ -318,7 +318,7 @@
     ) {
       console.log(
         "🌍 [Gamepad] ✓ Using document.documentElement.lang:",
-        results.documentLang,
+        results.documentLang
       );
       finalLanguage = results.documentLang.toLowerCase().startsWith("de")
         ? "de"
@@ -343,7 +343,7 @@
     ) {
       console.log(
         "🌍 [Gamepad] ✓ Using navigator.language:",
-        results.navigatorLanguage,
+        results.navigatorLanguage
       );
       finalLanguage = results.navigatorLanguage.toLowerCase().startsWith("de")
         ? "de"
@@ -357,7 +357,7 @@
     ) {
       console.log(
         "🌍 [Gamepad] ✓ Using navigator.languages[0]:",
-        results.navigatorLanguages[0],
+        results.navigatorLanguages[0]
       );
       finalLanguage = results.navigatorLanguages[0]
         .toLowerCase()
@@ -383,7 +383,7 @@
         finalLanguage: finalLanguage,
       };
       console.log(
-        "🌍 [Gamepad] Debug info stored in: window._gamepadLanguageDetection",
+        "🌍 [Gamepad] Debug info stored in: window._gamepadLanguageDetection"
       );
     }
 
@@ -411,7 +411,7 @@
           currentLang = newLang;
           console.log("🌍 [Gamepad] Language updated to:", currentLang);
           console.warn(
-            "🌍 [Gamepad] Extension translations will apply after reload",
+            "🌍 [Gamepad] Extension translations will apply after reload"
           );
         }
       }
@@ -436,10 +436,10 @@
               currentLang = newLang;
               console.log(
                 "🌍 [Gamepad] Extension language updated to:",
-                currentLang,
+                currentLang
               );
               console.warn(
-                "🌍 [Gamepad] Extension translations will apply after reload",
+                "🌍 [Gamepad] Extension translations will apply after reload"
               );
             }
           }
@@ -816,7 +816,7 @@
               this.activeController = remaining[0];
               console.log(
                 "🎮 [Gamepad] Switched to controller:",
-                this.activeController.id,
+                this.activeController.id
               );
             }
           }
@@ -824,7 +824,7 @@
       } catch (error) {
         console.error(
           "🎮 [Gamepad] ❌ Error setting up event listeners:",
-          error,
+          error
         );
         this.stats.errors++;
       }
@@ -862,7 +862,7 @@
               this.activeController = gamepad;
               console.log(
                 "🎮 [Gamepad] 🔄 Auto-detected controller:",
-                gamepad.id,
+                gamepad.id
               );
               break;
             }
@@ -900,11 +900,11 @@
 
           this.virtualCursor.x = Math.max(
             this.virtualCursor.minX,
-            Math.min(this.virtualCursor.maxX, this.virtualCursor.x),
+            Math.min(this.virtualCursor.maxX, this.virtualCursor.x)
           );
           this.virtualCursor.y = Math.max(
             this.virtualCursor.minY,
-            Math.min(this.virtualCursor.maxY, this.virtualCursor.y),
+            Math.min(this.virtualCursor.maxY, this.virtualCursor.y)
           );
         }
       } catch (error) {
@@ -1132,15 +1132,15 @@
 
         this.virtualCursor.x = Math.max(
           this.virtualCursor.minX,
-          Math.min(this.virtualCursor.maxX, x),
+          Math.min(this.virtualCursor.maxX, x)
         );
         this.virtualCursor.y = Math.max(
           this.virtualCursor.minY,
-          Math.min(this.virtualCursor.maxY, y),
+          Math.min(this.virtualCursor.maxY, y)
         );
 
         console.log(
-          `🎮 [Gamepad] 🖱️ Cursor set to (${this.virtualCursor.x.toFixed(1)}, ${this.virtualCursor.y.toFixed(1)})`,
+          `🎮 [Gamepad] 🖱️ Cursor set to (${this.virtualCursor.x.toFixed(1)}, ${this.virtualCursor.y.toFixed(1)})`
         );
       } catch (error) {
         console.error("🎮 [Gamepad] ❌ setCursorPosition error:", error);
@@ -1192,7 +1192,7 @@
           })
           .then(() => {
             console.log(
-              `🎮 [Gamepad] 📳 Vibration: ${duration}ms at ${Math.round(intensity * 100)}%`,
+              `🎮 [Gamepad] 📳 Vibration: ${duration}ms at ${Math.round(intensity * 100)}%`
             );
           })
           .catch((error) => {
@@ -1228,7 +1228,7 @@
           })
           .then(() => {
             console.log(
-              `🎮 [Gamepad] 📳 Pattern: weak=${Math.round(weak * 100)}% strong=${Math.round(strong * 100)}% ${duration}ms`,
+              `🎮 [Gamepad] 📳 Pattern: weak=${Math.round(weak * 100)}% strong=${Math.round(strong * 100)}% ${duration}ms`
             );
           })
           .catch((error) => {
@@ -1292,11 +1292,11 @@
     showDebugInfo() {
       console.log("");
       console.log(
-        "═══════════════════════════════════════════════════════════",
+        "═══════════════════════════════════════════════════════════"
       );
       console.log("🎮 UNIVERSAL GAMEPAD - DEBUG INFORMATION");
       console.log(
-        "═══════════════════════════════════════════════════════════",
+        "═══════════════════════════════════════════════════════════"
       );
       console.log("");
 
@@ -1306,7 +1306,7 @@
       console.log(`   Extension name: ${t("extensionName")}`);
       if (window._gamepadLanguageDetection) {
         console.log(
-          `   Detection results available in: window._gamepadLanguageDetection`,
+          `   Detection results available in: window._gamepadLanguageDetection`
         );
       }
 
@@ -1324,7 +1324,7 @@
         console.log(`   Axes: ${this.activeController.axes.length}`);
         console.log(`   Mapping: ${this.activeController.mapping}`);
         console.log(
-          `   Vibration: ${this.activeController.vibrationActuator ? "✅" : "❌"}`,
+          `   Vibration: ${this.activeController.vibrationActuator ? "✅" : "❌"}`
         );
 
         console.log("");
@@ -1335,7 +1335,7 @@
             const button = this.activeController.buttons[index];
             if (button.pressed || button.value > 0) {
               console.log(
-                `   ${name.padEnd(8)} [${index}]: PRESSED (${button.value.toFixed(2)})`,
+                `   ${name.padEnd(8)} [${index}]: PRESSED (${button.value.toFixed(2)})`
               );
               anyPressed = true;
             }
@@ -1360,7 +1360,7 @@
 
             if (Math.abs(normalized) > 0.01) {
               console.log(
-                `   ${stick.name}: ${scaled.toString().padStart(4)} (raw: ${raw.toFixed(3)})`,
+                `   ${stick.name}: ${scaled.toString().padStart(4)} (raw: ${raw.toFixed(3)})`
               );
             } else {
               console.log(`   ${stick.name}:    0 (deadzone)`);
@@ -1371,7 +1371,7 @@
         console.log("");
         console.log("🖱️  CURSOR:");
         console.log(
-          `   Position: (${this.virtualCursor.x.toFixed(1)}, ${this.virtualCursor.y.toFixed(1)})`,
+          `   Position: (${this.virtualCursor.x.toFixed(1)}, ${this.virtualCursor.y.toFixed(1)})`
         );
         console.log(`   Sensitivity: ${this.virtualCursor.sensitivity}`);
       }
@@ -1391,7 +1391,7 @@
 
       console.log("");
       console.log(
-        "═══════════════════════════════════════════════════════════",
+        "═══════════════════════════════════════════════════════════"
       );
       console.log("");
     }
@@ -1400,6 +1400,6 @@
   Scratch.extensions.register(new UniversalGamepad());
   console.log("🎮 [Gamepad] Extension registered successfully");
   console.log(
-    "🎮 [Gamepad] To view language detection: window._gamepadLanguageDetection",
+    "🎮 [Gamepad] To view language detection: window._gamepadLanguageDetection"
   );
 })(Scratch);
