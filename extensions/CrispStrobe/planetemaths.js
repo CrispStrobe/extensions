@@ -1833,7 +1833,7 @@
           case "pgcd":
             result = this._pgcd(n1, n2);
             break;
-          case "ppcm":
+          case "ppcm": {
             const gcd = this._pgcd(n1, n2);
             if (gcd === 0) {
               result = 0;
@@ -1841,6 +1841,7 @@
               result = Math.abs(n1 * n2) / gcd;
             }
             break;
+          }
           default:
             error(`Unknown operator: ${operator}`);
             return "";

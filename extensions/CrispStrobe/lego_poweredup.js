@@ -803,7 +803,7 @@
     ON_FOR_ROTATION: 3,
   };
 
-  const MotorLabel = {
+  const _MotorLabel = {
     A: "A",
     B: "B",
     C: "C",
@@ -2128,11 +2128,12 @@
           this.hubStatus.rssi = -(256 - data[5]);
           logger.trace(`RSSI: ${this.hubStatus.rssi} dBm`);
           break;
-        case HubProperty.FW_VERSION:
+        case HubProperty.FW_VERSION: {
           const version = int32ArrayToNumber([data[5], data[6], data[7], data[8]]);
           this.hubStatus.fwVersion = decodeVersion(version);
           logger.info(`Firmware version: ${this.hubStatus.fwVersion}`);
           break;
+        }
       }
     }
 
@@ -2195,22 +2196,25 @@
         case DeviceType.SPIKE_COLOR_SENSOR:
         case DeviceType.TECHNIC_COLOR_SENSOR:
           switch (mode) {
-            case Mode.COLOR:
+            case Mode.COLOR: {
               const colorValue = data[4];
               const color = IndexToColor[colorValue] || Color.NONE;
               device.setValue("color", color);
               logger.trace(`Color: ${color} (${colorValue})`);
               break;
-            case Mode.DISTANCE:
+            }
+            case Mode.DISTANCE: {
               const distance = data[4];
               device.setValue("distance", distance);
               logger.trace(`Distance: ${distance}`);
               break;
-            case Mode.REFLECTION:
+            }
+            case Mode.REFLECTION: {
               const reflection = data[4];
               device.setValue("reflection", reflection);
               logger.trace(`Reflection: ${reflection}`);
               break;
+            }
           }
           break;
 
@@ -2235,16 +2239,18 @@
 
         case DeviceType.SPIKE_FORCE_SENSOR:
           switch (mode) {
-            case Mode.FORCE:
+            case Mode.FORCE: {
               const force = Math.round(data[4] * 10) / 10;
               device.setValue("force", force);
               logger.trace(`Force: ${force}N`);
               break;
-            case Mode.TOUCHED:
+            }
+            case Mode.TOUCHED: {
               const touched = data[4] === 1;
               device.setValue("touched", touched);
               logger.trace(`Touched: ${touched}`);
               break;
+            }
           }
           break;
 

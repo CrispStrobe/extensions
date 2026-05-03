@@ -949,12 +949,13 @@
           this._handleDeviceNotification(data);
           break;
 
-        case MessageType.CONSOLE_NOTIFICATION:
+        case MessageType.CONSOLE_NOTIFICATION: {
           const message = new TextDecoder().decode(data.slice(1));
           log.info("Console output:", message);
           this._replOutput += message;
           break;
 
+        }
         case MessageType.PROGRAM_FLOW_RESPONSE:
         case MessageType.PROGRAM_FLOW_NOTIFICATION:
           log.proto("Program flow message received");
@@ -963,7 +964,7 @@
     }
 
     _handleDeviceNotification(data) {
-      const payloadSize = data[1] | (data[2] << 8);
+      const _payloadSize = data[1] | (data[2] << 8);
       let offset = 3;
 
       while (offset < data.length) {
@@ -2137,7 +2138,7 @@
         log.transpile("Broadcasts found:", this.broadcasts);
 
         // FIRST PASS: Process all targets to collect imports and generate code body
-        const tempCode = this.code;
+        const _tempCode = this.code;
         this.code = []; // Temporarily clear code array
 
         // Generate globals (without header)

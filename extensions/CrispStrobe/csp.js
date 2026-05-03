@@ -98,7 +98,7 @@
   // Embed the CSP solver
   var CSP = {},
     FAILURE = "FAILURE",
-    stepCounter = 0;
+    _stepCounter = 0;
 
   CSP.solve = function solve(csp) {
     csp = normalizeProblem(csp);
@@ -122,7 +122,7 @@
     const savedDom = unassigned[nextKey];
     delete unassigned[nextKey];
     for (let i = 0; i < values.length; i++) {
-      stepCounter++;
+      _stepCounter++;
       assigned[nextKey] = [values[i]];
       const consistent = enforceConsistency(assigned, unassigned, csp);
       if (consistent === FAILURE) {

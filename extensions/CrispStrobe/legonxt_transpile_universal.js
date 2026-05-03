@@ -316,7 +316,7 @@
 
   let currentLocale = "en";
 
-  function formatMessage(id) {
+  function _formatMessage(id) {
     const lang = translations[currentLocale] || translations.en;
     return lang[id] || translations.en[id] || id;
   }
@@ -885,10 +885,10 @@ if (typeof window !== "undefined") {
       if (telegram.length === 0) return;
 
       const messageType = telegram[0];
-      const command = telegram[1];
+      const _command = telegram[1];
 
       if (messageType === NXT_OPCODE.REPLY) {
-        const status = telegram[2];
+        const _status = telegram[2];
         // Resolve and remove the oldest pending request.
         const first = this.pendingRequests.entries().next().value;
         if (first) {
@@ -3769,7 +3769,7 @@ this.addLine("}");
             }
             break;
             
-            case 'direct':
+            case 'direct': {
             // Create backend if needed
             if (!this._serialBackend) {
                 this._serialBackend = new SerialBackend();
@@ -3781,7 +3781,8 @@ this.addLine("}");
                 this._onConnect();  // Trigger connection callback
             }
             return serialSuccess;
-            
+            }
+
             case 'bridge':
             // Create backend if needed
             if (!this._bridgeBackend) {

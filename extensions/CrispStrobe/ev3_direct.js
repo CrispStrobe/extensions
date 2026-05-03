@@ -221,7 +221,7 @@
     // ==================== EV3 PROTOCOL CONSTANTS ====================
     
     // Direct command types (from c_com.h)
-    const COMMAND_TYPE = {
+    const _COMMAND_TYPE = {
         DIRECT_COMMAND_REPLY: 0x00,
         DIRECT_COMMAND_NO_REPLY: 0x80,
         DIRECT_REPLY: 0x02,
@@ -382,12 +382,12 @@
         RATE: 1
     };
 
-    const ULTRASONIC_MODE = {
+    const _ULTRASONIC_MODE = {
         CM: 0,
         INCH: 1
     };
 
-    const TOUCH_MODE = {
+    const _TOUCH_MODE = {
         TOUCH: 0
     };
 

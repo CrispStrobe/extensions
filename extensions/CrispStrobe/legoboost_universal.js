@@ -406,7 +406,7 @@
 
   const BoostMotorMaxPowerAdd = 10;
   const BoostPingInterval = 5000;
-  const BoostColorSampleSize = 5;
+  const _BoostColorSampleSize = 5;
 
   const BoostIO = {
     MOTOR_WEDO: 0x01,
@@ -625,7 +625,7 @@
     RIGHT: "right",
   };
 
-  const BoostOperator = {
+  const _BoostOperator = {
     LESS: "<",
     GREATER: ">",
     EQUAL: "=",
@@ -1631,7 +1631,7 @@
           this.hubStatus.rssi = -(256 - data[5]);
           logger.trace(`RSSI: ${this.hubStatus.rssi} dBm`);
           break;
-        case BoostHubProperty.FW_VERSION:
+        case BoostHubProperty.FW_VERSION: {
           const version = int32ArrayToNumber([data[5], data[6], data[7], data[8]]);
           this.hubStatus.fwVersion = decodeVersion(version);
           logger.info(`Firmware version: ${this.hubStatus.fwVersion}`);
@@ -1646,6 +1646,7 @@
             logger.info("Using port mapping for firmware >= 1.0.00.0224");
           }
           break;
+        }
       }
     }
 
@@ -1689,7 +1690,7 @@
           break;
 
         case BoostIO.COLOR:
-        case BoostIO.MOTION_SENSOR:
+        case BoostIO.MOTION_SENSOR: {
           const mode = this._portModes[portId];
           
           if (!this._sensors[portId]) {
@@ -1697,7 +1698,7 @@
           }
 
           switch (mode) {
-            case BoostMode.COLOR:
+            case BoostMode.COLOR: {
               const colorValue = data[4];
               const newColor = Object.keys(BoostColorIndex).find(
                 (key) => BoostColorIndex[key] === colorValue
@@ -1712,24 +1713,28 @@
               this._sensors[portId].color = this.color;
               break;
 
-            case BoostMode.DISTANCE:
+            }
+            case BoostMode.DISTANCE: {
               const distance = data[4] > 255 ? 255 : data[4];
               this._sensors[portId].distance = distance;
               logger.trace(`Distance: ${distance}`);
               break;
 
-            case BoostMode.REFLECTION:
+            }
+            case BoostMode.REFLECTION: {
               const reflection = data[4] > 100 ? 100 : data[4];
               this._sensors[portId].reflection = reflection;
               logger.trace(`Reflection: ${reflection}`);
               break;
+            }
+        }
           }
           break;
 
         case BoostIO.MOTORINT:
         case BoostIO.MOTOREXT:
         case BoostIO.MOTOR_WEDO:
-        case BoostIO.MOTOR_SYSTEM:
+        case BoostIO.MOTOR_SYSTEM: {
           const motor = this._motors[portId];
           if (motor) {
             const position = int32ArrayToNumber([data[4], data[5], data[6], data[7]]);
@@ -1738,7 +1743,8 @@
           }
           break;
 
-        case BoostIO.TECHNIC_FORCE_SENSOR:
+        }
+        case BoostIO.TECHNIC_FORCE_SENSOR: {
           const mode2 = this._portModes[portId];
           
           if (!this._sensors[portId]) {
@@ -1746,17 +1752,20 @@
           }
 
           switch (mode2) {
-            case BoostMode.FORCE:
+            case BoostMode.FORCE: {
               const force = Math.round(data[4] * 10) / 10;
               this._sensors[portId].force = force;
               logger.trace(`Force: ${force}N`);
               break;
 
-            case BoostMode.TOUCHED:
+            }
+            case BoostMode.TOUCHED: {
               const touched = data[4] === 1;
               this._sensors[portId].touched = touched;
               logger.trace(`Touched: ${touched}`);
               break;
+            }
+        }
           }
           break;
       }

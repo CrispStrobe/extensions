@@ -10,7 +10,7 @@
     throw new Error("LEGO EV3 Comprehensive Extension must run unsandboxed");
   }
 
-  const Cast = Scratch.Cast;
+  const _Cast = Scratch.Cast;
 
   // ============================================================================
   // INTERNATIONALIZATION (i18n)
@@ -381,7 +381,7 @@
   const LC1 = (v) => [0x81, v & 0xff];
   const LC2 = (v) => [0x82, v & 0xff, (v >> 8) & 0xff];
   const LC4 = (v) => [0x83, v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff];
-  const LCS = (str) => {
+  const _LCS = (str) => {
     const bytes = [0x84];
     for (let i = 0; i < str.length; i++) bytes.push(str.charCodeAt(i));
     bytes.push(0x00);
@@ -1180,7 +1180,7 @@
       if (this.broadcastHandlers.size === 0) return;
       this.addLine("");
       this.addComment("Broadcast handler subcalls");
-      for (const [broadcastName, handler] of this.broadcastHandlers.entries()) {
+      for (const [_broadcastName, handler] of this.broadcastHandlers.entries()) {
         this.addLine("");
         this.addLine(`${handler.label}:`);
         this.indentLevel++;

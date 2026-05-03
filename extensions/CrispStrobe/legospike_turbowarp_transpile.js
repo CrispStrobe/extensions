@@ -1914,7 +1914,7 @@ continuous_sensor_loop()
         
         const ports = port.includes("+") ? port.split("+") : [port];
         
-        for (const p of ports) {
+        for (const _p of ports) {
           this.addLine(`motor = get_motor("${port}")`);  // Use 'port' not 'p'
           this.addLine(`if motor:`);
           this.indentLevel++;

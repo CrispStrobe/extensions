@@ -32,6 +32,8 @@
       compileToRBF: "compile to RBF bytecode",
       showRBFCode: "show RBF bytecode (hex)",
       downloadRBF: "download as .rbf file",
+      showDebugLog: "show transpilation diagnostics",
+      testDiagnostics: "🔧 Show full transpilation diagnostics",
       uploadAndRun: "upload RBF to EV3 and run",
 
       // Script Management
@@ -161,6 +163,8 @@
       compileToRBF: "zu RBF Bytecode kompilieren",
       showRBFCode: "zeige RBF Bytecode (Hex)",
       downloadRBF: "als .rbf Datei herunterladen",
+      showDebugLog: "Transpilierungs-Diagnose anzeigen",
+      testDiagnostics: "🔧 Vollständige Transpilierungs-Diagnose anzeigen",
       uploadAndRun: "RBF zu EV3 hochladen und ausführen",
 
       // Script Management
@@ -1008,7 +1012,7 @@
       this.addLine("");
       this.addComment("Broadcast handler subcalls");
 
-      for (const [broadcastName, handler] of this.broadcastHandlers.entries()) {
+      for (const [_broadcastName, handler] of this.broadcastHandlers.entries()) {
         this.addLine("");
         this.addLine(`${handler.label}:`);
         this.indentLevel++;
@@ -3092,12 +3096,12 @@
           {
             opcode: "showDebugLog",
             blockType: Scratch.BlockType.COMMAND,
-            text: "show transpilation diagnostics",
+            text: t("showDebugLog"),
           },
           {
             opcode: "testDiagnostics",
             blockType: Scratch.BlockType.COMMAND,
-            text: "🔧 Show full transpilation diagnostics",
+            text: t("testDiagnostics"),
           },
 
           "---",

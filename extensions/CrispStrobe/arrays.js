@@ -227,7 +227,7 @@
 
   // Storage for arrays (keyed by name)
   const arrays = {};
-  let nextTempId = 0;
+  let _nextTempId = 0;
 
   class ArrayExtension {
     getInfo() {
