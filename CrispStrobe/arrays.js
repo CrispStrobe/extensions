@@ -6,6 +6,225 @@
 (function (Scratch) {
   "use strict";
 
+  // ============================================================================
+  // INTERNATIONALIZATION (i18n)
+  //
+  // Same module-level locale pattern as ev3dev_py_transpile.js and
+  // planetemaths.js: detect once at gallery-load time, listen for changes,
+  // resolve block text via the module-level t(key) at every getInfo() call.
+  // ============================================================================
+
+  const translations = {
+    en: {
+      "arrays.name": "Arrays & Tensors",
+      "arrays.create1D": "create 1D array [NAME] from JSON [JSON]",
+      "arrays.create2D": "create 2D array [NAME] from JSON [JSON]",
+      "arrays.createEmpty": "create empty array [NAME]",
+      "arrays.createZeros": "create array [NAME] of zeros with shape [SHAPE]",
+      "arrays.createRange": "create array [NAME] from [START] to [END]",
+      "arrays.get": "get [NAME] at [INDEX]",
+      "arrays.get2D": "get [NAME] at row [ROW] col [COL]",
+      "arrays.getMulti": "get [NAME] at indices [INDICES]",
+      "arrays.set": "set [NAME] at [INDEX] to [VALUE]",
+      "arrays.set2D": "set [NAME] at row [ROW] col [COL] to [VALUE]",
+      "arrays.setMulti": "set [NAME] at indices [INDICES] to [VALUE]",
+      "arrays.push": "push [VALUE] to [NAME]",
+      "arrays.pop": "pop from [NAME]",
+      "arrays.insert": "insert [VALUE] at [INDEX] in [NAME]",
+      "arrays.remove": "remove at [INDEX] from [NAME]",
+      "arrays.length": "length of [NAME]",
+      "arrays.shape": "shape of [NAME]",
+      "arrays.contains": "[NAME] contains [VALUE]",
+      "arrays.indexOf": "index of [VALUE] in [NAME]",
+      "arrays.slice": "slice [NAME] from [START] to [END]",
+      "arrays.getRow": "get row [ROW] from [NAME]",
+      "arrays.getColumn": "get column [COL] from [NAME]",
+      "arrays.map": "map [NAME] with function [FUNC]",
+      "arrays.filter": "filter [NAME] with function [FUNC]",
+      "arrays.reduce": "reduce [NAME] with function [FUNC] initial [INIT]",
+      "arrays.sort": "sort [NAME] [ORDER]",
+      "arrays.reverse": "reverse [NAME]",
+      "arrays.sum": "sum of [NAME]",
+      "arrays.mean": "mean of [NAME]",
+      "arrays.min": "min of [NAME]",
+      "arrays.max": "max of [NAME]",
+      "arrays.transpose": "transpose [NAME]",
+      "arrays.flatten": "flatten [NAME]",
+      "arrays.reshape": "reshape [NAME] to [SHAPE]",
+      "arrays.toJSON": "convert [NAME] to JSON",
+      "arrays.toString": "convert [NAME] to string",
+      "arrays.delete": "delete array [NAME]",
+      "arrays.listAll": "list all arrays",
+      "arrays.ascending": "ascending",
+      "arrays.descending": "descending",
+    },
+    de: {
+      "arrays.name": "Arrays & Tensoren",
+      "arrays.create1D": "1D-Array [NAME] aus JSON [JSON] erstellen",
+      "arrays.create2D": "2D-Array [NAME] aus JSON [JSON] erstellen",
+      "arrays.createEmpty": "leeres Array [NAME] erstellen",
+      "arrays.createZeros": "Array [NAME] aus Nullen mit Form [SHAPE] erstellen",
+      "arrays.createRange": "Array [NAME] von [START] bis [END] erstellen",
+      "arrays.get": "[NAME] an [INDEX]",
+      "arrays.get2D": "[NAME] an Zeile [ROW] Spalte [COL]",
+      "arrays.getMulti": "[NAME] an Indizes [INDICES]",
+      "arrays.set": "[NAME] an [INDEX] auf [VALUE] setzen",
+      "arrays.set2D": "[NAME] an Zeile [ROW] Spalte [COL] auf [VALUE] setzen",
+      "arrays.setMulti": "[NAME] an Indizes [INDICES] auf [VALUE] setzen",
+      "arrays.push": "[VALUE] an [NAME] anhängen",
+      "arrays.pop": "letztes Element aus [NAME] entfernen",
+      "arrays.insert": "[VALUE] an [INDEX] in [NAME] einfügen",
+      "arrays.remove": "an [INDEX] aus [NAME] entfernen",
+      "arrays.length": "Länge von [NAME]",
+      "arrays.shape": "Form von [NAME]",
+      "arrays.contains": "[NAME] enthält [VALUE]",
+      "arrays.indexOf": "Index von [VALUE] in [NAME]",
+      "arrays.slice": "Ausschnitt von [NAME] von [START] bis [END]",
+      "arrays.getRow": "Zeile [ROW] aus [NAME]",
+      "arrays.getColumn": "Spalte [COL] aus [NAME]",
+      "arrays.map": "[NAME] mit Funktion [FUNC] abbilden",
+      "arrays.filter": "[NAME] mit Funktion [FUNC] filtern",
+      "arrays.reduce": "[NAME] mit Funktion [FUNC] und Startwert [INIT] reduzieren",
+      "arrays.sort": "[NAME] [ORDER] sortieren",
+      "arrays.reverse": "[NAME] umkehren",
+      "arrays.sum": "Summe von [NAME]",
+      "arrays.mean": "Mittelwert von [NAME]",
+      "arrays.min": "Minimum von [NAME]",
+      "arrays.max": "Maximum von [NAME]",
+      "arrays.transpose": "[NAME] transponieren",
+      "arrays.flatten": "[NAME] abflachen",
+      "arrays.reshape": "[NAME] zu [SHAPE] umformen",
+      "arrays.toJSON": "[NAME] zu JSON konvertieren",
+      "arrays.toString": "[NAME] zu Zeichenkette konvertieren",
+      "arrays.delete": "Array [NAME] löschen",
+      "arrays.listAll": "alle Arrays auflisten",
+      "arrays.ascending": "aufsteigend",
+      "arrays.descending": "absteigend",
+    },
+    fr: {
+      "arrays.name": "Tableaux et Tenseurs",
+      "arrays.create1D": "créer tableau 1D [NAME] depuis JSON [JSON]",
+      "arrays.create2D": "créer tableau 2D [NAME] depuis JSON [JSON]",
+      "arrays.createEmpty": "créer tableau vide [NAME]",
+      "arrays.createZeros": "créer tableau [NAME] de zéros avec forme [SHAPE]",
+      "arrays.createRange": "créer tableau [NAME] de [START] à [END]",
+      "arrays.get": "obtenir [NAME] à [INDEX]",
+      "arrays.get2D": "obtenir [NAME] à ligne [ROW] colonne [COL]",
+      "arrays.getMulti": "obtenir [NAME] aux indices [INDICES]",
+      "arrays.set": "définir [NAME] à [INDEX] = [VALUE]",
+      "arrays.set2D": "définir [NAME] à ligne [ROW] colonne [COL] = [VALUE]",
+      "arrays.setMulti": "définir [NAME] aux indices [INDICES] = [VALUE]",
+      "arrays.push": "ajouter [VALUE] à [NAME]",
+      "arrays.pop": "retirer dernier élément de [NAME]",
+      "arrays.insert": "insérer [VALUE] à [INDEX] dans [NAME]",
+      "arrays.remove": "supprimer à [INDEX] de [NAME]",
+      "arrays.length": "longueur de [NAME]",
+      "arrays.shape": "forme de [NAME]",
+      "arrays.contains": "[NAME] contient [VALUE]",
+      "arrays.indexOf": "index de [VALUE] dans [NAME]",
+      "arrays.slice": "extraire [NAME] de [START] à [END]",
+      "arrays.getRow": "ligne [ROW] de [NAME]",
+      "arrays.getColumn": "colonne [COL] de [NAME]",
+      "arrays.map": "appliquer fonction [FUNC] à [NAME]",
+      "arrays.filter": "filtrer [NAME] avec fonction [FUNC]",
+      "arrays.reduce": "réduire [NAME] avec fonction [FUNC] initial [INIT]",
+      "arrays.sort": "trier [NAME] [ORDER]",
+      "arrays.reverse": "inverser [NAME]",
+      "arrays.sum": "somme de [NAME]",
+      "arrays.mean": "moyenne de [NAME]",
+      "arrays.min": "minimum de [NAME]",
+      "arrays.max": "maximum de [NAME]",
+      "arrays.transpose": "transposer [NAME]",
+      "arrays.flatten": "aplatir [NAME]",
+      "arrays.reshape": "remodeler [NAME] en [SHAPE]",
+      "arrays.toJSON": "convertir [NAME] en JSON",
+      "arrays.toString": "convertir [NAME] en chaîne",
+      "arrays.delete": "supprimer tableau [NAME]",
+      "arrays.listAll": "lister tous les tableaux",
+      "arrays.ascending": "croissant",
+      "arrays.descending": "décroissant",
+    },
+  };
+
+  function detectLanguage() {
+    const candidates = [];
+    try {
+      if (typeof window !== "undefined" && window.ReduxStore?.getState) {
+        candidates.push(window.ReduxStore.getState().locales?.locale);
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      candidates.push(localStorage.getItem("tw:language"));
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) {
+        candidates.push(Scratch.vm.runtime.getLocale());
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      candidates.push(document.documentElement.lang);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      candidates.push(navigator.language);
+    } catch (e) {
+      /* ignore */
+    }
+    for (const c of candidates) {
+      if (typeof c !== "string" || !c) continue;
+      const lower = c.toLowerCase();
+      if (lower.startsWith("de")) return "de";
+      if (lower.startsWith("fr")) return "fr";
+      if (lower.startsWith("en")) return "en";
+    }
+    return "en";
+  }
+
+  let currentLang = detectLanguage();
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (e) => {
+      if (e.key === "tw:language") {
+        const newLang = detectLanguage();
+        if (newLang !== currentLang) currentLang = newLang;
+      }
+    });
+    let lastKnownLocale = null;
+    setInterval(() => {
+      try {
+        if (window.ReduxStore?.getState) {
+          const locale = window.ReduxStore.getState().locales?.locale;
+          if (locale && locale !== lastKnownLocale) {
+            lastKnownLocale = locale;
+            const lower = locale.toLowerCase();
+            const newLang = lower.startsWith("de")
+              ? "de"
+              : lower.startsWith("fr")
+                ? "fr"
+                : "en";
+            if (newLang !== currentLang) currentLang = newLang;
+          }
+        }
+      } catch (e) {
+        /* ignore */
+      }
+    }, 1000);
+  }
+
+  function t(key, defaultValue) {
+    const tr = translations[currentLang];
+    if (tr && tr[key]) return tr[key];
+    if (translations.en && translations.en[key]) return translations.en[key];
+    return defaultValue !== undefined ? defaultValue : key;
+  }
+
   // Storage for arrays (keyed by name)
   const arrays = {};
   let nextTempId = 0;
@@ -14,7 +233,7 @@
     getInfo() {
       return {
         id: "arrays",
-        name: "Arrays & Tensors",
+        name: t("arrays.name"),
         color1: "#FF6680",
         color2: "#FF4D6A",
         color3: "#FF3355",
@@ -22,7 +241,7 @@
           {
             opcode: "create1D",
             blockType: Scratch.BlockType.COMMAND,
-            text: "create 1D array [NAME] from JSON [JSON]",
+            text: t("arrays.create1D"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -37,7 +256,7 @@
           {
             opcode: "create2D",
             blockType: Scratch.BlockType.COMMAND,
-            text: "create 2D array [NAME] from JSON [JSON]",
+            text: t("arrays.create2D"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -52,7 +271,7 @@
           {
             opcode: "createEmpty",
             blockType: Scratch.BlockType.COMMAND,
-            text: "create empty array [NAME]",
+            text: t("arrays.createEmpty"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -63,7 +282,7 @@
           {
             opcode: "createZeros",
             blockType: Scratch.BlockType.COMMAND,
-            text: "create array [NAME] of zeros with shape [SHAPE]",
+            text: t("arrays.createZeros"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -78,7 +297,7 @@
           {
             opcode: "createRange",
             blockType: Scratch.BlockType.COMMAND,
-            text: "create array [NAME] from [START] to [END]",
+            text: t("arrays.createRange"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -92,7 +311,7 @@
           {
             opcode: "get",
             blockType: Scratch.BlockType.REPORTER,
-            text: "get [NAME] at [INDEX]",
+            text: t("arrays.get"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -104,7 +323,7 @@
           {
             opcode: "get2D",
             blockType: Scratch.BlockType.REPORTER,
-            text: "get [NAME] at row [ROW] col [COL]",
+            text: t("arrays.get2D"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -117,7 +336,7 @@
           {
             opcode: "getMulti",
             blockType: Scratch.BlockType.REPORTER,
-            text: "get [NAME] at indices [INDICES]",
+            text: t("arrays.getMulti"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -133,7 +352,7 @@
           {
             opcode: "set",
             blockType: Scratch.BlockType.COMMAND,
-            text: "set [NAME] at [INDEX] to [VALUE]",
+            text: t("arrays.set"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -146,7 +365,7 @@
           {
             opcode: "set2D",
             blockType: Scratch.BlockType.COMMAND,
-            text: "set [NAME] at row [ROW] col [COL] to [VALUE]",
+            text: t("arrays.set2D"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -160,7 +379,7 @@
           {
             opcode: "setMulti",
             blockType: Scratch.BlockType.COMMAND,
-            text: "set [NAME] at indices [INDICES] to [VALUE]",
+            text: t("arrays.setMulti"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -177,7 +396,7 @@
           {
             opcode: "push",
             blockType: Scratch.BlockType.COMMAND,
-            text: "push [VALUE] to [NAME]",
+            text: t("arrays.push"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -189,7 +408,7 @@
           {
             opcode: "pop",
             blockType: Scratch.BlockType.REPORTER,
-            text: "pop from [NAME]",
+            text: t("arrays.pop"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -200,7 +419,7 @@
           {
             opcode: "insert",
             blockType: Scratch.BlockType.COMMAND,
-            text: "insert [VALUE] at [INDEX] in [NAME]",
+            text: t("arrays.insert"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -213,7 +432,7 @@
           {
             opcode: "remove",
             blockType: Scratch.BlockType.COMMAND,
-            text: "remove at [INDEX] from [NAME]",
+            text: t("arrays.remove"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -226,7 +445,7 @@
           {
             opcode: "length",
             blockType: Scratch.BlockType.REPORTER,
-            text: "length of [NAME]",
+            text: t("arrays.length"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -237,7 +456,7 @@
           {
             opcode: "shape",
             blockType: Scratch.BlockType.REPORTER,
-            text: "shape of [NAME]",
+            text: t("arrays.shape"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -248,7 +467,7 @@
           {
             opcode: "contains",
             blockType: Scratch.BlockType.BOOLEAN,
-            text: "[NAME] contains [VALUE]",
+            text: t("arrays.contains"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -260,7 +479,7 @@
           {
             opcode: "indexOf",
             blockType: Scratch.BlockType.REPORTER,
-            text: "index of [VALUE] in [NAME]",
+            text: t("arrays.indexOf"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -273,7 +492,7 @@
           {
             opcode: "slice",
             blockType: Scratch.BlockType.REPORTER,
-            text: "slice [NAME] from [START] to [END]",
+            text: t("arrays.slice"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -286,7 +505,7 @@
           {
             opcode: "getRow",
             blockType: Scratch.BlockType.REPORTER,
-            text: "get row [ROW] from [NAME]",
+            text: t("arrays.getRow"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -298,7 +517,7 @@
           {
             opcode: "getColumn",
             blockType: Scratch.BlockType.REPORTER,
-            text: "get column [COL] from [NAME]",
+            text: t("arrays.getColumn"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -311,7 +530,7 @@
           {
             opcode: "map",
             blockType: Scratch.BlockType.REPORTER,
-            text: "map [NAME] with function [FUNC]",
+            text: t("arrays.map"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -326,7 +545,7 @@
           {
             opcode: "filter",
             blockType: Scratch.BlockType.REPORTER,
-            text: "filter [NAME] with function [FUNC]",
+            text: t("arrays.filter"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -341,7 +560,7 @@
           {
             opcode: "reduce",
             blockType: Scratch.BlockType.REPORTER,
-            text: "reduce [NAME] with function [FUNC] initial [INIT]",
+            text: t("arrays.reduce"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -357,7 +576,7 @@
           {
             opcode: "sort",
             blockType: Scratch.BlockType.REPORTER,
-            text: "sort [NAME] [ORDER]",
+            text: t("arrays.sort"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -369,7 +588,7 @@
           {
             opcode: "reverse",
             blockType: Scratch.BlockType.REPORTER,
-            text: "reverse [NAME]",
+            text: t("arrays.reverse"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -381,7 +600,7 @@
           {
             opcode: "sum",
             blockType: Scratch.BlockType.REPORTER,
-            text: "sum of [NAME]",
+            text: t("arrays.sum"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -392,7 +611,7 @@
           {
             opcode: "mean",
             blockType: Scratch.BlockType.REPORTER,
-            text: "mean of [NAME]",
+            text: t("arrays.mean"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -403,7 +622,7 @@
           {
             opcode: "min",
             blockType: Scratch.BlockType.REPORTER,
-            text: "min of [NAME]",
+            text: t("arrays.min"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -414,7 +633,7 @@
           {
             opcode: "max",
             blockType: Scratch.BlockType.REPORTER,
-            text: "max of [NAME]",
+            text: t("arrays.max"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -426,7 +645,7 @@
           {
             opcode: "transpose",
             blockType: Scratch.BlockType.REPORTER,
-            text: "transpose [NAME]",
+            text: t("arrays.transpose"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -437,7 +656,7 @@
           {
             opcode: "flatten",
             blockType: Scratch.BlockType.REPORTER,
-            text: "flatten [NAME]",
+            text: t("arrays.flatten"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -448,7 +667,7 @@
           {
             opcode: "reshape",
             blockType: Scratch.BlockType.REPORTER,
-            text: "reshape [NAME] to [SHAPE]",
+            text: t("arrays.reshape"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -464,7 +683,7 @@
           {
             opcode: "toJSON",
             blockType: Scratch.BlockType.REPORTER,
-            text: "convert [NAME] to JSON",
+            text: t("arrays.toJSON"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -475,7 +694,7 @@
           {
             opcode: "toString",
             blockType: Scratch.BlockType.REPORTER,
-            text: "convert [NAME] to string",
+            text: t("arrays.toString"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -486,7 +705,7 @@
           {
             opcode: "delete",
             blockType: Scratch.BlockType.COMMAND,
-            text: "delete array [NAME]",
+            text: t("arrays.delete"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -497,13 +716,16 @@
           {
             opcode: "listAll",
             blockType: Scratch.BlockType.REPORTER,
-            text: "list all arrays",
+            text: t("arrays.listAll"),
           },
         ],
         menus: {
           sortOrder: {
             acceptReporters: true,
-            items: ["ascending", "descending"],
+            items: [
+              { text: t("arrays.ascending"), value: "ascending" },
+              { text: t("arrays.descending"), value: "descending" },
+            ],
           },
         },
       };
