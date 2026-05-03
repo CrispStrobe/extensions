@@ -3170,6 +3170,9 @@
           this.logger.debug(`  Parsing sensor: "${sensor}"`);
 
           // Format: "type_Sn_extra" or "type_Sn"
+          // Anchored + bounded + no nested quantifiers; safe regardless of
+          // input. False positive from eslint-plugin-security.
+          // eslint-disable-next-line security/detect-unsafe-regex
           const match = sensor.match(/^(\w+)_S(\d)(?:_(\w+))?$/);
 
           if (match) {
