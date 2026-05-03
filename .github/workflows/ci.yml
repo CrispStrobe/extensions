@@ -26,8 +26,11 @@ jobs:
       - name: ESLint (max-warnings=0)
         run: npm run lint -- --max-warnings=0
 
-      - name: Prettier (--check)
-        run: npm run check-format
+      # Scope to our extensions only — the gallery's check-format script
+      # would try to format the whole repo, including other authors' files
+      # that we have no business touching.
+      - name: Prettier (--check) on CrispStrobe extensions
+        run: npx prettier --check 'extensions/CrispStrobe/**/*.js'
 
   validate:
     name: Gallery validate (informational)
