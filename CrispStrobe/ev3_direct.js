@@ -6,6 +6,199 @@
 (function(Scratch) {
     'use strict';
 
+  // ============================================================================
+  // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
+  //
+  // Module-level locale state pattern shared with planetemaths.js,
+  // ev3dev_py_transpile.js, arrays.js, etc. Detect once at gallery-load,
+  // listen for changes, resolve block text via the module-level t(key) at
+  // every getInfo() call.
+  // ============================================================================
+
+  const translations = {
+    en: {
+      "ev3d.name": "LEGO EV3 Direct",
+      "ev3d.connect": "🔌 connect to EV3",
+      "ev3d.disconnect": "🔌 disconnect from EV3",
+      "ev3d.connected": "connected?",
+      "ev3d.motorOn": "🎮 motor [PORTS] on at [POWER]% power",
+      "ev3d.motorRunDeg": "🎮 motor [PORTS] run [DEGREES]° at [POWER]% [BRAKE]",
+      "ev3d.motorRunSec": "🎮 motor [PORTS] run [SECONDS] sec at [POWER]% [BRAKE]",
+      "ev3d.motorStop": "🎮 motor [PORTS] stop and [BRAKE]",
+      "ev3d.motorPolarity": "🎮 set motor [PORTS] polarity [POLARITY]",
+      "ev3d.motorPosition": "🎮 motor [PORT] position",
+      "ev3d.motorSpeed": "🎮 motor [PORT] speed",
+      "ev3d.motorReset": "🎮 reset motor [PORTS] position",
+      "ev3d.touchPressed": "👆 touch [PORT] pressed?",
+      "ev3d.colorColor": "🌈 color [PORT] color",
+      "ev3d.colorRefl": "🌈 color [PORT] reflected light",
+      "ev3d.colorAmb": "🌈 color [PORT] ambient light",
+      "ev3d.colorRGB": "🌈 color [PORT] RGB [COMPONENT]",
+      "ev3d.ultrasonic": "📏 ultrasonic [PORT] distance (cm)",
+      "ev3d.gyroAngle": "🔄 gyro [PORT] angle",
+      "ev3d.gyroRate": "🔄 gyro [PORT] rate",
+      "ev3d.gyroReset": "🔄 reset gyro [PORT]",
+      "ev3d.infrared": "📡 infrared [PORT] proximity",
+      "ev3d.nxtLight": "🔧 NXT light [PORT] brightness",
+      "ev3d.nxtSound": "🔧 NXT sound [PORT] loudness",
+      "ev3d.brickButton": "🎮 brick button [BUTTON] pressed?",
+      "ev3d.setLED": "💡 set LED to [PATTERN]",
+      "ev3d.playTone": "🔔 play tone [FREQ] Hz for [MS] ms volume [VOL]%",
+      "ev3d.playNote": "🔔 play note [NOTE] for [BEATS] beats",
+      "ev3d.stopSound": "🔔 stop sound",
+      "ev3d.setVolume": "🔔 set volume to [VOL]%",
+      "ev3d.volume": "🔔 volume",
+      "ev3d.clearScreen": "🖥️ clear screen",
+      "ev3d.drawText": "🖥️ draw text [TEXT] at x:[X] y:[Y]",
+      "ev3d.selectFont": "🖥️ select font [SIZE]",
+      "ev3d.drawPixel": "🖥️ draw pixel at x:[X] y:[Y]",
+      "ev3d.drawLine": "🖥️ draw line from x:[X1] y:[Y1] to x:[X2] y:[Y2]",
+      "ev3d.drawRect": "🖥️ draw [FILL] rectangle x:[X] y:[Y] w:[W] h:[H]",
+      "ev3d.drawCircle": "🖥️ draw [FILL] circle x:[X] y:[Y] radius:[R]",
+      "ev3d.invertRect": "🖥️ invert rectangle x:[X] y:[Y] w:[W] h:[H]",
+      "ev3d.wait": "⏱️ wait [MS] ms",
+      "ev3d.timer": "⏱️ timer (ms)",
+      "ev3d.battery": "📊 battery level (V)",
+    },
+    de: {
+      "ev3d.name": "LEGO EV3 Direkt",
+      "ev3d.connect": "🔌 mit EV3 verbinden",
+      "ev3d.disconnect": "🔌 EV3 trennen",
+      "ev3d.connected": "verbunden?",
+      "ev3d.motorOn": "🎮 Motor [PORTS] mit [POWER]% Leistung an",
+      "ev3d.motorRunDeg": "🎮 Motor [PORTS] läuft [DEGREES]° mit [POWER]% [BRAKE]",
+      "ev3d.motorRunSec": "🎮 Motor [PORTS] läuft [SECONDS] Sek. mit [POWER]% [BRAKE]",
+      "ev3d.motorStop": "🎮 Motor [PORTS] stoppen und [BRAKE]",
+      "ev3d.motorPolarity": "🎮 Motor [PORTS] Polarität [POLARITY] setzen",
+      "ev3d.motorPosition": "🎮 Motor [PORT] Position",
+      "ev3d.motorSpeed": "🎮 Motor [PORT] Geschwindigkeit",
+      "ev3d.motorReset": "🎮 Motor [PORTS] Position zurücksetzen",
+      "ev3d.touchPressed": "👆 Berührung [PORT] gedrückt?",
+      "ev3d.colorColor": "🌈 Farbe [PORT] Farbe",
+      "ev3d.colorRefl": "🌈 Farbe [PORT] reflektiertes Licht",
+      "ev3d.colorAmb": "🌈 Farbe [PORT] Umgebungslicht",
+      "ev3d.colorRGB": "🌈 Farbe [PORT] RGB [COMPONENT]",
+      "ev3d.ultrasonic": "📏 Ultraschall [PORT] Abstand (cm)",
+      "ev3d.gyroAngle": "🔄 Kreisel [PORT] Winkel",
+      "ev3d.gyroRate": "🔄 Kreisel [PORT] Rate",
+      "ev3d.gyroReset": "🔄 Kreisel [PORT] zurücksetzen",
+      "ev3d.infrared": "📡 Infrarot [PORT] Näherung",
+      "ev3d.nxtLight": "🔧 NXT-Licht [PORT] Helligkeit",
+      "ev3d.nxtSound": "🔧 NXT-Sound [PORT] Lautstärke",
+      "ev3d.brickButton": "🎮 Brick-Knopf [BUTTON] gedrückt?",
+      "ev3d.setLED": "💡 LED auf [PATTERN] setzen",
+      "ev3d.playTone": "🔔 Ton [FREQ] Hz für [MS] ms Lautstärke [VOL]% spielen",
+      "ev3d.playNote": "🔔 Note [NOTE] für [BEATS] Schläge spielen",
+      "ev3d.stopSound": "🔔 Ton stoppen",
+      "ev3d.setVolume": "🔔 Lautstärke auf [VOL]% setzen",
+      "ev3d.volume": "🔔 Lautstärke",
+      "ev3d.clearScreen": "🖥️ Bildschirm löschen",
+      "ev3d.drawText": "🖥️ Text [TEXT] bei x:[X] y:[Y] zeichnen",
+      "ev3d.selectFont": "🖥️ Schriftart [SIZE] wählen",
+      "ev3d.drawPixel": "🖥️ Pixel bei x:[X] y:[Y] zeichnen",
+      "ev3d.drawLine": "🖥️ Linie von x:[X1] y:[Y1] nach x:[X2] y:[Y2] zeichnen",
+      "ev3d.drawRect": "🖥️ [FILL] Rechteck x:[X] y:[Y] B:[W] H:[H] zeichnen",
+      "ev3d.drawCircle": "🖥️ [FILL] Kreis x:[X] y:[Y] Radius:[R] zeichnen",
+      "ev3d.invertRect": "🖥️ Rechteck invertieren x:[X] y:[Y] B:[W] H:[H]",
+      "ev3d.wait": "⏱️ [MS] ms warten",
+      "ev3d.timer": "⏱️ Timer (ms)",
+      "ev3d.battery": "📊 Batteriestand (V)",
+    },
+    fr: {
+      "ev3d.name": "LEGO EV3 Direct",
+      "ev3d.connect": "🔌 se connecter au EV3",
+      "ev3d.disconnect": "🔌 déconnecter du EV3",
+      "ev3d.connected": "connecté ?",
+      "ev3d.motorOn": "🎮 moteur [PORTS] à [POWER]% de puissance",
+      "ev3d.motorRunDeg": "🎮 moteur [PORTS] tourne [DEGREES]° à [POWER]% [BRAKE]",
+      "ev3d.motorRunSec": "🎮 moteur [PORTS] tourne [SECONDS] sec à [POWER]% [BRAKE]",
+      "ev3d.motorStop": "🎮 moteur [PORTS] arrêter et [BRAKE]",
+      "ev3d.motorPolarity": "🎮 régler polarité moteur [PORTS] [POLARITY]",
+      "ev3d.motorPosition": "🎮 position moteur [PORT]",
+      "ev3d.motorSpeed": "🎮 vitesse moteur [PORT]",
+      "ev3d.motorReset": "🎮 réinitialiser position moteur [PORTS]",
+      "ev3d.touchPressed": "👆 capteur tactile [PORT] pressé ?",
+      "ev3d.colorColor": "🌈 couleur [PORT] couleur",
+      "ev3d.colorRefl": "🌈 lumière réfléchie [PORT]",
+      "ev3d.colorAmb": "🌈 lumière ambiante [PORT]",
+      "ev3d.colorRGB": "🌈 couleur [PORT] RGB [COMPONENT]",
+      "ev3d.ultrasonic": "📏 ultrason [PORT] distance (cm)",
+      "ev3d.gyroAngle": "🔄 gyroscope [PORT] angle",
+      "ev3d.gyroRate": "🔄 gyroscope [PORT] vitesse",
+      "ev3d.gyroReset": "🔄 réinitialiser gyroscope [PORT]",
+      "ev3d.infrared": "📡 proximité infrarouge [PORT]",
+      "ev3d.nxtLight": "🔧 luminosité NXT [PORT]",
+      "ev3d.nxtSound": "🔧 son NXT [PORT] volume",
+      "ev3d.brickButton": "🎮 bouton brique [BUTTON] pressé ?",
+      "ev3d.setLED": "💡 régler LED sur [PATTERN]",
+      "ev3d.playTone": "🔔 jouer ton [FREQ] Hz pendant [MS] ms volume [VOL]%",
+      "ev3d.playNote": "🔔 jouer note [NOTE] pendant [BEATS] battements",
+      "ev3d.stopSound": "🔔 arrêter son",
+      "ev3d.setVolume": "🔔 régler volume sur [VOL]%",
+      "ev3d.volume": "🔔 volume",
+      "ev3d.clearScreen": "🖥️ effacer l'écran",
+      "ev3d.drawText": "🖥️ écrire texte [TEXT] à x:[X] y:[Y]",
+      "ev3d.selectFont": "🖥️ sélectionner police [SIZE]",
+      "ev3d.drawPixel": "🖥️ tracer pixel à x:[X] y:[Y]",
+      "ev3d.drawLine": "🖥️ tracer ligne de x:[X1] y:[Y1] à x:[X2] y:[Y2]",
+      "ev3d.drawRect": "🖥️ tracer rectangle [FILL] x:[X] y:[Y] L:[W] H:[H]",
+      "ev3d.drawCircle": "🖥️ tracer cercle [FILL] x:[X] y:[Y] rayon:[R]",
+      "ev3d.invertRect": "🖥️ inverser rectangle x:[X] y:[Y] L:[W] H:[H]",
+      "ev3d.wait": "⏱️ attendre [MS] ms",
+      "ev3d.timer": "⏱️ minuteur (ms)",
+      "ev3d.battery": "📊 niveau de batterie (V)",
+    },
+  };
+
+  function detectLanguage() {
+    const candidates = [];
+    try { if (typeof window !== "undefined" && window.ReduxStore?.getState) { candidates.push(window.ReduxStore.getState().locales?.locale); } } catch (e) {}
+    try { candidates.push(localStorage.getItem("tw:language")); } catch (e) {}
+    try { if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) { candidates.push(Scratch.vm.runtime.getLocale()); } } catch (e) {}
+    try { candidates.push(document.documentElement.lang); } catch (e) {}
+    try { candidates.push(navigator.language); } catch (e) {}
+    for (const c of candidates) {
+      if (typeof c !== "string" || !c) continue;
+      const lower = c.toLowerCase();
+      if (lower.startsWith("de")) return "de";
+      if (lower.startsWith("fr")) return "fr";
+      if (lower.startsWith("en")) return "en";
+    }
+    return "en";
+  }
+
+  let currentLang = detectLanguage();
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (e) => {
+      if (e.key === "tw:language") {
+        const newLang = detectLanguage();
+        if (newLang !== currentLang) currentLang = newLang;
+      }
+    });
+    let lastKnownLocale = null;
+    setInterval(() => {
+      try {
+        if (window.ReduxStore?.getState) {
+          const locale = window.ReduxStore.getState().locales?.locale;
+          if (locale && locale !== lastKnownLocale) {
+            lastKnownLocale = locale;
+            const lower = locale.toLowerCase();
+            const newLang = lower.startsWith("de") ? "de" : lower.startsWith("fr") ? "fr" : "en";
+            if (newLang !== currentLang) currentLang = newLang;
+          }
+        }
+      } catch (e) {}
+    }, 1000);
+  }
+
+  function t(key, defaultValue) {
+    const tr = translations[currentLang];
+    if (tr && tr[key]) return tr[key];
+    if (translations.en && translations.en[key]) return translations.en[key];
+    return defaultValue !== undefined ? defaultValue : key;
+  }
+
     const Cast = Scratch.Cast;
     
     // ==================== DEBUG LOGGING ====================
@@ -1137,7 +1330,7 @@
         getInfo() {
             return {
                 id: 'legoev3direct',
-                name: 'LEGO EV3 Direct',
+                name: t("ev3d.name"),
                 color1: '#00B395',
                 color2: '#009A7F',
                 color3: '#008169',
@@ -1146,17 +1339,17 @@
                     {
                         opcode: 'connect',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🔌 connect to EV3'
+                        text: t("ev3d.connect")
                     },
                     {
                         opcode: 'disconnect',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🔌 disconnect from EV3'
+                        text: t("ev3d.disconnect")
                     },
                     {
                         opcode: 'isConnected',
                         blockType: Scratch.BlockType.BOOLEAN,
-                        text: 'connected?'
+                        text: t("ev3d.connected")
                     },
                     
                     '---',
@@ -1164,7 +1357,7 @@
                     {
                         opcode: 'motorOn',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🎮 motor [PORTS] on at [POWER]% power',
+                        text: t("ev3d.motorOn"),
                         arguments: {
                             PORTS: { type: Scratch.ArgumentType.STRING, menu: 'MOTOR_PORTS', defaultValue: 'A' },
                             POWER: { type: Scratch.ArgumentType.NUMBER, defaultValue: 75 }
@@ -1173,7 +1366,7 @@
                     {
                         opcode: 'motorRunDegrees',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🎮 motor [PORTS] run [DEGREES]° at [POWER]% [BRAKE]',
+                        text: t("ev3d.motorRunDeg"),
                         arguments: {
                             PORTS: { type: Scratch.ArgumentType.STRING, menu: 'MOTOR_PORTS', defaultValue: 'A' },
                             DEGREES: { type: Scratch.ArgumentType.NUMBER, defaultValue: 360 },
@@ -1184,7 +1377,7 @@
                     {
                         opcode: 'motorRunSeconds',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🎮 motor [PORTS] run [SECONDS] sec at [POWER]% [BRAKE]',
+                        text: t("ev3d.motorRunSec"),
                         arguments: {
                             PORTS: { type: Scratch.ArgumentType.STRING, menu: 'MOTOR_PORTS', defaultValue: 'A' },
                             SECONDS: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
@@ -1195,7 +1388,7 @@
                     {
                         opcode: 'motorStop',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🎮 motor [PORTS] stop and [BRAKE]',
+                        text: t("ev3d.motorStop"),
                         arguments: {
                             PORTS: { type: Scratch.ArgumentType.STRING, menu: 'MOTOR_PORTS', defaultValue: 'A' },
                             BRAKE: { type: Scratch.ArgumentType.STRING, menu: 'BRAKE_MODE', defaultValue: 'brake' }
@@ -1204,7 +1397,7 @@
                     {
                         opcode: 'setMotorPolarity',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🎮 set motor [PORTS] polarity [POLARITY]',
+                        text: t("ev3d.motorPolarity"),
                         arguments: {
                             PORTS: { type: Scratch.ArgumentType.STRING, menu: 'MOTOR_PORTS', defaultValue: 'A' },
                             POLARITY: { type: Scratch.ArgumentType.STRING, menu: 'POLARITY', defaultValue: 'forward' }
@@ -1213,7 +1406,7 @@
                     {
                         opcode: 'getMotorPosition',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '🎮 motor [PORT] position',
+                        text: t("ev3d.motorPosition"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'MOTOR_PORT_SINGLE', defaultValue: 'A' }
                         }
@@ -1221,7 +1414,7 @@
                     {
                         opcode: 'getMotorSpeed',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '🎮 motor [PORT] speed',
+                        text: t("ev3d.motorSpeed"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'MOTOR_PORT_SINGLE', defaultValue: 'A' }
                         }
@@ -1229,7 +1422,7 @@
                     {
                         opcode: 'resetMotorPosition',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🎮 reset motor [PORTS] position',
+                        text: t("ev3d.motorReset"),
                         arguments: {
                             PORTS: { type: Scratch.ArgumentType.STRING, menu: 'MOTOR_PORTS', defaultValue: 'A' }
                         }
@@ -1240,7 +1433,7 @@
                     {
                         opcode: 'isTouchPressed',
                         blockType: Scratch.BlockType.BOOLEAN,
-                        text: '👆 touch [PORT] pressed?',
+                        text: t("ev3d.touchPressed"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'SENSOR_PORT', defaultValue: '1' }
                         }
@@ -1251,7 +1444,7 @@
                     {
                         opcode: 'getColor',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '🌈 color [PORT] color',
+                        text: t("ev3d.colorColor"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'SENSOR_PORT', defaultValue: '3' }
                         }
@@ -1259,7 +1452,7 @@
                     {
                         opcode: 'getReflectedLight',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '🌈 color [PORT] reflected light',
+                        text: t("ev3d.colorRefl"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'SENSOR_PORT', defaultValue: '3' }
                         }
@@ -1267,7 +1460,7 @@
                     {
                         opcode: 'getAmbientLight',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '🌈 color [PORT] ambient light',
+                        text: t("ev3d.colorAmb"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'SENSOR_PORT', defaultValue: '3' }
                         }
@@ -1275,7 +1468,7 @@
                     {
                         opcode: 'getRGBRaw',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '🌈 color [PORT] RGB [COMPONENT]',
+                        text: t("ev3d.colorRGB"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'SENSOR_PORT', defaultValue: '3' },
                             COMPONENT: { type: Scratch.ArgumentType.STRING, menu: 'RGB_COMPONENT', defaultValue: 'r' }
@@ -1287,7 +1480,7 @@
                     {
                         opcode: 'getUltrasonicDistance',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '📏 ultrasonic [PORT] distance (cm)',
+                        text: t("ev3d.ultrasonic"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'SENSOR_PORT', defaultValue: '4' }
                         }
@@ -1298,7 +1491,7 @@
                     {
                         opcode: 'getGyroAngle',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '🔄 gyro [PORT] angle',
+                        text: t("ev3d.gyroAngle"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'SENSOR_PORT', defaultValue: '2' }
                         }
@@ -1306,7 +1499,7 @@
                     {
                         opcode: 'getGyroRate',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '🔄 gyro [PORT] rate',
+                        text: t("ev3d.gyroRate"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'SENSOR_PORT', defaultValue: '2' }
                         }
@@ -1314,7 +1507,7 @@
                     {
                         opcode: 'resetGyro',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🔄 reset gyro [PORT]',
+                        text: t("ev3d.gyroReset"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'SENSOR_PORT', defaultValue: '2' }
                         }
@@ -1325,7 +1518,7 @@
                     {
                         opcode: 'getInfraredProximity',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '📡 infrared [PORT] proximity',
+                        text: t("ev3d.infrared"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'SENSOR_PORT', defaultValue: '4' }
                         }
@@ -1336,7 +1529,7 @@
                     {
                         opcode: 'getNXTLight',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '🔧 NXT light [PORT] brightness',
+                        text: t("ev3d.nxtLight"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'SENSOR_PORT', defaultValue: '3' }
                         }
@@ -1344,7 +1537,7 @@
                     {
                         opcode: 'getNXTSound',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '🔧 NXT sound [PORT] loudness',
+                        text: t("ev3d.nxtSound"),
                         arguments: {
                             PORT: { type: Scratch.ArgumentType.STRING, menu: 'SENSOR_PORT', defaultValue: '2' }
                         }
@@ -1355,7 +1548,7 @@
                     {
                         opcode: 'isButtonPressed',
                         blockType: Scratch.BlockType.BOOLEAN,
-                        text: '🎮 brick button [BUTTON] pressed?',
+                        text: t("ev3d.brickButton"),
                         arguments: {
                             BUTTON: { type: Scratch.ArgumentType.STRING, menu: 'BRICK_BUTTON', defaultValue: 'enter' }
                         }
@@ -1366,7 +1559,7 @@
                     {
                         opcode: 'setLED',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '💡 set LED to [PATTERN]',
+                        text: t("ev3d.setLED"),
                         arguments: {
                             PATTERN: { type: Scratch.ArgumentType.STRING, menu: 'LED_PATTERN', defaultValue: 'green' }
                         }
@@ -1377,7 +1570,7 @@
                     {
                         opcode: 'playTone',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🔔 play tone [FREQ] Hz for [MS] ms volume [VOL]%',
+                        text: t("ev3d.playTone"),
                         arguments: {
                             FREQ: { type: Scratch.ArgumentType.NUMBER, defaultValue: 440 },
                             MS: { type: Scratch.ArgumentType.NUMBER, defaultValue: 500 },
@@ -1387,7 +1580,7 @@
                     {
                         opcode: 'playNote',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🔔 play note [NOTE] for [BEATS] beats',
+                        text: t("ev3d.playNote"),
                         arguments: {
                             NOTE: { type: Scratch.ArgumentType.STRING, menu: 'NOTE', defaultValue: 'C4' },
                             BEATS: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 }
@@ -1396,12 +1589,12 @@
                     {
                         opcode: 'stopSound',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🔔 stop sound'
+                        text: t("ev3d.stopSound")
                     },
                     {
                         opcode: 'setVolume',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🔔 set volume to [VOL]%',
+                        text: t("ev3d.setVolume"),
                         arguments: {
                             VOL: { type: Scratch.ArgumentType.NUMBER, defaultValue: 50 }
                         }
@@ -1409,7 +1602,7 @@
                     {
                         opcode: 'getVolume',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '🔔 volume'
+                        text: t("ev3d.volume")
                     },
                     
                     '---',
@@ -1417,12 +1610,12 @@
                     {
                         opcode: 'clearScreen',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🖥️ clear screen'
+                        text: t("ev3d.clearScreen")
                     },
                     {
                         opcode: 'drawText',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🖥️ draw text [TEXT] at x:[X] y:[Y]',
+                        text: t("ev3d.drawText"),
                         arguments: {
                             TEXT: { type: Scratch.ArgumentType.STRING, defaultValue: 'Hello!' },
                             X: { type: Scratch.ArgumentType.NUMBER, defaultValue: 10 },
@@ -1432,7 +1625,7 @@
                     {
                         opcode: 'selectFont',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🖥️ select font [SIZE]',
+                        text: t("ev3d.selectFont"),
                         arguments: {
                             SIZE: { type: Scratch.ArgumentType.STRING, menu: 'FONT_SIZE', defaultValue: 'normal' }
                         }
@@ -1440,7 +1633,7 @@
                     {
                         opcode: 'drawPixel',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🖥️ draw pixel at x:[X] y:[Y]',
+                        text: t("ev3d.drawPixel"),
                         arguments: {
                             X: { type: Scratch.ArgumentType.NUMBER, defaultValue: 89 },
                             Y: { type: Scratch.ArgumentType.NUMBER, defaultValue: 64 }
@@ -1449,7 +1642,7 @@
                     {
                         opcode: 'drawLine',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🖥️ draw line from x:[X1] y:[Y1] to x:[X2] y:[Y2]',
+                        text: t("ev3d.drawLine"),
                         arguments: {
                             X1: { type: Scratch.ArgumentType.NUMBER, defaultValue: 10 },
                             Y1: { type: Scratch.ArgumentType.NUMBER, defaultValue: 10 },
@@ -1460,7 +1653,7 @@
                     {
                         opcode: 'drawRect',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🖥️ draw [FILL] rectangle x:[X] y:[Y] w:[W] h:[H]',
+                        text: t("ev3d.drawRect"),
                         arguments: {
                             FILL: { type: Scratch.ArgumentType.STRING, menu: 'FILL_MODE', defaultValue: 'outline' },
                             X: { type: Scratch.ArgumentType.NUMBER, defaultValue: 20 },
@@ -1472,7 +1665,7 @@
                     {
                         opcode: 'drawCircle',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🖥️ draw [FILL] circle x:[X] y:[Y] radius:[R]',
+                        text: t("ev3d.drawCircle"),
                         arguments: {
                             FILL: { type: Scratch.ArgumentType.STRING, menu: 'FILL_MODE', defaultValue: 'outline' },
                             X: { type: Scratch.ArgumentType.NUMBER, defaultValue: 89 },
@@ -1483,7 +1676,7 @@
                     {
                         opcode: 'invertRect',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '🖥️ invert rectangle x:[X] y:[Y] w:[W] h:[H]',
+                        text: t("ev3d.invertRect"),
                         arguments: {
                             X: { type: Scratch.ArgumentType.NUMBER, defaultValue: 20 },
                             Y: { type: Scratch.ArgumentType.NUMBER, defaultValue: 20 },
@@ -1497,7 +1690,7 @@
                     {
                         opcode: 'wait',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: '⏱️ wait [MS] ms',
+                        text: t("ev3d.wait"),
                         arguments: {
                             MS: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1000 }
                         }
@@ -1505,7 +1698,7 @@
                     {
                         opcode: 'readTimer',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '⏱️ timer (ms)'
+                        text: t("ev3d.timer")
                     },
                     
                     '---',
@@ -1513,7 +1706,7 @@
                     {
                         opcode: 'getBattery',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: '📊 battery level (V)'
+                        text: t("ev3d.battery")
                     }
                 ],
                 menus: {

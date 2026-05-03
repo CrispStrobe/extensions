@@ -6,6 +6,95 @@
 (function (Scratch) {
   "use strict";
 
+
+  // ============================================================================
+  // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
+  //
+  // Module-level locale state pattern shared with planetemaths.js,
+  // ev3dev_py_transpile.js, arrays.js, etc. Detect once at gallery-load,
+  // listen for changes, resolve block text via the module-level t(key) at
+  // every getInfo() call.
+  // ============================================================================
+
+  const translations = {
+    en: {
+      "csp.name": "CSP Solver",
+      "csp.clear": "clear CSP problem",
+      "csp.addVariable": "add variable [NAME] with domain [DOMAIN]",
+      "csp.addConstraint": "add constraint [VAR1] != [VAR2]",
+      "csp.solve": "solve CSP",
+      "csp.getVarValue": "solution value of [VAR]",
+      "csp.solveSudoku": "solve sudoku [PUZZLE]",
+    },
+    de: {
+      "csp.name": "CSP-Löser",
+      "csp.clear": "CSP-Problem zurücksetzen",
+      "csp.addVariable": "Variable [NAME] mit Domäne [DOMAIN] hinzufügen",
+      "csp.addConstraint": "Bedingung [VAR1] != [VAR2] hinzufügen",
+      "csp.solve": "CSP lösen",
+      "csp.getVarValue": "Lösungswert von [VAR]",
+      "csp.solveSudoku": "Sudoku [PUZZLE] lösen",
+    },
+    fr: {
+      "csp.name": "Solveur CSP",
+      "csp.clear": "effacer le problème CSP",
+      "csp.addVariable": "ajouter variable [NAME] avec domaine [DOMAIN]",
+      "csp.addConstraint": "ajouter contrainte [VAR1] != [VAR2]",
+      "csp.solve": "résoudre le CSP",
+      "csp.getVarValue": "valeur solution de [VAR]",
+      "csp.solveSudoku": "résoudre sudoku [PUZZLE]",
+    },
+  };
+
+  function detectLanguage() {
+    const candidates = [];
+    try { if (typeof window !== "undefined" && window.ReduxStore?.getState) { candidates.push(window.ReduxStore.getState().locales?.locale); } } catch (e) {}
+    try { candidates.push(localStorage.getItem("tw:language")); } catch (e) {}
+    try { if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) { candidates.push(Scratch.vm.runtime.getLocale()); } } catch (e) {}
+    try { candidates.push(document.documentElement.lang); } catch (e) {}
+    try { candidates.push(navigator.language); } catch (e) {}
+    for (const c of candidates) {
+      if (typeof c !== "string" || !c) continue;
+      const lower = c.toLowerCase();
+      if (lower.startsWith("de")) return "de";
+      if (lower.startsWith("fr")) return "fr";
+      if (lower.startsWith("en")) return "en";
+    }
+    return "en";
+  }
+
+  let currentLang = detectLanguage();
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (e) => {
+      if (e.key === "tw:language") {
+        const newLang = detectLanguage();
+        if (newLang !== currentLang) currentLang = newLang;
+      }
+    });
+    let lastKnownLocale = null;
+    setInterval(() => {
+      try {
+        if (window.ReduxStore?.getState) {
+          const locale = window.ReduxStore.getState().locales?.locale;
+          if (locale && locale !== lastKnownLocale) {
+            lastKnownLocale = locale;
+            const lower = locale.toLowerCase();
+            const newLang = lower.startsWith("de") ? "de" : lower.startsWith("fr") ? "fr" : "en";
+            if (newLang !== currentLang) currentLang = newLang;
+          }
+        }
+      } catch (e) {}
+    }, 1000);
+  }
+
+  function t(key, defaultValue) {
+    const tr = translations[currentLang];
+    if (tr && tr[key]) return tr[key];
+    if (translations.en && translations.en[key]) return translations.en[key];
+    return defaultValue !== undefined ? defaultValue : key;
+  }
+
   // Embed the CSP solver
   var CSP = {},
     FAILURE = "FAILURE",
@@ -335,17 +424,17 @@
     getInfo() {
       return {
         id: "cspSolver",
-        name: "CSP Solver",
+        name: t("csp.name"),
         blocks: [
           {
             opcode: "clearProblem",
             blockType: Scratch.BlockType.COMMAND,
-            text: "clear CSP problem",
+            text: t("csp.clear"),
           },
           {
             opcode: "addVariable",
             blockType: Scratch.BlockType.COMMAND,
-            text: "add variable [NAME] with domain [DOMAIN]",
+            text: t("csp.addVariable"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -360,7 +449,7 @@
           {
             opcode: "addConstraint",
             blockType: Scratch.BlockType.COMMAND,
-            text: "add constraint [VAR1] != [VAR2]",
+            text: t("csp.addConstraint"),
             arguments: {
               VAR1: {
                 type: Scratch.ArgumentType.STRING,
@@ -375,12 +464,12 @@
           {
             opcode: "solve",
             blockType: Scratch.BlockType.REPORTER,
-            text: "solve CSP",
+            text: t("csp.solve"),
           },
           {
             opcode: "getVarValue",
             blockType: Scratch.BlockType.REPORTER,
-            text: "solution value of [VAR]",
+            text: t("csp.getVarValue"),
             arguments: {
               VAR: {
                 type: Scratch.ArgumentType.STRING,
@@ -391,7 +480,7 @@
           {
             opcode: "solveSudoku",
             blockType: Scratch.BlockType.REPORTER,
-            text: "solve sudoku [PUZZLE]",
+            text: t("csp.solveSudoku"),
             arguments: {
               PUZZLE: {
                 type: Scratch.ArgumentType.STRING,

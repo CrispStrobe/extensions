@@ -214,6 +214,27 @@
       btn_right: "Right",
       btn_enter: "Enter",
       btn_back: "Backspace",
+
+      // Script management & misc (added)
+      debug: "🔧 Debug",
+      languageDetectionInfo: "language detection info",
+      scriptManagement: "Script Management",
+      uploadAndRunScript: "upload and run current project as [NAME]",
+      uploadScript: "upload current project as [NAME]",
+      runScriptByName: "run script [NAME]",
+      stopCurrentScript: "stop current script",
+      stopScriptId: "stop script ID [ID]",
+      stopAllScripts: "stop all running scripts",
+      deleteScriptByName: "delete script [NAME]",
+      refreshScriptList: "refresh script list",
+      availableScriptsJson: "available scripts (JSON)",
+      runningScriptsJson: "running scripts (JSON)",
+      numAvailableScripts: "number of available scripts",
+      scriptIsRunning: "script [NAME] is running?",
+      currentScriptId: "current script ID",
+      dcMotorsLabel: "DC Motors (RCX/Power Functions)",
+      soundSensor: "sound sensor [PORT] [MODE]",
+      lightSensor: "light sensor [PORT] [MODE]",
     },
 
     de: {
@@ -944,12 +965,12 @@
 
           {
             blockType: Scratch.BlockType.LABEL,
-            text: "🔧 Debug",
+            text: t("debug"),
           },
           {
             opcode: "getLanguageInfo",
             blockType: Scratch.BlockType.REPORTER,
-            text: "language detection info",
+            text: t("languageDetectionInfo"),
             hideFromPalette: false, // Set to true in production
           },
 
@@ -958,12 +979,12 @@
           // Script Management Section
           {
             blockType: Scratch.BlockType.LABEL,
-            text: "Script Management",
+            text: t("scriptManagement"),
           },
           {
             opcode: "uploadAndRunScript",
             blockType: Scratch.BlockType.COMMAND,
-            text: "upload and run current project as [NAME]",
+            text: t("uploadAndRunScript"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -974,7 +995,7 @@
           {
             opcode: "uploadScript",
             blockType: Scratch.BlockType.COMMAND,
-            text: "upload current project as [NAME]",
+            text: t("uploadScript"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -985,7 +1006,7 @@
           {
             opcode: "runScriptByName",
             blockType: Scratch.BlockType.COMMAND,
-            text: "run script [NAME]",
+            text: t("runScriptByName"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -996,12 +1017,12 @@
           {
             opcode: "stopCurrentScript",
             blockType: Scratch.BlockType.COMMAND,
-            text: "stop current script",
+            text: t("stopCurrentScript"),
           },
           {
             opcode: "stopScriptById",
             blockType: Scratch.BlockType.COMMAND,
-            text: "stop script ID [ID]",
+            text: t("stopScriptId"),
             arguments: {
               ID: {
                 type: Scratch.ArgumentType.NUMBER,
@@ -1012,12 +1033,12 @@
           {
             opcode: "stopAllScripts",
             blockType: Scratch.BlockType.COMMAND,
-            text: "stop all running scripts",
+            text: t("stopAllScripts"),
           },
           {
             opcode: "deleteScript",
             blockType: Scratch.BlockType.COMMAND,
-            text: "delete script [NAME]",
+            text: t("deleteScriptByName"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -1028,27 +1049,27 @@
           {
             opcode: "refreshScriptList",
             blockType: Scratch.BlockType.COMMAND,
-            text: "refresh script list",
+            text: t("refreshScriptList"),
           },
           {
             opcode: "getScriptList",
             blockType: Scratch.BlockType.REPORTER,
-            text: "available scripts (JSON)",
+            text: t("availableScriptsJson"),
           },
           {
             opcode: "getRunningScripts",
             blockType: Scratch.BlockType.REPORTER,
-            text: "running scripts (JSON)",
+            text: t("runningScriptsJson"),
           },
           {
             opcode: "getScriptCount",
             blockType: Scratch.BlockType.REPORTER,
-            text: "number of available scripts",
+            text: t("numAvailableScripts"),
           },
           {
             opcode: "isScriptRunning",
             blockType: Scratch.BlockType.BOOLEAN,
-            text: "script [NAME] is running?",
+            text: t("scriptIsRunning"),
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -1059,7 +1080,7 @@
           {
             opcode: "getCurrentScriptId",
             blockType: Scratch.BlockType.REPORTER,
-            text: "current script ID",
+            text: t("currentScriptId"),
           },
 
           "---",
@@ -1207,7 +1228,7 @@
             },
           },
 
-          { blockType: Scratch.BlockType.LABEL, text: "DC Motors (RCX/Power Functions)" },
+          { blockType: Scratch.BlockType.LABEL, text: t("dcMotorsLabel") },
           {
             opcode: "ev3DcMotorRun",
             blockType: Scratch.BlockType.COMMAND,
@@ -1357,7 +1378,7 @@
           {
             opcode: "ev3SoundSensor",
             blockType: Scratch.BlockType.REPORTER,
-            text: "sound sensor [PORT] [MODE]",
+            text: t("soundSensor"),
             arguments: {
               PORT: { type: Scratch.ArgumentType.STRING, menu: "sensorPorts" },
               MODE: { type: Scratch.ArgumentType.STRING, menu: "soundMode" },
@@ -1368,7 +1389,7 @@
           {
             opcode: "ev3LightSensor",
             blockType: Scratch.BlockType.REPORTER,
-            text: "light sensor [PORT] [MODE]",
+            text: t("lightSensor"),
             arguments: {
               PORT: { type: Scratch.ArgumentType.STRING, menu: "sensorPorts" },
               MODE: { type: Scratch.ArgumentType.STRING, menu: "lightMode" },

@@ -133,6 +133,16 @@
       generateFirst: "Generate LMS code first!",
       compileFirst: "Compile to RBF first!",
       downloaded: "Downloaded",
+      bridgeSettingsLabel: '🌉 Bridge Settings',
+      ev3SettingsLabel: '🤖 EV3 Settings',
+      setEV3Port: 'set EV3 port to [PORT]',
+      compilerSettingsLabel: '⚙️ Compiler Settings',
+      codeGenerationLabel: '📝 Code Generation',
+      generateLMS: 'generate LMS code',
+      showLMS: 'show LMS code',
+      downloadLMS: 'download LMS code',
+      compileRBF: 'compile to RBF',
+      showRBF: 'show RBF bytecode',
     },
     
     de: {
@@ -240,6 +250,16 @@
       generateFirst: "Generiere zuerst LMS Code!",
       compileFirst: "Kompiliere zuerst zu RBF!",
       downloaded: "Heruntergeladen",
+      bridgeSettingsLabel: '🌉 Bridge-Einstellungen',
+      ev3SettingsLabel: '🤖 EV3-Einstellungen',
+      setEV3Port: 'EV3-Port auf [PORT] setzen',
+      compilerSettingsLabel: '⚙️ Compiler-Einstellungen',
+      codeGenerationLabel: '📝 Code-Generierung',
+      generateLMS: 'LMS-Code generieren',
+      showLMS: 'LMS-Code anzeigen',
+      downloadLMS: 'LMS-Code herunterladen',
+      compileRBF: 'zu RBF kompilieren',
+      showRBF: 'RBF-Bytecode anzeigen',
     }
   };
 
@@ -2772,7 +2792,7 @@
           '---',
 
           // Bridge configuration
-          { blockType: Scratch.BlockType.LABEL, text: '🌉 Bridge Settings' },
+          { blockType: Scratch.BlockType.LABEL, text: t('bridgeSettingsLabel') },
           {
             opcode: 'setBridgeHost',
             blockType: Scratch.BlockType.COMMAND,
@@ -2830,7 +2850,7 @@
           '---',
 
           // EV3 HTTP configuration
-          { blockType: Scratch.BlockType.LABEL, text: '🤖 EV3 Settings' },
+          { blockType: Scratch.BlockType.LABEL, text: t('ev3SettingsLabel') },
           {
             opcode: 'setEV3IP',
             blockType: Scratch.BlockType.COMMAND,
@@ -2845,7 +2865,7 @@
           {
             opcode: 'setEV3Port',
             blockType: Scratch.BlockType.COMMAND,
-            text: 'set EV3 port to [PORT]',
+            text: t('setEV3Port'),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.NUMBER,
@@ -2862,7 +2882,7 @@
           '---',
 
           // LMS API configuration
-          { blockType: Scratch.BlockType.LABEL, text: '⚙️ Compiler Settings' },
+          { blockType: Scratch.BlockType.LABEL, text: t('compilerSettingsLabel') },
           {
             opcode: 'setLMSApiUrl',
             blockType: Scratch.BlockType.COMMAND,
@@ -2887,46 +2907,46 @@
           '---',
 
           // Transpilation blocks (same as before)
-          { blockType: Scratch.BlockType.LABEL, text: '📝 Code Generation' },
+          { blockType: Scratch.BlockType.LABEL, text: t('codeGenerationLabel') },
           {
             opcode: 'transpileToLMS',
             blockType: Scratch.BlockType.COMMAND,
-            text: 'generate LMS code'
+            text: t('generateLMS')
           },
           {
             opcode: 'showLMSCode',
             blockType: Scratch.BlockType.COMMAND,
-            text: 'show LMS code'
+            text: t('showLMS')
           },
           {
             opcode: 'downloadLMSCode',
             blockType: Scratch.BlockType.COMMAND,
-            text: 'download LMS code'
+            text: t('downloadLMS')
           },
           {
             opcode: 'compileToRBF',
             blockType: Scratch.BlockType.COMMAND,
-            text: 'compile to RBF'
+            text: t('compileRBF')
           },
           {
             opcode: 'showRBFCode',
             blockType: Scratch.BlockType.COMMAND,
-            text: 'show RBF bytecode'
+            text: t('showRBF')
           },
           {
             opcode: 'downloadRBF',
             blockType: Scratch.BlockType.COMMAND,
-            text: 'download RBF file'
+            text: t('downloadRBF')
           },
           {
             opcode: 'uploadAndRun',
             blockType: Scratch.BlockType.COMMAND,
-            text: 'upload and run on EV3'
+            text: t('uploadAndRun')
           },
           {
             opcode: 'showDebugLog',
             blockType: Scratch.BlockType.COMMAND,
-            text: 'show debug log'
+            text: t('showDebugLog')
           },
 
           '---',

@@ -6,6 +6,131 @@
 (function (Scratch) {
   "use strict";
 
+
+  // ============================================================================
+  // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
+  //
+  // Module-level locale state pattern shared with planetemaths.js,
+  // ev3dev_py_transpile.js, arrays.js, etc. Detect once at gallery-load,
+  // listen for changes, resolve block text via the module-level t(key) at
+  // every getInfo() call.
+  // ============================================================================
+
+  const translations = {
+    en: {
+      "wedo2.name": "LEGO WeDo 2.0",
+      "wedo2.setConnection": "set connection to [TYPE]",
+      "wedo2.connect": "connect to WeDo 2.0",
+      "wedo2.disconnect": "disconnect from WeDo 2.0",
+      "wedo2.connected": "connected?",
+      "wedo2.setDebug": "set debug level to [LEVEL]",
+      "wedo2.motorOn": "turn motor [PORT] on",
+      "wedo2.motorOff": "turn motor [PORT] off",
+      "wedo2.motorPower": "set motor [PORT] power to [POWER]%",
+      "wedo2.motorDirection": "set motor [PORT] direction to [DIRECTION]",
+      "wedo2.distance": "distance",
+      "wedo2.tiltAngle": "tilt angle [DIRECTION]",
+      "wedo2.whenTilted": "when tilted [DIRECTION]",
+      "wedo2.isTilted": "tilted [DIRECTION]?",
+      "wedo2.lightColor": "set light color to [HUE]",
+      "wedo2.playNote": "play note [NOTE] for [DURATION] seconds",
+      "wedo2.whenButton": "when button pressed",
+      "wedo2.buttonPressed": "button pressed?",
+      "wedo2.battery": "battery level",
+    },
+    de: {
+      "wedo2.name": "LEGO WeDo 2.0",
+      "wedo2.setConnection": "Verbindung auf [TYPE] setzen",
+      "wedo2.connect": "mit WeDo 2.0 verbinden",
+      "wedo2.disconnect": "WeDo 2.0 trennen",
+      "wedo2.connected": "verbunden?",
+      "wedo2.setDebug": "Debug-Level auf [LEVEL] setzen",
+      "wedo2.motorOn": "Motor [PORT] einschalten",
+      "wedo2.motorOff": "Motor [PORT] ausschalten",
+      "wedo2.motorPower": "Motorleistung [PORT] auf [POWER]% setzen",
+      "wedo2.motorDirection": "Motorrichtung [PORT] auf [DIRECTION] setzen",
+      "wedo2.distance": "Abstand",
+      "wedo2.tiltAngle": "Neigungswinkel [DIRECTION]",
+      "wedo2.whenTilted": "wenn geneigt [DIRECTION]",
+      "wedo2.isTilted": "geneigt [DIRECTION]?",
+      "wedo2.lightColor": "Lichtfarbe auf [HUE] setzen",
+      "wedo2.playNote": "Note [NOTE] für [DURATION] Sekunden spielen",
+      "wedo2.whenButton": "wenn Knopf gedrückt",
+      "wedo2.buttonPressed": "Knopf gedrückt?",
+      "wedo2.battery": "Batteriestand",
+    },
+    fr: {
+      "wedo2.name": "LEGO WeDo 2.0",
+      "wedo2.setConnection": "définir la connexion sur [TYPE]",
+      "wedo2.connect": "se connecter au WeDo 2.0",
+      "wedo2.disconnect": "déconnecter du WeDo 2.0",
+      "wedo2.connected": "connecté ?",
+      "wedo2.setDebug": "définir niveau de débogage sur [LEVEL]",
+      "wedo2.motorOn": "allumer moteur [PORT]",
+      "wedo2.motorOff": "éteindre moteur [PORT]",
+      "wedo2.motorPower": "régler puissance moteur [PORT] sur [POWER]%",
+      "wedo2.motorDirection": "régler direction moteur [PORT] sur [DIRECTION]",
+      "wedo2.distance": "distance",
+      "wedo2.tiltAngle": "angle d'inclinaison [DIRECTION]",
+      "wedo2.whenTilted": "quand incliné [DIRECTION]",
+      "wedo2.isTilted": "incliné [DIRECTION] ?",
+      "wedo2.lightColor": "définir couleur lumière sur [HUE]",
+      "wedo2.playNote": "jouer note [NOTE] pendant [DURATION] secondes",
+      "wedo2.whenButton": "quand bouton appuyé",
+      "wedo2.buttonPressed": "bouton appuyé ?",
+      "wedo2.battery": "niveau de batterie",
+    },
+  };
+
+  function detectLanguage() {
+    const candidates = [];
+    try { if (typeof window !== "undefined" && window.ReduxStore?.getState) { candidates.push(window.ReduxStore.getState().locales?.locale); } } catch (e) {}
+    try { candidates.push(localStorage.getItem("tw:language")); } catch (e) {}
+    try { if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) { candidates.push(Scratch.vm.runtime.getLocale()); } } catch (e) {}
+    try { candidates.push(document.documentElement.lang); } catch (e) {}
+    try { candidates.push(navigator.language); } catch (e) {}
+    for (const c of candidates) {
+      if (typeof c !== "string" || !c) continue;
+      const lower = c.toLowerCase();
+      if (lower.startsWith("de")) return "de";
+      if (lower.startsWith("fr")) return "fr";
+      if (lower.startsWith("en")) return "en";
+    }
+    return "en";
+  }
+
+  let currentLang = detectLanguage();
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (e) => {
+      if (e.key === "tw:language") {
+        const newLang = detectLanguage();
+        if (newLang !== currentLang) currentLang = newLang;
+      }
+    });
+    let lastKnownLocale = null;
+    setInterval(() => {
+      try {
+        if (window.ReduxStore?.getState) {
+          const locale = window.ReduxStore.getState().locales?.locale;
+          if (locale && locale !== lastKnownLocale) {
+            lastKnownLocale = locale;
+            const lower = locale.toLowerCase();
+            const newLang = lower.startsWith("de") ? "de" : lower.startsWith("fr") ? "fr" : "en";
+            if (newLang !== currentLang) currentLang = newLang;
+          }
+        }
+      } catch (e) {}
+    }, 1000);
+  }
+
+  function t(key, defaultValue) {
+    const tr = translations[currentLang];
+    if (tr && tr[key]) return tr[key];
+    if (translations.en && translations.en[key]) return translations.en[key];
+    return defaultValue !== undefined ? defaultValue : key;
+  }
+
   // ============================================================================
   // DEBUG LOGGER
   // ============================================================================
@@ -1149,7 +1274,7 @@
     getInfo() {
       return {
         id: "wedo2unified",
-        name: "LEGO WeDo 2.0",
+        name: t("wedo2.name"),
         color1: "#005595",
         color2: "#004577",
         color3: "#003559",
@@ -1159,7 +1284,7 @@
           {
             opcode: "setConnectionType",
             blockType: BlockType.COMMAND,
-            text: "set connection to [TYPE]",
+            text: t("wedo2.setConnection"),
             arguments: {
               TYPE: {
                 type: ArgumentType.STRING,
@@ -1171,17 +1296,17 @@
           {
             opcode: "connect",
             blockType: BlockType.COMMAND,
-            text: "connect to WeDo 2.0",
+            text: t("wedo2.connect"),
           },
           {
             opcode: "disconnect",
             blockType: BlockType.COMMAND,
-            text: "disconnect from WeDo 2.0",
+            text: t("wedo2.disconnect"),
           },
           {
             opcode: "isConnected",
             blockType: BlockType.BOOLEAN,
-            text: "connected?",
+            text: t("wedo2.connected"),
           },
 
           "---",
@@ -1190,7 +1315,7 @@
           {
             opcode: "setDebugLevel",
             blockType: BlockType.COMMAND,
-            text: "set debug level to [LEVEL]",
+            text: t("wedo2.setDebug"),
             arguments: {
               LEVEL: {
                 type: ArgumentType.STRING,
@@ -1206,7 +1331,7 @@
           {
             opcode: "motorOn",
             blockType: BlockType.COMMAND,
-            text: "turn motor [PORT] on",
+            text: t("wedo2.motorOn"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -1218,7 +1343,7 @@
           {
             opcode: "motorOff",
             blockType: BlockType.COMMAND,
-            text: "turn motor [PORT] off",
+            text: t("wedo2.motorOff"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -1230,7 +1355,7 @@
           {
             opcode: "setMotorPower",
             blockType: BlockType.COMMAND,
-            text: "set motor [PORT] power to [POWER]%",
+            text: t("wedo2.motorPower"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -1246,7 +1371,7 @@
           {
             opcode: "setMotorDirection",
             blockType: BlockType.COMMAND,
-            text: "set motor [PORT] direction to [DIRECTION]",
+            text: t("wedo2.motorDirection"),
             arguments: {
               PORT: {
                 type: ArgumentType.STRING,
@@ -1267,12 +1392,12 @@
           {
             opcode: "getDistance",
             blockType: BlockType.REPORTER,
-            text: "distance",
+            text: t("wedo2.distance"),
           },
           {
             opcode: "getTiltAngle",
             blockType: BlockType.REPORTER,
-            text: "tilt angle [DIRECTION]",
+            text: t("wedo2.tiltAngle"),
             arguments: {
               DIRECTION: {
                 type: ArgumentType.STRING,
@@ -1284,7 +1409,7 @@
           {
             opcode: "whenTilted",
             blockType: BlockType.HAT,
-            text: "when tilted [DIRECTION]",
+            text: t("wedo2.whenTilted"),
             arguments: {
               DIRECTION: {
                 type: ArgumentType.STRING,
@@ -1296,7 +1421,7 @@
           {
             opcode: "isTilted",
             blockType: BlockType.BOOLEAN,
-            text: "tilted [DIRECTION]?",
+            text: t("wedo2.isTilted"),
             arguments: {
               DIRECTION: {
                 type: ArgumentType.STRING,
@@ -1312,7 +1437,7 @@
           {
             opcode: "setLED",
             blockType: BlockType.COMMAND,
-            text: "set light color to [HUE]",
+            text: t("wedo2.lightColor"),
             arguments: {
               HUE: {
                 type: ArgumentType.NUMBER,
@@ -1323,7 +1448,7 @@
           {
             opcode: "playNote",
             blockType: BlockType.COMMAND,
-            text: "play note [NOTE] for [DURATION] seconds",
+            text: t("wedo2.playNote"),
             arguments: {
               NOTE: {
                 type: ArgumentType.NUMBER,
@@ -1342,17 +1467,17 @@
           {
             opcode: "whenButtonPressed",
             blockType: BlockType.HAT,
-            text: "when button pressed",
+            text: t("wedo2.whenButton"),
           },
           {
             opcode: "isButtonPressed",
             blockType: BlockType.BOOLEAN,
-            text: "button pressed?",
+            text: t("wedo2.buttonPressed"),
           },
           {
             opcode: "getBatteryLevel",
             blockType: BlockType.REPORTER,
-            text: "battery level",
+            text: t("wedo2.battery"),
           },
         ],
         menus: {
