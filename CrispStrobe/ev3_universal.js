@@ -3066,6 +3066,9 @@
         // Allow param to override (for backward compatibility)
         if (param) {
           // Parse param as URL: ws://host:port or host:port
+          // Anchored, bounded, no nested quantifiers — not vulnerable to
+          // catastrophic backtracking despite eslint-plugin-security's heuristic.
+          // eslint-disable-next-line security/detect-unsafe-regex
           const match = param.match(/^(?:(wss?):\/\/)?([^:]+)(?::(\d+))?$/);
           if (match) {
             config.ssl = match[1] === "wss";
