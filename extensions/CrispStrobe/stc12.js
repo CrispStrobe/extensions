@@ -41,14 +41,14 @@
     getInfo() {
       return {
         id: "stc12",
-        name: "STC12 / 8051 pins",
+        name: Scratch.translate("STC12 / 8051 pins"),
         color1: "#3d7ea6",
         color2: "#2f6383",
         blocks: [
           {
             opcode: "setpin",
             blockType: Scratch.BlockType.COMMAND,
-            text: "turn [STATE] [PIN]",
+            text: Scratch.translate("turn [STATE] [PIN]"),
             arguments: {
               STATE: { type: Scratch.ArgumentType.STRING, menu: "states" },
               PIN: { type: Scratch.ArgumentType.STRING, menu: "pins" },
@@ -57,7 +57,7 @@
           {
             opcode: "toggle",
             blockType: Scratch.BlockType.COMMAND,
-            text: "toggle [PIN]",
+            text: Scratch.translate("toggle [PIN]"),
             arguments: {
               PIN: { type: Scratch.ArgumentType.STRING, menu: "pins" },
             },
@@ -65,7 +65,7 @@
           {
             opcode: "writepin",
             blockType: Scratch.BlockType.COMMAND,
-            text: "set [PIN] to [VALUE]",
+            text: Scratch.translate("set [PIN] to [VALUE]"),
             arguments: {
               PIN: { type: Scratch.ArgumentType.STRING, menu: "pins" },
               VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
@@ -74,7 +74,7 @@
           {
             opcode: "read",
             blockType: Scratch.BlockType.REPORTER,
-            text: "read [PIN]",
+            text: Scratch.translate("read [PIN]"),
             arguments: {
               PIN: { type: Scratch.ArgumentType.STRING, menu: "pins" },
             },
@@ -83,7 +83,7 @@
           {
             opcode: "setpwm",
             blockType: Scratch.BlockType.COMMAND,
-            text: "set [PIN] to [VALUE] percent",
+            text: Scratch.translate("set [PIN] to [VALUE] percent"),
             arguments: {
               PIN: { type: Scratch.ArgumentType.STRING, menu: "pins" },
               VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 50 },
@@ -92,7 +92,7 @@
           {
             opcode: "settone",
             blockType: Scratch.BlockType.COMMAND,
-            text: "set [PIN] to [VALUE] hz",
+            text: Scratch.translate("set [PIN] to [VALUE] hz"),
             arguments: {
               PIN: { type: Scratch.ArgumentType.STRING, menu: "pins" },
               VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 440 },
@@ -101,7 +101,7 @@
           {
             opcode: "setport",
             blockType: Scratch.BlockType.COMMAND,
-            text: "set [PORT] to [VALUE]",
+            text: Scratch.translate("set [PORT] to [VALUE]"),
             arguments: {
               PORT: { type: Scratch.ArgumentType.STRING, menu: "ports" },
               VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
@@ -110,7 +110,7 @@
           {
             opcode: "readport",
             blockType: Scratch.BlockType.REPORTER,
-            text: "read [PORT]",
+            text: Scratch.translate("read [PORT]"),
             arguments: {
               PORT: { type: Scratch.ArgumentType.STRING, menu: "ports" },
             },
@@ -118,7 +118,7 @@
           {
             opcode: "setpart",
             blockType: Scratch.BlockType.COMMAND,
-            text: "set [PART] to [VALUE]",
+            text: Scratch.translate("set [PART] to [VALUE]"),
             arguments: {
               PART: { type: Scratch.ArgumentType.STRING, menu: "parts" },
               VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
@@ -127,7 +127,7 @@
           {
             opcode: "print",
             blockType: Scratch.BlockType.COMMAND,
-            text: "print [VALUE]",
+            text: Scratch.translate("print [VALUE]"),
             arguments: {
               VALUE: {
                 type: Scratch.ArgumentType.STRING,
@@ -140,7 +140,7 @@
           {
             opcode: "whenpin",
             blockType: Scratch.BlockType.HAT,
-            text: "when [PIN] [EDGE]",
+            text: Scratch.translate("when [PIN] [EDGE]"),
             isEdgeActivated: true,
             arguments: {
               PIN: { type: Scratch.ArgumentType.STRING, menu: "pins" },
@@ -150,7 +150,7 @@
           {
             opcode: "tableindex",
             blockType: Scratch.BlockType.REPORTER,
-            text: "[TABLE] [ [INDEX] ]",
+            text: Scratch.translate("[TABLE] [ [INDEX] ]"),
             arguments: {
               TABLE: { type: Scratch.ArgumentType.STRING, menu: "tables" },
               INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
