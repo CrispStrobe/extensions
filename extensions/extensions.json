@@ -18,6 +18,7 @@
   "CrispStrobe/arrays",
   "CrispStrobe/circuit",
   "CrispStrobe/csp",
+  "CrispStrobe/ledcube",
   "CrispStrobe/gamepad",
   "CrispStrobe/planetemaths",
   "CrispStrobe/stc12live",
