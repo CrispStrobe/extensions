@@ -16,6 +16,7 @@
   "CrispStrobe/ev3_direct",
 
   "CrispStrobe/arrays",
+  "CrispStrobe/circuit",
   "CrispStrobe/csp",
   "CrispStrobe/gamepad",
   "CrispStrobe/planetemaths",
