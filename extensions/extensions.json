@@ -20,6 +20,7 @@
   "CrispStrobe/csp",
   "CrispStrobe/gamepad",
   "CrispStrobe/planetemaths",
+  "CrispStrobe/stc12live",
   "lab/text",
   "lab/face-sensing",
   "stretch",
