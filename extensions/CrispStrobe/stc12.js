@@ -22,6 +22,11 @@
     return stc && Array.isArray(stc.parts) ? stc.parts : [];
   }
 
+  function tableDecls(runtime) {
+    const stc = runtime && runtime.stc;
+    return stc && Array.isArray(stc.tables) ? stc.tables : [];
+  }
+
   /** The board state this extension maintains, for whoever is watching. */
   function board(runtime) {
     if (!runtime._stc12Pins) runtime._stc12Pins = Object.create(null);
@@ -142,6 +147,15 @@
               EDGE: { type: Scratch.ArgumentType.STRING, menu: "edges" },
             },
           },
+          {
+            opcode: "tableindex",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "[TABLE] [ [INDEX] ]",
+            arguments: {
+              TABLE: { type: Scratch.ArgumentType.STRING, menu: "tables" },
+              INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
         ],
         menus: {
           // acceptReporters:false is what makes these FIELDS rather than inputs,
@@ -155,6 +169,7 @@
           parts: { acceptReporters: false, items: "partNames" },
           printModes: { acceptReporters: false, items: ["text", "number"] },
           edges: { acceptReporters: false, items: ["pressed", "released"] },
+          tables: { acceptReporters: false, items: "tableNames" },
         },
       };
     }
@@ -179,6 +194,13 @@
       return names.length
         ? names
         : [{ text: "(declare a PART in the Code tab)", value: "" }];
+    }
+
+    tableNames() {
+      const names = tableDecls(this.runtime).map((t) => t.name);
+      return names.length
+        ? names
+        : [{ text: "(declare a TABLE in the Code tab)", value: "" }];
     }
 
     setpin(args) {
@@ -258,6 +280,16 @@
         : 0;
       const level = pin && pin.activeLow ? !raw : !!raw;
       return args.EDGE === "pressed" ? level : !level;
+    }
+
+    tableindex(args) {
+      const tbl = tableDecls(this.runtime).find((t) => t.name === args.TABLE);
+      if (!tbl || !tbl.values) return 0;
+      const i = Math.max(
+        0,
+        Math.min(Number(args.INDEX) | 0, tbl.values.length - 1)
+      );
+      return tbl.values[i];
     }
   }
 
