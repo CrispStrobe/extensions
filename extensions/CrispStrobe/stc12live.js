@@ -104,6 +104,13 @@
       this._pendingResolve = null;
       this._pendingCmd = 0;
       this._readLoop = null;
+      // Publish capabilities to runtime so the palette layer can grey out
+      // blocks that are unavailable on this target.  Same seam as runtime.stc
+      // and runtime.circuitBoard.
+      this._runtime =
+        typeof Scratch !== "undefined" && Scratch.vm && Scratch.vm.runtime
+          ? Scratch.vm.runtime
+          : null;
     }
 
     getInfo() {
@@ -203,6 +210,7 @@
     async _close() {
       this._connected = false;
       this._capabilities = null;
+      if (this._runtime) this._runtime.stc12liveCapabilities = null;
       try {
         if (this._reader) {
           await this._reader.cancel();
@@ -293,6 +301,9 @@
           consumed: cap[8] || 0,
         };
         this._connected = true;
+        // Publish to runtime so the palette and circuit extension can read them.
+        if (this._runtime)
+          this._runtime.stc12liveCapabilities = this._capabilities;
       } catch (e) {
         await this._close();
         // Surface the reason rather than failing silently.
