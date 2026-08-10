@@ -1,8 +1,32 @@
-# Custom TurboWarp Extensions (LEGO + EV3dev)
+# CrispStrobe extension gallery
 
-This repo hosts a curated TurboWarp extension gallery, including a custom
-**ev3dev** extension that lets a Scratch project drive a real LEGO MINDSTORMS
-EV3 brick over Wi-Fi.
+A curated Scratch/TurboWarp extension gallery, served as static files from
+GitHub Pages. It began as an EV3dev bridge and now hosts **22 extensions**
+covering LEGO hardware, an 8051 microcontroller, a circuit simulator and some
+general-purpose block sets.
+
+    https://crispstrobe.github.io/extensions/
+
+## What is in it
+
+| group | extensions |
+|---|---|
+| **LEGO** | EV3 (direct, LMS transpile, universal, ev3dev-Python), NXT, WeDo 2.0, Boost, Powered Up, SPIKE Prime (BLE, Bluetooth Classic, bridge, transpile) |
+| **Microcontroller** | `stc12` — compile Scratch blocks to C for an STC12C5A60S2 and flash it; `stc12live` — drive the same chip live over a serial link |
+| **Circuit** | `circuit` — read voltages, currents and net state from a simulated breadboard; `ledcube` — a 4x4x4 LED cube surface |
+| **General** | `arrays`, `csp` (constraint solving), `gamepad`, `planetemaths` |
+
+Two of these are consumed twice over, and the distinction matters:
+
+- **Live-loaded from here** by editors that accept an extension URL. A project
+  declares the URL, the editor fetches the JS at runtime.
+- **Bundled** into `brickwright-lite`, which ships its own copy under
+  `overlay/scratch-vm/src/extensions/crispstrobe/` so it can run with no
+  network and pass store review. The gallery copy and the bundled copy are
+  checked against each other by a conformance test in `sb3-creator`
+  (`test/stc12-conformance.test.mjs`) — a menu that becomes a field in one copy
+  and an input in the other silently breaks every saved project, so the two are
+  asserted identical rather than assumed.
 
 ## How the pieces fit together
 
@@ -214,9 +238,30 @@ Forked from the [TurboWarp extensions gallery](https://extensions.turbowarp.org/
 with custom additions in `extensions/CrispStrobe/`. See [CONTRIBUTING.md](CONTRIBUTING.md)
 for the upstream contribution process.
 
-## License
+## Licensing — read this before bundling anything
 
-Per-extension licenses are at the top of each `.js`. Default for new
-extensions: [MPL-2.0](./licenses/MPL-2.0.txt). Sample projects: [CC-BY 4.0](./licenses/CC-BY-4.0.txt).
-Everything else (build tools, website, images): [GPL-3.0](licenses/GPL-3.0.txt).
-Image attribution: see [images/README.md](images/README.md).
+Upstream `TurboWarp/extensions` is **mixed-licence**, and the mix is the part
+that matters if you intend to ship an app:
+
+| upstream part | licence |
+|---|---|
+| extension `.js` files | per-file header — MIT historically, **MPL-2.0** recommended now |
+| sample projects | CC-BY 4.0 |
+| **images, development server, website** | **GPL-3.0** |
+
+So "the repo is GPL" and "the repo is MIT" are both wrong. The extension *code*
+is permissive or weak-copyleft; the GPL covers the site infrastructure around it.
+
+**Every extension under `extensions/CrispStrobe/` is ours and carries an MPL-2.0
+or MIT header.** MPL-2.0 is file-level weak copyleft: it explicitly allows
+combining the file into a Larger Work under other terms, requiring only that the
+MPL-covered files stay MPL and their source remain available — which it is, here.
+That is compatible with closed distribution channels in a way GPL-3.0 is not.
+
+`brickwright-lite` therefore bundles these extensions and **no GPL-3.0 material
+from upstream**: no images, no development server, no website code. Verified
+rather than assumed — every bundled file's licence header was checked, and the
+repo contains no vendored gallery images.
+
+Attribution for anything inherited from upstream stays intact. Per-file headers
+are the authority; this section describes them, it does not override them.
