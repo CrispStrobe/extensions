@@ -170,7 +170,9 @@
           {
             opcode: "seg_showdigit",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate("show digit [DIGIT] = value [VALUE] on [PART]"),
+            text: Scratch.translate(
+              "show digit [DIGIT] = value [VALUE] on [PART]"
+            ),
             arguments: {
               DIGIT: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
               VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
@@ -180,7 +182,9 @@
           {
             opcode: "seg_setsegs",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate("set digit [DIGIT] to segments [SEGS] on [PART]"),
+            text: Scratch.translate(
+              "set digit [DIGIT] to segments [SEGS] on [PART]"
+            ),
             arguments: {
               DIGIT: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
               SEGS: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
@@ -258,7 +262,9 @@
           {
             opcode: "matrix_setpx",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate("[STYLE] pixel [X] [Y] level [LEVEL] on [PART]"),
+            text: Scratch.translate(
+              "[STYLE] pixel [X] [Y] level [LEVEL] on [PART]"
+            ),
             arguments: {
               STYLE: { type: Scratch.ArgumentType.STRING, menu: "pixelStyles" },
               X: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
@@ -309,7 +315,11 @@
             blockType: Scratch.BlockType.COMMAND,
             text: Scratch.translate("paint [GRID] on [PART]"),
             arguments: {
-              GRID: { type: "led8x8", defaultValue: "0330033033333333333333333333333303333330003333000003300000000000" },
+              GRID: {
+                type: "led8x8",
+                defaultValue:
+                  "0330033033333333333333333333333303333330003333000003300000000000",
+              },
               PART: { type: Scratch.ArgumentType.STRING, menu: "parts" },
             },
           },
@@ -475,20 +485,25 @@
     _scr(part) {
       const b = board(this.runtime);
       const k = "scr_" + part;
-      if (!Object.prototype.hasOwnProperty.call(b, k)) b[k] = [0, 0, 0, 0, 0, 0, 0, 0];
+      if (!Object.prototype.hasOwnProperty.call(b, k))
+        b[k] = [0, 0, 0, 0, 0, 0, 0, 0];
       return b[k];
     }
 
     _scrpx(part, x, y, on) {
-      x = Number(x) | 0; y = Number(y) | 0;
+      x = Number(x) | 0;
+      y = Number(y) | 0;
       if (x < 0 || x > 7 || y < 0 || y > 7) return;
       const buf = this._scr(part);
       const m = 0x80 >> x;
-      if (on) buf[y] |= m; else buf[y] &= ~m & 0xff;
+      if (on) buf[y] |= m;
+      else buf[y] &= ~m & 0xff;
     }
 
     matrix_setpx(args) {
-      const on = args.STYLE === "light" || args.STYLE === "on" ||
+      const on =
+        args.STYLE === "light" ||
+        args.STYLE === "on" ||
         (args.STYLE === "brightness" && Number(args.LEVEL) > 0);
       this._scrpx(args.PART, args.X, args.Y, on);
     }
@@ -504,7 +519,8 @@
       // values); blit it, or clear the screen if the table is absent.
       const img = board(this.runtime)["tab_" + args.TABLE];
       const buf = this._scr(args.PART);
-      for (let y = 0; y < 8; y++) buf[y] = Array.isArray(img) ? (Number(img[y]) & 0xff) : 0;
+      for (let y = 0; y < 8; y++)
+        buf[y] = Array.isArray(img) ? Number(img[y]) & 0xff : 0;
     }
 
     matrix_paint(args) {
@@ -517,7 +533,7 @@
       for (let y = 0; y < 8; y++) {
         let byte = 0;
         for (let x = 0; x < 8; x++) {
-          if ((g.charCodeAt(y * 8 + x) - 48) > 0) byte |= (0x80 >> x);
+          if (g.charCodeAt(y * 8 + x) - 48 > 0) byte |= 0x80 >> x;
         }
         buf[y] = byte & 0xff;
       }
@@ -525,10 +541,17 @@
 
     matrix_scroll(args) {
       const buf = this._scr(args.PART);
-      if (args.DIR === "left") for (let y = 0; y < 8; y++) buf[y] = (buf[y] << 1) & 0xff;
-      else if (args.DIR === "right") for (let y = 0; y < 8; y++) buf[y] = (buf[y] >> 1) & 0xff;
-      else if (args.DIR === "up") { for (let y = 0; y < 7; y++) buf[y] = buf[y + 1]; buf[7] = 0; }
-      else { for (let y = 7; y > 0; y--) buf[y] = buf[y - 1]; buf[0] = 0; }
+      if (args.DIR === "left")
+        for (let y = 0; y < 8; y++) buf[y] = (buf[y] << 1) & 0xff;
+      else if (args.DIR === "right")
+        for (let y = 0; y < 8; y++) buf[y] = (buf[y] >> 1) & 0xff;
+      else if (args.DIR === "up") {
+        for (let y = 0; y < 7; y++) buf[y] = buf[y + 1];
+        buf[7] = 0;
+      } else {
+        for (let y = 7; y > 0; y--) buf[y] = buf[y - 1];
+        buf[0] = 0;
+      }
     }
 
     matrix_dim(args) {
@@ -541,7 +564,8 @@
     }
 
     matrix_getpx(args) {
-      const x = Number(args.X) | 0, y = Number(args.Y) | 0;
+      const x = Number(args.X) | 0,
+        y = Number(args.Y) | 0;
       if (x < 0 || x > 7 || y < 0 || y > 7) return false;
       return (this._scr(args.PART)[y] & (0x80 >> x)) !== 0;
     }
@@ -577,13 +601,16 @@
     }
 
     seg_shownum(args) {
-      const FONT = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07,
-        0x7f, 0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71];
+      const FONT = [
+        0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x77, 0x7c,
+        0x39, 0x5e, 0x79, 0x71,
+      ];
       const fb = this._segfb(args.PART);
       fb.fill(0);
       let n = Number(args.NUM) | 0;
       const neg = n < 0;
-      let u = Math.abs(n), i = 7;
+      let u = Math.abs(n),
+        i = 7;
       do {
         fb[i] = FONT[u % 10];
         u = Math.floor(u / 10);
@@ -594,8 +621,10 @@
     }
 
     seg_showdigit(args) {
-      const FONT = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07,
-        0x7f, 0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71];
+      const FONT = [
+        0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x77, 0x7c,
+        0x39, 0x5e, 0x79, 0x71,
+      ];
       const d = Number(args.DIGIT) | 0;
       if (d < 0 || d > 7) return;
       this._segfb(args.PART)[d] = FONT[(Number(args.VALUE) | 0) & 0x0f];
@@ -638,7 +667,7 @@
     led_only(args) {
       const n = Number(args.N) | 0;
       this._bank(args.PART);
-      this._banks[args.PART] = (n < 0 || n > 7) ? 0 : (1 << n);
+      this._banks[args.PART] = n < 0 || n > 7 ? 0 : 1 << n;
     }
 
     whenkey(args) {
