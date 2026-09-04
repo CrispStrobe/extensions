@@ -942,7 +942,15 @@
 
       switch (messageType) {
         case MessageType.INFO_RESPONSE:
-          log.proto("INFO_RESPONSE received");
+          if (data.length >= 15) {
+            const view = new DataView(data.buffer, data.byteOffset);
+            this._maxPacketSize = view.getUint16(9, true);
+            this._maxChunkSize = view.getUint16(13, true);
+          }
+          log.proto("INFO_RESPONSE received", {
+            maxPacketSize: this._maxPacketSize,
+            maxChunkSize: this._maxChunkSize,
+          });
           break;
 
         case MessageType.DEVICE_NOTIFICATION:
@@ -963,10 +971,12 @@
     }
 
     _handleDeviceNotification(data) {
-      const _payloadSize = data[1] | (data[2] << 8);
+      if (data.length < 3) return;
+      const payloadSize = data[1] | (data[2] << 8);
+      const payloadEnd = Math.min(data.length, 3 + payloadSize);
       let offset = 3;
 
-      while (offset < data.length) {
+      while (offset < payloadEnd) {
         const deviceType = data[offset];
         log.sensor(
           "Device notification, type:",
@@ -975,6 +985,7 @@
 
         switch (deviceType) {
           case DeviceMessageType.BATTERY:
+            if (offset + 2 > payloadEnd) return;
             this._sensors.battery.level = data[offset + 1];
             log.sensor("Battery:", this._sensors.battery.level, "%");
             offset += 2;
@@ -982,6 +993,7 @@
 
           case DeviceMessageType.IMU_VALUES:
             {
+              if (offset + 21 > payloadEnd) return;
               const yaw = data[offset + 3] | (data[offset + 4] << 8);
               const pitch = data[offset + 5] | (data[offset + 6] << 8);
               const roll = data[offset + 7] | (data[offset + 8] << 8);
@@ -997,6 +1009,7 @@
 
           case DeviceMessageType.MOTOR:
             {
+              if (offset + 12 > payloadEnd) return;
               const port = data[offset + 1];
               const position =
                 data[offset + 8] |
@@ -1023,6 +1036,7 @@
 
           case DeviceMessageType.COLOR_SENSOR:
             {
+              if (offset + 9 > payloadEnd) return;
               const port = data[offset + 1];
               this._sensors.colorSensors[port] = {
                 color: data[offset + 2],
@@ -1037,8 +1051,10 @@
 
           case DeviceMessageType.DISTANCE_SENSOR:
             {
+              if (offset + 4 > payloadEnd) return;
               const port = data[offset + 1];
-              const distance = data[offset + 2] | (data[offset + 3] << 8);
+              const view = new DataView(data.buffer, data.byteOffset + offset);
+              const distance = view.getInt16(2, true);
               this._sensors.distanceSensors[port] = distance;
               log.sensor("Distance sensor port", port, ":", distance, "mm");
               offset += 4;
@@ -1047,6 +1063,7 @@
 
           case DeviceMessageType.FORCE_SENSOR:
             {
+              if (offset + 4 > payloadEnd) return;
               const port = data[offset + 1];
               const value = data[offset + 2];
               const pressed = data[offset + 3] === 0x01;

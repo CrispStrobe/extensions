@@ -1031,11 +1031,16 @@
       if (!this.isConnected()) return Promise.resolve();
       if (useLimiter && !this._rateLimiter.okayToSend())
         return Promise.resolve();
-      if (!id) return this._bt.sendMessage({ message: text });
+      const bytes = new TextEncoder().encode(text);
+      const options = {
+        message: Base64Util.uint8ArrayToBase64(bytes),
+        encoding: "base64",
+      };
+      if (!id) return this._bt.sendMessage(options);
       const promise = new Promise((resolve, reject) => {
         this._openRequests[id] = { resolve, reject };
       });
-      this._bt.sendMessage({ message: text });
+      this._bt.sendMessage(options);
       return promise;
     }
 

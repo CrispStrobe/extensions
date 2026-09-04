@@ -190,6 +190,8 @@
       // Hub state
       this.maxPacketSize = 20;
       this.maxChunkSize = 100;
+      this._notificationBuffer = [];
+      this._writeChain = Promise.resolve();
       this.batteryLevel = 100;
 
       // Port data
@@ -510,6 +512,8 @@
       });
 
       this.batteryLevel = 100;
+      this._notificationBuffer = [];
+      this._writeChain = Promise.resolve();
       this.imu = {
         yaw: 0,
         pitch: 0,
@@ -547,10 +551,29 @@
     _onMessage(event) {
       try {
         const value = event.target.value;
-        const data = this._unpack(new Uint8Array(value.buffer));
+        const chunk = new Uint8Array(
+          value.buffer,
+          value.byteOffset,
+          value.byteLength
+        );
 
-        if (!data || data.length === 0) return;
+        for (const byte of chunk) {
+          this._notificationBuffer.push(byte);
+          if (byte !== 0x02) continue;
 
+          const frame = new Uint8Array(this._notificationBuffer);
+          this._notificationBuffer = [];
+          const data = this._unpack(frame);
+          if (data && data.length > 0) this._processMessage(data);
+        }
+      } catch (error) {
+        this._notificationBuffer = [];
+        console.error("❌ [SPIKE Prime] Error handling message:", error);
+      }
+    }
+
+    _processMessage(data) {
+      try {
         const msgType = data[0];
         if (DEBUG)
           console.log(
@@ -646,7 +669,7 @@
             break;
 
           case HUB_CONSTANTS.DEVICE_MOTOR:
-            if (remaining >= 11) {
+            if (remaining >= 12) {
               const portId = payload[offset + 1];
               const portName = PORT_ID_TO_NAME[portId];
               if (portName) {
@@ -666,7 +689,7 @@
                     this.ports[portName].value.position
                   );
               }
-              offset += 11;
+              offset += 12;
             } else offset = payload.length;
             break;
 
@@ -884,11 +907,25 @@
       await this._sendMessage(Array.from(message));
     }
 
-    async _sendMessage(payloadArray) {
+    _sendMessage(payloadArray) {
       if (!this.isConnected()) return;
 
       const packed = this._pack(new Uint8Array(payloadArray));
-      await this.rxCharacteristic.writeValue(packed);
+      const packetSize = Math.max(1, this.maxPacketSize || 20);
+      const write = this.rxCharacteristic.writeValueWithoutResponse
+        ? this.rxCharacteristic.writeValueWithoutResponse.bind(
+            this.rxCharacteristic
+          )
+        : this.rxCharacteristic.writeValue.bind(this.rxCharacteristic);
+
+      this._writeChain = this._writeChain
+        .catch(() => {})
+        .then(async () => {
+          for (let offset = 0; offset < packed.length; offset += packetSize) {
+            await write(packed.slice(offset, offset + packetSize));
+          }
+        });
+      return this._writeChain;
     }
 
     _pack(data) {
