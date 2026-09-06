@@ -1244,7 +1244,24 @@ continuous_sensor_loop()
       if (Object.prototype.hasOwnProperty.call(response, "i")) {
         const openRequest = this._openRequests[response.i];
         delete this._openRequests[response.i];
-        if (openRequest) openRequest.resolve();
+        if (openRequest) {
+          // Official legacy replies use `r`/`e`; Brickwright emits the same
+          // compact shape. Accept JSON-RPC's verbose `error` spelling too so
+          // application failures take the same path as transport failures.
+          const hasCompactError = Object.prototype.hasOwnProperty.call(
+            response,
+            "e"
+          );
+          const hasJsonRpcError = Object.prototype.hasOwnProperty.call(
+            response,
+            "error"
+          );
+          if (hasCompactError || hasJsonRpcError) {
+            openRequest.reject(hasCompactError ? response.e : response.error);
+          } else {
+            openRequest.resolve(response.r);
+          }
+        }
       }
     }
 
@@ -2432,10 +2449,11 @@ continuous_sensor_loop()
             stall: setting.stallDetection,
           }
         );
-        const altCommand = this._peripheral.sendPythonCommand(
-          `import hub; hub.port.${port}.motor.run_for_degrees(${Math.floor(degrees)}, ${setting.speed * direction})`
+        return standardCommand.catch(() =>
+          this._peripheral.sendPythonCommand(
+            `import hub; hub.port.${port}.motor.run_for_degrees(${Math.floor(degrees)}, ${setting.speed * direction})`
+          )
         );
-        return standardCommand.catch(() => altCommand);
       });
       return Promise.all(promises).then(() => {});
     }
@@ -2453,10 +2471,11 @@ continuous_sensor_loop()
             stall: setting.stallDetection,
           }
         );
-        const altCommand = this._peripheral.sendPythonCommand(
-          `import hub; hub.port.${port}.motor.run_for_time(${Math.floor(seconds * 1000)}, ${setting.speed * direction})`
+        return standardCommand.catch(() =>
+          this._peripheral.sendPythonCommand(
+            `import hub; hub.port.${port}.motor.run_for_time(${Math.floor(seconds * 1000)}, ${setting.speed * direction})`
+          )
         );
-        return standardCommand.catch(() => altCommand);
       });
       return Promise.all(promises).then(() => {});
     }
@@ -2474,10 +2493,11 @@ continuous_sensor_loop()
             stall: setting.stallDetection,
           }
         );
-        const altCommand = this._peripheral.sendPythonCommand(
-          `import hub; hub.port.${port}.motor.pwm(${Math.round(setting.speed * direction)})`
+        return standardCommand.catch(() =>
+          this._peripheral.sendPythonCommand(
+            `import hub; hub.port.${port}.motor.pwm(${Math.round(setting.speed * direction)})`
+          )
         );
-        return standardCommand.catch(() => altCommand);
       });
       return Promise.all(promises).then(() => {});
     }
@@ -2490,10 +2510,11 @@ continuous_sensor_loop()
           "scratch.motor_stop",
           { port: port, stop: setting.stopMode }
         );
-        const altCommand = this._peripheral.sendPythonCommand(
-          `import hub; hub.port.${port}.motor.stop()`
+        return standardCommand.catch(() =>
+          this._peripheral.sendPythonCommand(
+            `import hub; hub.port.${port}.motor.stop()`
+          )
         );
-        return standardCommand.catch(() => altCommand);
       });
       return Promise.all(promises).then(() => {});
     }
@@ -2558,10 +2579,11 @@ continuous_sensor_loop()
         "scratch.display_text",
         { text: text }
       );
-      const altCommand = this._peripheral.sendPythonCommand(
-        `import hub; hub.display.show("${text.replace(/"/g, '\\"')}")`
+      return standardCommand.catch(() =>
+        this._peripheral.sendPythonCommand(
+          `import hub; hub.display.show("${text.replace(/"/g, '\\"')}")`
+        )
       );
-      return standardCommand.catch(() => altCommand);
     }
 
     displayImage(args) {
@@ -2580,10 +2602,11 @@ continuous_sensor_loop()
         .replace(/0/g, "_")
         .match(/.{5}/g)
         .join(":");
-      const altCommand = this._peripheral.sendPythonCommand(
-        `import hub; hub.display.show(hub.Image("${altImage}"))`
+      return standardCommand.catch(() =>
+        this._peripheral.sendPythonCommand(
+          `import hub; hub.display.show(hub.Image("${altImage}"))`
+        )
       );
-      return standardCommand.catch(() => altCommand);
     }
 
     displayPattern(args) {
@@ -2598,10 +2621,9 @@ continuous_sensor_loop()
         "scratch.display_clear",
         {}
       );
-      const altCommand = this._peripheral.sendPythonCommand(
-        'import hub; hub.display.show(" ")'
+      return standardCommand.catch(() =>
+        this._peripheral.sendPythonCommand('import hub; hub.display.show(" ")')
       );
-      return standardCommand.catch(() => altCommand);
     }
 
     setPixel(args) {
@@ -2613,10 +2635,11 @@ continuous_sensor_loop()
         "scratch.display_set_pixel",
         { x: x, y: y, brightness: Math.round((brightness * 9) / 100) }
       );
-      const altCommand = this._peripheral.sendPythonCommand(
-        `import hub; hub.display.pixel(${x}, ${y}, ${Math.round((brightness * 9) / 100)})`
+      return standardCommand.catch(() =>
+        this._peripheral.sendPythonCommand(
+          `import hub; hub.display.pixel(${x}, ${y}, ${Math.round((brightness * 9) / 100)})`
+        )
       );
-      return standardCommand.catch(() => altCommand);
     }
 
     rotateDisplay(args) {
@@ -2633,10 +2656,9 @@ continuous_sensor_loop()
         "scratch.center_button_lights",
         { color: colorValue }
       );
-      const altCommand = this._peripheral.sendPythonCommand(
-        `import hub; hub.led(${colorValue})`
+      return standardCommand.catch(() =>
+        this._peripheral.sendPythonCommand(`import hub; hub.led(${colorValue})`)
       );
-      return standardCommand.catch(() => altCommand);
     }
 
     // IMU & Gyro
@@ -2790,10 +2812,11 @@ continuous_sensor_loop()
         "scratch.sound_beep",
         { frequency: frequency, duration: duration }
       );
-      const altCommand = this._peripheral.sendPythonCommand(
-        `import hub; hub.sound.beep(${frequency}, ${duration}, hub.sound.SOUND_SIN)`
+      return standardCommand.catch(() =>
+        this._peripheral.sendPythonCommand(
+          `import hub; hub.sound.beep(${frequency}, ${duration}, hub.sound.SOUND_SIN)`
+        )
       );
-      return standardCommand.catch(() => altCommand);
     }
     playNote(args) {
       const note = Cast.toNumber(args.NOTE);
