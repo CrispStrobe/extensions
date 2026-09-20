@@ -19,7 +19,8 @@
       "arrays.showTable": "show table [NAME] at x [X] y [Y]",
       "arrays.hideTable": "hide table [NAME]",
       "arrays.setTableTitle": "set table [NAME] title to [TITLE]",
-      "arrays.setTableStyle": "set table [NAME] cell [W] by [H] text size [SIZE]",
+      "arrays.setTableStyle":
+        "set table [NAME] cell [W] by [H] text size [SIZE]",
       "arrays.markCell": "mark [NAME] row [ROW] col [COL]",
       "arrays.unmarkCell": "unmark [NAME] row [ROW] col [COL]",
       "arrays.clearMarks": "clear all marks on [NAME]",
@@ -71,9 +72,11 @@
       "arrays.showTable": "Tabelle [NAME] bei x [X] y [Y] zeigen",
       "arrays.hideTable": "Tabelle [NAME] verbergen",
       "arrays.setTableTitle": "Titel von Tabelle [NAME] auf [TITLE] setzen",
-      "arrays.setTableStyle": "Tabelle [NAME] Zelle [W] mal [H] Schriftgröße [SIZE]",
+      "arrays.setTableStyle":
+        "Tabelle [NAME] Zelle [W] mal [H] Schriftgröße [SIZE]",
       "arrays.markCell": "[NAME] Zeile [ROW] Spalte [COL] markieren",
-      "arrays.unmarkCell": "Markierung [NAME] Zeile [ROW] Spalte [COL] entfernen",
+      "arrays.unmarkCell":
+        "Markierung [NAME] Zeile [ROW] Spalte [COL] entfernen",
       "arrays.clearMarks": "alle Markierungen auf [NAME] löschen",
       "arrays.isMarked": "[NAME] Zeile [ROW] Spalte [COL] markiert?",
       "arrays.markedCount": "Markierungen auf [NAME]",
@@ -125,7 +128,8 @@
       "arrays.showTable": "afficher le tableau [NAME] à x [X] y [Y]",
       "arrays.hideTable": "cacher le tableau [NAME]",
       "arrays.setTableTitle": "définir le titre du tableau [NAME] à [TITLE]",
-      "arrays.setTableStyle": "tableau [NAME] cellule [W] sur [H] taille du texte [SIZE]",
+      "arrays.setTableStyle":
+        "tableau [NAME] cellule [W] sur [H] taille du texte [SIZE]",
       "arrays.markCell": "marquer [NAME] ligne [ROW] colonne [COL]",
       "arrays.unmarkCell": "démarquer [NAME] ligne [ROW] colonne [COL]",
       "arrays.clearMarks": "effacer toutes les marques sur [NAME]",
@@ -755,7 +759,10 @@
             blockType: Scratch.BlockType.COMMAND,
             text: t("arrays.showTable"),
             arguments: {
-              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "myArray" },
+              NAME: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "myArray",
+              },
               X: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
               Y: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
             },
@@ -765,7 +772,10 @@
             blockType: Scratch.BlockType.COMMAND,
             text: t("arrays.hideTable"),
             arguments: {
-              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "myArray" },
+              NAME: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "myArray",
+              },
             },
           },
           {
@@ -773,8 +783,14 @@
             blockType: Scratch.BlockType.COMMAND,
             text: t("arrays.setTableTitle"),
             arguments: {
-              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "myArray" },
-              TITLE: { type: Scratch.ArgumentType.STRING, defaultValue: "Player 1" },
+              NAME: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "myArray",
+              },
+              TITLE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "Player 1",
+              },
             },
           },
           {
@@ -782,7 +798,10 @@
             blockType: Scratch.BlockType.COMMAND,
             text: t("arrays.setTableStyle"),
             arguments: {
-              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "myArray" },
+              NAME: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "myArray",
+              },
               W: { type: Scratch.ArgumentType.NUMBER, defaultValue: 44 },
               H: { type: Scratch.ArgumentType.NUMBER, defaultValue: 30 },
               SIZE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 16 },
@@ -793,7 +812,10 @@
             blockType: Scratch.BlockType.COMMAND,
             text: t("arrays.markCell"),
             arguments: {
-              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "myArray" },
+              NAME: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "myArray",
+              },
               ROW: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
               COL: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
             },
@@ -803,7 +825,10 @@
             blockType: Scratch.BlockType.COMMAND,
             text: t("arrays.unmarkCell"),
             arguments: {
-              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "myArray" },
+              NAME: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "myArray",
+              },
               ROW: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
               COL: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
             },
@@ -813,7 +838,10 @@
             blockType: Scratch.BlockType.COMMAND,
             text: t("arrays.clearMarks"),
             arguments: {
-              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "myArray" },
+              NAME: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "myArray",
+              },
             },
           },
           {
@@ -821,7 +849,10 @@
             blockType: Scratch.BlockType.BOOLEAN,
             text: t("arrays.isMarked"),
             arguments: {
-              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "myArray" },
+              NAME: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "myArray",
+              },
               ROW: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
               COL: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
             },
@@ -831,7 +862,10 @@
             blockType: Scratch.BlockType.REPORTER,
             text: t("arrays.markedCount"),
             arguments: {
-              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "myArray" },
+              NAME: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "myArray",
+              },
             },
           },
         ],
@@ -1209,8 +1243,16 @@
     _tableState(name) {
       if (!tables[name]) {
         tables[name] = {
-          x: 0, y: 0, cellW: 44, cellH: 30, fontSize: 16,
-          title: "", marks: {}, skinId: null, drawableId: null, visible: false,
+          x: 0,
+          y: 0,
+          cellW: 44,
+          cellH: 30,
+          fontSize: 16,
+          title: "",
+          marks: {},
+          skinId: null,
+          drawableId: null,
+          visible: false,
         };
       }
       return tables[name];
@@ -1226,14 +1268,19 @@
 
     _esc(text) {
       return String(text)
-        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
     }
 
     // Pure: rows + state in, SVG out. Kept free of renderer calls so it can be
     // asserted directly rather than through a GL context.
     _tableSVG(rows, st) {
-      const cols = rows.reduce((widest, row) => Math.max(widest, row.length), 0);
+      const cols = rows.reduce(
+        (widest, row) => Math.max(widest, row.length),
+        0
+      );
       if (!rows.length || !cols) return null;
       const cw = Math.max(8, Number(st.cellW) || 44);
       const ch = Math.max(8, Number(st.cellH) || 30);
@@ -1244,30 +1291,69 @@
       const h = rows.length * ch + pad * 2 + titleH;
       const parts = [];
       parts.push(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h +
-        '" viewBox="0 0 ' + w + " " + h + '">');
-      parts.push('<rect x="0" y="0" width="' + w + '" height="' + h +
-        '" rx="6" fill="#ffffff" fill-opacity="0.92" stroke="#4c4c4c" stroke-width="2"/>');
+        '<svg xmlns="http://www.w3.org/2000/svg" width="' +
+          w +
+          '" height="' +
+          h +
+          '" viewBox="0 0 ' +
+          w +
+          " " +
+          h +
+          '">'
+      );
+      parts.push(
+        '<rect x="0" y="0" width="' +
+          w +
+          '" height="' +
+          h +
+          '" rx="6" fill="#ffffff" fill-opacity="0.92" stroke="#4c4c4c" stroke-width="2"/>'
+      );
       if (st.title) {
-        parts.push('<text x="' + (w / 2) + '" y="' + (pad + fs) +
-          '" font-family="sans-serif" font-size="' + fs +
-          '" font-weight="bold" text-anchor="middle" fill="#111111">' +
-          this._esc(st.title) + "</text>");
+        parts.push(
+          '<text x="' +
+            w / 2 +
+            '" y="' +
+            (pad + fs) +
+            '" font-family="sans-serif" font-size="' +
+            fs +
+            '" font-weight="bold" text-anchor="middle" fill="#111111">' +
+            this._esc(st.title) +
+            "</text>"
+        );
       }
       for (let r = 0; r < rows.length; r++) {
         for (let c = 0; c < cols; c++) {
           const x = pad + c * cw;
           const y = pad + titleH + r * ch;
-          const marked = st.marks[(r + 1) + "," + (c + 1)] === true;
-          parts.push('<rect x="' + x + '" y="' + y + '" width="' + cw + '" height="' + ch +
-            '" fill="' + (marked ? "#ff8c1a" : "#f2f2f2") +
-            '" stroke="#4c4c4c" stroke-width="1"/>');
+          const marked = st.marks[r + 1 + "," + (c + 1)] === true;
+          parts.push(
+            '<rect x="' +
+              x +
+              '" y="' +
+              y +
+              '" width="' +
+              cw +
+              '" height="' +
+              ch +
+              '" fill="' +
+              (marked ? "#ff8c1a" : "#f2f2f2") +
+              '" stroke="#4c4c4c" stroke-width="1"/>'
+          );
           const cell = rows[r][c];
           if (cell !== undefined && cell !== null && cell !== "") {
-            parts.push('<text x="' + (x + cw / 2) + '" y="' + (y + ch / 2 + fs * 0.35) +
-              '" font-family="sans-serif" font-size="' + fs +
-              '" text-anchor="middle" fill="' + (marked ? "#ffffff" : "#111111") + '">' +
-              this._esc(cell) + "</text>");
+            parts.push(
+              '<text x="' +
+                (x + cw / 2) +
+                '" y="' +
+                (y + ch / 2 + fs * 0.35) +
+                '" font-family="sans-serif" font-size="' +
+                fs +
+                '" text-anchor="middle" fill="' +
+                (marked ? "#ffffff" : "#111111") +
+                '">' +
+                this._esc(cell) +
+                "</text>"
+            );
           }
         }
       }
@@ -1277,7 +1363,10 @@
 
     _renderer() {
       try {
-        return (Scratch.vm && Scratch.vm.runtime && Scratch.vm.runtime.renderer) || null;
+        return (
+          (Scratch.vm && Scratch.vm.runtime && Scratch.vm.runtime.renderer) ||
+          null
+        );
       } catch (e) {
         return null;
       }
@@ -1345,14 +1434,16 @@
     markCell(args) {
       const name = String(args.NAME);
       this._tableState(name).marks[
-        Math.round(Number(args.ROW)) + "," + Math.round(Number(args.COL))] = true;
+        Math.round(Number(args.ROW)) + "," + Math.round(Number(args.COL))
+      ] = true;
       this._redrawTable(name);
     }
 
     unmarkCell(args) {
       const name = String(args.NAME);
       delete this._tableState(name).marks[
-        Math.round(Number(args.ROW)) + "," + Math.round(Number(args.COL))];
+        Math.round(Number(args.ROW)) + "," + Math.round(Number(args.COL))
+      ];
       this._redrawTable(name);
     }
 
@@ -1365,8 +1456,11 @@
     isMarked(args) {
       const st = tables[String(args.NAME)];
       if (!st) return false;
-      return st.marks[
-        Math.round(Number(args.ROW)) + "," + Math.round(Number(args.COL))] === true;
+      return (
+        st.marks[
+          Math.round(Number(args.ROW)) + "," + Math.round(Number(args.COL))
+        ] === true
+      );
     }
 
     markedCount(args) {
