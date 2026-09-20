@@ -3,6 +3,18 @@
 // Description: Control Spike Prime via Bluetooth Low Energy (New Firmware).
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0
+//
+// SUPERSEDED by legospike_turbowarp_transpile.js (id `spikeprime`), which
+// absorbed this extension and three others on 2026-09-20. This one carried
+// Web Bluetooth against GATT FD02 (firmware 3.x). Its readings moved across as
+// they were, with one correction: this file reads the motor record as 11 bytes
+// while taking a 32-bit position from offset 8, which needs a twelfth — so it
+// over-reads the record and mis-strides to the next one.
+//
+// Kept because the gallery serves it by URL and a project may load it
+// directly; it is no longer the place to make changes. brickwright-lite no
+// longer ships it, and the unified extension migrates projects that name
+// `spikeprimeble` when they load.
 (function (Scratch) {
   "use strict";
 

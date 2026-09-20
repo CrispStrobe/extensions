@@ -3,6 +3,16 @@
 // Description: Alternative BLE control for Spike Prime.
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0
+//
+// SUPERSEDED by legospike_turbowarp_transpile.js (id `spikeprime`), which
+// absorbed this extension and three others on 2026-09-20. This one carried
+// the same SPIKE 3 protocol over Scratch Link BLE. Its 12-byte motor layout was
+// the correct one and is what the unified extension uses.
+//
+// Kept because the gallery serves it by URL and a project may load it
+// directly; it is no longer the place to make changes. brickwright-lite no
+// longer ships it, and the unified extension migrates projects that name
+// `legospikeprimeBLE` when they load.
 (function (Scratch) {
   "use strict";
 
