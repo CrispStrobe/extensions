@@ -286,6 +286,35 @@
     sendInterval: 50,
   };
 
+  // Which service owns each characteristic. This has to be a lookup, not a
+  // pattern: every WeDo 2.0 characteristic ends in the SAME
+  // "-1523-785feabcd123" suffix as the advertised service, so a substring
+  // test for "152" matches all of them -- including 1560/1563/1565, which
+  // live on the IO service. Scratch Link resolves a characteristic inside the
+  // service the request names, so a mislabelled write is a write that never
+  // lands.
+  const ServiceOf = {
+    // attachedIO is on the ADVERTISED service, not the IO service -- the hub's
+    // own GATT tree puts 1524-152e on 1523 and only 1560/1561/1563/1565 on
+    // 4f0e, and scratch-vm subscribes it on DEVICE_SERVICE for the same
+    // reason.
+    [WeDo2BLE.attachedIO]: WeDo2BLE.advertisementService,
+    [WeDo2BLE.inputValues]: WeDo2BLE.ioService,
+    [WeDo2BLE.inputCommand]: WeDo2BLE.ioService,
+    [WeDo2BLE.outputCommand]: WeDo2BLE.ioService,
+    [WeDo2BLE.button]: WeDo2BLE.advertisementService,
+    [WeDo2BLE.disconnect]: WeDo2BLE.advertisementService,
+    [WeDo2BLE.battery]: WeDo2BLE.batteryService,
+  };
+
+  const serviceFor = (characteristic) => {
+    const service = ServiceOf[String(characteristic).toLowerCase()];
+    if (!service) {
+      throw new Error(`No service known for characteristic ${characteristic}`);
+    }
+    return service;
+  };
+
   const DeviceType = {
     MOTOR: 1,
     VOLTAGE_SENSOR: 20,
@@ -619,6 +648,9 @@
       this._requests = new Map();
       this._connectResolve = null;
       this._connectReject = null;
+      this._discoverPromise = null;
+      this._onPeripheralFound = null;
+      this._onDiscoverFailed = null;
       logger.info("Scratch Link Adapter initialized");
     }
 
@@ -657,6 +689,19 @@
     _onOpen() {
       logger.info("✓ Socket opened, discovering devices...");
 
+      // `discover` is answered IMMEDIATELY with null and the scan results
+      // arrive afterwards as `didDiscoverPeripheral` notifications -- that is
+      // the Scratch Link contract, and our own session states it outright
+      // ("Returns immediately; discovered devices stream back as
+      // notifications"). We were reading the discover REPLY as the device and
+      // taking .peripheralId off it, which is a TypeError on null before any
+      // hub is even considered. Wait for the first peripheral the scan
+      // actually reports instead.
+      this._discoverPromise = new Promise((resolve, reject) => {
+        this._onPeripheralFound = resolve;
+        this._onDiscoverFailed = reject;
+      });
+
       this._sendRequest("discover", {
         filters: [
           {
@@ -675,6 +720,7 @@
         // Bluetooth, which carries its own optionalServices below.
         optionalServices: [WeDo2BLE.ioService, WeDo2BLE.batteryService],
       })
+        .then(() => this._discoverPromise)
         .then((device) => {
           logger.info(`Device discovered: ${device.name || "WeDo 2.0"}`);
 
@@ -694,19 +740,13 @@
 
           // Start notifications for all input characteristics
           const notifications = [
-            {
-              serviceId: WeDo2BLE.ioService,
-              characteristicId: WeDo2BLE.attachedIO,
-            },
-            {
-              serviceId: WeDo2BLE.ioService,
-              characteristicId: WeDo2BLE.inputValues,
-            },
-            {
-              serviceId: WeDo2BLE.advertisementService,
-              characteristicId: WeDo2BLE.button,
-            },
-          ];
+            WeDo2BLE.attachedIO,
+            WeDo2BLE.inputValues,
+            WeDo2BLE.button,
+          ].map((characteristicId) => ({
+            serviceId: serviceFor(characteristicId),
+            characteristicId,
+          }));
 
           return Promise.all(
             notifications.map((n) => this._sendRequest("startNotifications", n))
@@ -772,7 +812,40 @@
         logger.trace("Scratch Link message:", json);
 
         if (json.jsonrpc === "2.0") {
-          if (json.method === "characteristicDidChange") {
+          if (json.method === "didDiscoverPeripheral") {
+            logger.info(
+              `Peripheral reported: ${json.params.name} (${json.params.peripheralId})`
+            );
+            if (this._onPeripheralFound) {
+              const resolve = this._onPeripheralFound;
+              this._onPeripheralFound = null;
+              this._onDiscoverFailed = null;
+              resolve(json.params);
+            }
+          } else if (
+            json.method === "discoverDidFail" ||
+            json.method === "userDidNotPickPeripheral"
+          ) {
+            // discoverDidFail carries a reason; userDidNotPickPeripheral is
+            // the stock frame and carries none. Either way the scan is over.
+            const why =
+              (json.params && json.params.message) || "no WeDo 2.0 hub found";
+            logger.warn(`Discovery failed: ${why}`);
+            if (this._onDiscoverFailed) {
+              const reject = this._onDiscoverFailed;
+              this._onPeripheralFound = null;
+              this._onDiscoverFailed = null;
+              reject(new Error(why));
+            }
+          } else if (json.method === "discoverDidFinish") {
+            // The scan window closed. If nothing matched, stop waiting.
+            if (this._onDiscoverFailed && !json.params.count) {
+              const reject = this._onDiscoverFailed;
+              this._onPeripheralFound = null;
+              this._onDiscoverFailed = null;
+              reject(new Error("no WeDo 2.0 hub found"));
+            }
+          } else if (json.method === "characteristicDidChange") {
             const data = Base64Util.base64ToUint8Array(json.params.message);
             const uuid = json.params.characteristicId.toLowerCase();
             logger.trace(`Data received on ${uuid}:`, Array.from(data));
@@ -817,14 +890,8 @@
 
       const base64 = Base64Util.uint8ArrayToBase64(data);
 
-      // Determine service based on characteristic
-      let serviceId = WeDo2BLE.ioService;
-      if (characteristic.toLowerCase().includes("152")) {
-        serviceId = WeDo2BLE.advertisementService;
-      }
-
       return this._sendRequest("write", {
-        serviceId: serviceId,
+        serviceId: serviceFor(characteristic),
         characteristicId: characteristic,
         message: base64,
         encoding: "base64",
@@ -839,13 +906,8 @@
 
       logger.trace(`Reading from ${characteristic}`);
 
-      let serviceId = WeDo2BLE.batteryService;
-      if (characteristic.toLowerCase().includes("152")) {
-        serviceId = WeDo2BLE.advertisementService;
-      }
-
       const result = await this._sendRequest("read", {
-        serviceId: serviceId,
+        serviceId: serviceFor(characteristic),
         characteristicId: characteristic,
       });
 
@@ -909,9 +971,12 @@
       this.tiltY = 0;
       this.distance = 0;
 
-      // Bind methods
+      // Bind methods. There is deliberately no _onConnect here: it was bound
+      // but never defined anywhere in this extension, so the line threw
+      // "Cannot read properties of undefined (reading 'bind')" inside the
+      // constructor -- before any transport was chosen, which is why the hub
+      // could not be created over Web Bluetooth either.
       this.reset = this.reset.bind(this);
-      this._onConnect = this._onConnect.bind(this);
 
       // Register as peripheral extension
       if (this._runtime) {
