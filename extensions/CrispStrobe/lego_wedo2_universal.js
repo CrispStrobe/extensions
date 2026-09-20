@@ -663,6 +663,17 @@
             services: [WeDo2BLE.advertisementService],
           },
         ],
+        // A Scratch Link session's allowance is exactly the services named
+        // here: the filters plus optionalServices, replaced (not grown) by
+        // each discover. WeDo 2.0 is the one LEGO hub whose IO does NOT live
+        // on the service it advertises -- attachedIO, inputValues,
+        // inputCommand and outputCommand are all on 4f0e, and the heartbeat
+        // reads battery from 180f. Omitting them left the allowance at the
+        // advertised service alone, so every read, write and
+        // startNotifications against the IO service came back "attempt to
+        // access unexpected service" and the hub was reachable only over Web
+        // Bluetooth, which carries its own optionalServices below.
+        optionalServices: [WeDo2BLE.ioService, WeDo2BLE.batteryService],
       })
         .then((device) => {
           logger.info(`Device discovered: ${device.name || "WeDo 2.0"}`);
