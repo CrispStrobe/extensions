@@ -27,6 +27,17 @@
     return stc && Array.isArray(stc.tables) ? stc.tables : [];
   }
 
+  /** Which device family is active? Drives palette name, color, and gating. */
+  function deviceFamily(runtime) {
+    const stc = runtime && runtime.stc;
+    if (!stc || !stc.device) return "8051";
+    if (/eater6502|w65c02/i.test(stc.device)) return "6502";
+    if (/pico|rp2040/i.test(stc.device)) return "pico";
+    if (/arduino-mega/i.test(stc.device)) return "mega";
+    if (/arduino|atmega/i.test(stc.device)) return "avr";
+    return "8051";
+  }
+
   /** The board state this extension maintains, for whoever is watching. */
   function board(runtime) {
     if (!runtime._stc12Pins) runtime._stc12Pins = Object.create(null);
@@ -39,11 +50,41 @@
     }
 
     getInfo() {
+      const family = deviceFamily(this.runtime);
+      const is8051 = family === "8051";
+      const isAVR = family === "avr" || family === "mega";
+      const is6502 = family === "6502";
+      const hasPWM = !is6502;
+      const paletteName =
+        family === "6502"
+          ? Scratch.translate("6502 Pins")
+          : family === "pico"
+            ? Scratch.translate("Pico Pins")
+            : family === "mega"
+              ? Scratch.translate("Arduino Mega Pins")
+              : family === "avr"
+                ? Scratch.translate("Arduino Pins")
+                : Scratch.translate("STC12 / 8051 Pins");
+      const color1 = is6502
+        ? "#B8860B"
+        : family === "pico"
+          ? "#8E44AD"
+          : isAVR
+            ? "#00878F"
+            : "#3d7ea6";
+      const color2 = is6502
+        ? "#8B6914"
+        : family === "pico"
+          ? "#6C3483"
+          : isAVR
+            ? "#006B73"
+            : "#2f6383";
+
       return {
         id: "stc12",
-        name: Scratch.translate("STC12 / 8051 pins"),
-        color1: "#3d7ea6",
-        color2: "#2f6383",
+        name: paletteName,
+        color1: color1,
+        color2: color2,
         blocks: [
           {
             opcode: "setpin",
@@ -83,6 +124,7 @@
           {
             opcode: "setpwm",
             blockType: Scratch.BlockType.COMMAND,
+            hideFromPalette: !hasPWM,
             text: Scratch.translate("set [PIN] to [VALUE] percent"),
             arguments: {
               PIN: { type: Scratch.ArgumentType.STRING, menu: "pins" },
@@ -92,6 +134,7 @@
           {
             opcode: "settone",
             blockType: Scratch.BlockType.COMMAND,
+            hideFromPalette: !is8051,
             text: Scratch.translate("set [PIN] to [VALUE] hz"),
             arguments: {
               PIN: { type: Scratch.ArgumentType.STRING, menu: "pins" },
@@ -101,6 +144,7 @@
           {
             opcode: "setport",
             blockType: Scratch.BlockType.COMMAND,
+            hideFromPalette: !is8051,
             text: Scratch.translate("set [PORT] to [VALUE]"),
             arguments: {
               PORT: { type: Scratch.ArgumentType.STRING, menu: "ports" },
@@ -110,6 +154,7 @@
           {
             opcode: "readport",
             blockType: Scratch.BlockType.REPORTER,
+            hideFromPalette: !is8051,
             text: Scratch.translate("read [PORT]"),
             arguments: {
               PORT: { type: Scratch.ArgumentType.STRING, menu: "ports" },
@@ -122,14 +167,6 @@
             arguments: {
               PART: { type: Scratch.ArgumentType.STRING, menu: "parts" },
               VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
-            },
-          },
-          {
-            opcode: "keypad",
-            blockType: Scratch.BlockType.REPORTER,
-            text: Scratch.translate("key on [PART]"),
-            arguments: {
-              PART: { type: Scratch.ArgumentType.STRING, menu: "parts" },
             },
           },
           {
@@ -156,8 +193,35 @@
             },
           },
           "---",
-          // ---- SEVENSEG8: 8-digit 7-seg display, ISR-scanned from an 8-byte
-          // frame buffer. All verbs write the buffer only (mirror of the C).
+          // ---- KEYPAD4X4 / SEVENSEG8 / LEDBANK8. Mirrors of the reference
+          // copy (sb3-creator reference/extensions/stc12.js) and of the C the
+          // emitter writes. They were added there on 2026-08-18 (4962d4d,
+          // 952b623) and never ported here, so every one of them was an
+          // undefined opcode in the bundle: a silent no-op in the VM and a
+          // half-loaded workspace in the editor. See sb3-creator
+          // test/STC12-CONFORMANCE-FINDING.md.
+          //
+          // Not device-gated: these hang off a PART declaration, and the
+          // 'parts' menu is already driven by what the Code tab declared. A
+          // board with no such PART simply offers no item to choose.
+          {
+            opcode: "keypad",
+            blockType: Scratch.BlockType.REPORTER,
+            text: Scratch.translate("key on [PART]"),
+            arguments: {
+              PART: { type: Scratch.ArgumentType.STRING, menu: "parts" },
+            },
+          },
+          {
+            opcode: "whenkey",
+            blockType: Scratch.BlockType.HAT,
+            text: Scratch.translate("when key [KEY] [EDGE]"),
+            isEdgeActivated: true,
+            arguments: {
+              KEY: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              EDGE: { type: Scratch.ArgumentType.STRING, menu: "edges" },
+            },
+          },
           {
             opcode: "seg_shownum",
             blockType: Scratch.BlockType.COMMAND,
@@ -199,7 +263,6 @@
               PART: { type: Scratch.ArgumentType.STRING, menu: "parts" },
             },
           },
-          // ---- LEDBANK8: 8 LEDs on a port, written through a shadow byte.
           {
             opcode: "led_on",
             blockType: Scratch.BlockType.COMMAND,
@@ -234,16 +297,6 @@
             arguments: {
               N: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
               PART: { type: Scratch.ArgumentType.STRING, menu: "parts" },
-            },
-          },
-          {
-            opcode: "whenkey",
-            blockType: Scratch.BlockType.HAT,
-            text: Scratch.translate("when key [KEY] [EDGE]"),
-            isEdgeActivated: true,
-            arguments: {
-              KEY: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
-              EDGE: { type: Scratch.ArgumentType.STRING, menu: "edges" },
             },
           },
           {
@@ -370,9 +423,19 @@
     /** Declared pins, or a placeholder so the palette is never an empty dropdown. */
     pinNames() {
       const names = decls(this.runtime).map((p) => p.name);
-      return names.length
-        ? names
-        : [{ text: "(declare a PIN in the Code tab)", value: "" }];
+      if (names.length) return names;
+      const family = deviceFamily(this.runtime);
+      const hint =
+        family === "6502"
+          ? "(declare a PIN like PA0 or PB3 in the Code tab)"
+          : family === "pico"
+            ? "(declare a PIN like GP25 in the Code tab)"
+            : family === "mega"
+              ? "(declare a PIN like D22 or A8 in the Code tab)"
+              : family === "avr"
+                ? "(declare a PIN like D13 or A0 in the Code tab)"
+                : "(declare a PIN in the Code tab)";
+      return [{ text: hint, value: "" }];
     }
 
     portNames() {
@@ -396,11 +459,6 @@
         : [{ text: "(declare a TABLE in the Code tab)", value: "" }];
     }
 
-    /** The live transport, if connected. */
-    _live() {
-      return this.runtime && this.runtime._stc12live;
-    }
-
     setpin(args) {
       const pin = decls(this.runtime).find((p) => p.name === args.PIN);
       const state = String(args.STATE);
@@ -418,28 +476,18 @@
               ? 1
               : 0;
       board(this.runtime)[args.PIN] = level;
-      // Forward to the tethered target if connected.
-      const live = this._live();
-      if (live) live.drivePin(args.PIN, state);
     }
 
     toggle(args) {
       const b = board(this.runtime);
       b[args.PIN] = b[args.PIN] ? 0 : 1;
-      const live = this._live();
-      if (live) live.togglePin(args.PIN);
     }
 
     writepin(args) {
       board(this.runtime)[args.PIN] = Number(args.VALUE) ? 1 : 0;
-      const live = this._live();
-      if (live) live.writePinLevel(args.PIN, Number(args.VALUE));
     }
 
     read(args) {
-      // If a live target is connected, read from the chip.
-      const live = this._live();
-      if (live) return live.readPin(args.PIN);
       const b = board(this.runtime);
       return Object.prototype.hasOwnProperty.call(b, args.PIN)
         ? b[args.PIN]
@@ -466,15 +514,6 @@
 
     setpart(args) {
       board(this.runtime)["part_" + args.PART] = Number(args.VALUE) & 0xff;
-    }
-
-    keypad(args) {
-      // The scanned key 0..15, or -1 for none — same contract as the C
-      // scanner (PART KEYPAD4X4). The circuit layer feeds keypad_<name>;
-      // absent hardware reads as "nothing pressed".
-      const b = board(this.runtime);
-      const k = "keypad_" + args.PART;
-      return Object.prototype.hasOwnProperty.call(b, k) ? Number(b[k]) : -1;
     }
 
     // ---- MATRIX8X8: an 8x8 SCREEN. The editor keeps a simple 8-byte
@@ -592,6 +631,32 @@
       return args.EDGE === "pressed" ? level : !level;
     }
 
+    // ---- KEYPAD4X4 / SEVENSEG8 / LEDBANK8 implementations. Byte-for-byte
+    // the semantics of the reference copy and of the emitted C: the display
+    // verbs write an 8-byte frame buffer, the LED verbs write a shadow byte,
+    // and the keypad reads what the board layer scanned. Nothing here drives
+    // a pin directly — the ISR does, on silicon and in the simulator alike.
+
+    keypad(args) {
+      // The scanned key 0..15, or -1 for none — same contract as the C
+      // scanner (PART KEYPAD4X4). The circuit layer feeds keypad_<name>;
+      // absent hardware reads as "nothing pressed".
+      const b = board(this.runtime);
+      const k = "keypad_" + args.PART;
+      return Object.prototype.hasOwnProperty.call(b, k) ? Number(b[k]) : -1;
+    }
+
+    whenkey(args) {
+      // Edge hat on the sole KEYPAD4X4: true while the scanned key equals
+      // KEY; isEdgeActivated turns the false-to-true transition into the
+      // fire. The sole-keypad rule means any keypad_* entry is the one.
+      const b = board(this.runtime);
+      const k = Object.keys(b).find((n) => n.indexOf("keypad_") === 0);
+      const cur = k ? Number(b[k]) : -1;
+      const held = cur === Number(args.KEY);
+      return args.EDGE === "pressed" ? held : !held;
+    }
+
     _segfb(part) {
       // 8-digit frame buffer, one segment byte per digit — the same shape
       // the C keeps in bw_<part>_fb. The board/circuit layer reads it.
@@ -668,21 +733,6 @@
       const n = Number(args.N) | 0;
       this._bank(args.PART);
       this._banks[args.PART] = n < 0 || n > 7 ? 0 : 1 << n;
-    }
-
-    whenkey(args) {
-      // Edge hat on the sole KEYPAD4X4: true while the scanned key equals
-      // KEY; isEdgeActivated turns the false-to-true transition into the
-      // fire. The board layer feeds keypad_<name> (see keypad()); the
-      // sole-keypad rule means any keypad_* entry is the one. On silicon
-      // this is a shared debounced poll task (two agreeing scans, 5 ms
-      // apart) — the board layer already debounces, so the tick poll here
-      // carries the same meaning.
-      const b = board(this.runtime);
-      const k = Object.keys(b).find((n) => n.indexOf("keypad_") === 0);
-      const cur = k ? Number(b[k]) : -1;
-      const held = cur === Number(args.KEY);
-      return args.EDGE === "pressed" ? held : !held;
     }
 
     tableindex(args) {
