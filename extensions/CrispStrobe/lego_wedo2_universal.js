@@ -425,8 +425,14 @@
 
       let effectivePower = 0;
       if (this._power > 0) {
-        // Map 1-100 to WeDo's effective 30-100 range for better control
-        effectivePower = Math.floor(30 + 0.7 * this._power) * this._direction;
+        // this._power is ALREADY in the hub's effective 30-100 range -- the
+        // setter above maps 1-100 into it. Re-applying 30 + 0.7p here mapped
+        // it a second time and pushed every setting upwards: "power 1" left
+        // as 51 instead of 30 and "power 25" as 63 instead of 47.5, so the
+        // bottom of the dial was unreachable. scratch-vm's wedo2 sends
+        // `this._power * this._direction` unchanged; truncation to a byte is
+        // what Uint8Array does to the reference's float, so match it.
+        effectivePower = Math.trunc(this._power) * this._direction;
       }
 
       logger.debug(`Motor ${this._portId} turn on at ${effectivePower}`);
@@ -1111,7 +1117,33 @@
 
     getMotor(portId) {
       const device = this._devices[portId];
-      return device instanceof WeDo2Motor ? device : null;
+      if (device) {
+        return device instanceof WeDo2Motor ? device : null;
+      }
+      // Not announced. A motor is addressed by PORT NUMBER -- the output
+      // command carries the port and the hub routes it -- so an attachedIO
+      // announcement is not required to drive one, and some WeDo 2.0 hubs
+      // never send one for the external ports. Measured on an LPF2 Smart Hub
+      // clone (LEGO System A/S, fw 1.0.09.0000): it reports ports 3-6, its
+      // own internal devices, and announces NOTHING for ports 1 and 2 even
+      // with a motor physically attached and turning under our commands.
+      // Gating output on the announcement made every motor block a silent
+      // no-op on that hardware.
+      //
+      // Only the two external ports, and only while nothing is known to be
+      // there: a later announcement wins, so a port that turns out to hold a
+      // tilt or motion sensor stops answering getMotor as soon as the hub
+      // says so.
+      if (portId !== Port.A && portId !== Port.B) {
+        return null;
+      }
+      logger.info(
+        `Port ${portId} was never announced; addressing it as a motor ` +
+          `(this hub does not report its external ports)`
+      );
+      const motor = new WeDo2Motor(this, portId, DeviceType.MOTOR);
+      this._devices[portId] = motor;
+      return motor;
     }
 
     getSensor(portId) {
