@@ -125,11 +125,84 @@
   // block language from navigator.language: the browser language is not the
   // BrickWright language selected by the user. The embedded translations remain
   // useful defaults for hosts that do not provide a catalog.
+  // Every string gets its OWN Scratch.translate call with a literal id and
+  // default, because the gallery extracts l10n by evaluating these at build
+  // time (development/parse-extension-translations.js) and a call whose
+  // argument is a variable cannot be evaluated — it fails the production build
+  // outright. stc12live.js already writes them this way.
+  //
+  // The table keeps t(key) working for the call sites, and is generated from
+  // the en block above so the two cannot disagree.
+  const TRANSLATED = {
+    "circuit.name": () =>
+      Scratch.translate({ id: "circuit.name", default: "Circuit" }),
+    "circuit.voltage": () =>
+      Scratch.translate({ id: "circuit.voltage", default: "voltage at [NET]" }),
+    "circuit.current": () =>
+      Scratch.translate({
+        id: "circuit.current",
+        default: "current through [PART]",
+      }),
+    "circuit.resistance": () =>
+      Scratch.translate({
+        id: "circuit.resistance",
+        default: "resistance between [A] and [B]",
+      }),
+    "circuit.brightness": () =>
+      Scratch.translate({
+        id: "circuit.brightness",
+        default: "brightness of [PART]",
+      }),
+    "circuit.tone": () =>
+      Scratch.translate({ id: "circuit.tone", default: "tone of [PART]" }),
+    "circuit.setcontrol": () =>
+      Scratch.translate({
+        id: "circuit.setcontrol",
+        default: "set [CONTROL] to [VALUE]",
+      }),
+    "circuit.power": () =>
+      Scratch.translate({ id: "circuit.power", default: "turn power [STATE]" }),
+    "circuit.on": () => Scratch.translate({ id: "circuit.on", default: "on" }),
+    "circuit.off": () =>
+      Scratch.translate({ id: "circuit.off", default: "off" }),
+    "circuit.needsSim": () =>
+      Scratch.translate({
+        id: "circuit.needsSim",
+        default: "needs the simulator",
+      }),
+    "circuit.noNets": () =>
+      Scratch.translate({
+        id: "circuit.noNets",
+        default: "(no nets available)",
+      }),
+    "circuit.noParts": () =>
+      Scratch.translate({
+        id: "circuit.noParts",
+        default: "(no parts available)",
+      }),
+    "circuit.noLeds": () =>
+      Scratch.translate({
+        id: "circuit.noLeds",
+        default: "(no LEDs available)",
+      }),
+    "circuit.noBuzzers": () =>
+      Scratch.translate({
+        id: "circuit.noBuzzers",
+        default: "(no buzzers available)",
+      }),
+    "circuit.noControls": () =>
+      Scratch.translate({
+        id: "circuit.noControls",
+        default: "(no controls available)",
+      }),
+  };
+
   function t(key) {
-    return Scratch.translate({
-      id: key,
-      default: translations.en[key] || key,
-    });
+    const translated = TRANSLATED[key];
+    if (translated) return translated();
+    // A key with no entry still resolves, so adding one to the tables above
+    // without regenerating degrades to English rather than to the raw key.
+    return translations.en[key] || key;
   }
 
   // ============================================================================
