@@ -33,6 +33,16 @@
   "CrispStrobe/gamepad",
   "CrispStrobe/planetemaths",
   "CrispStrobe/stc12live",
+
+  // Written in brickwright-lite and moved here on 2026-09-20, so the gallery
+  // is their home rather than a copy of it. bitops and devices are contracts
+  // rather than conveniences: sb3-creator EMITS bitops_* and devices_*
+  // opcodes, and before these existed a generated project naming them fell
+  // through to the sandboxed loader and silently lost its blocks.
+  "CrispStrobe/bitops",
+  "CrispStrobe/devices",
+  "CrispStrobe/microbitplus",
+  "CrispStrobe/brickwright_tts",
   "lab/text",
   "lab/face-sensing",
   "stretch",
