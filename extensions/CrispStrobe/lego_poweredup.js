@@ -1356,6 +1356,22 @@
     }
   }
 
+  // Where Scratch Link lives, in the order it is tried.
+  //
+  // ws://127.0.0.1:20111 is the service the Brickwright app runs in-process
+  // (apps/tauri/src-tauri/src/scratchlink/), and is also where a current
+  // desktop Scratch Link listens. The wss:// device-manager host is legacy
+  // Scratch Link, kept because installed copies of it still answer only there.
+  //
+  // Only the legacy host used to be dialled. Inside the app nothing is
+  // listening on it, so this whole connection type could never connect —
+  // the socket failed, the error reached a console that does not exist on a
+  // phone, and the block appeared to do nothing at all.
+  const SCRATCH_LINK_ENDPOINTS = [
+    "ws://127.0.0.1:20111/scratch/ble",
+    "wss://device-manager.scratch.mit.edu:20110/scratch/ble",
+  ];
+
   // Scratch Link Connection Adapter
   class ScratchLinkAdapter extends ConnectionAdapter {
     constructor(runtime, extensionId) {
@@ -1372,17 +1388,26 @@
     }
 
     connect() {
+      return this._connectVia(0);
+    }
+
+    _connectVia(endpointIndex) {
       logger.group("Scratch Link Connection");
       try {
         logger.info("Connecting to Scratch Link WebSocket...");
 
         return new Promise((resolve, reject) => {
+          const endpoint = SCRATCH_LINK_ENDPOINTS[endpointIndex];
+          logger.info(`Dialling Scratch Link at ${endpoint}`);
           // eslint-disable-next-line extension/check-can-fetch -- talks to user-configured local bridge/brick endpoint set explicitly via a block; canFetch's prompt is UX-degrading and redundant here
-          this._ws = new WebSocket(
-            "wss://device-manager.scratch.mit.edu:20110/scratch/ble"
-          );
+          const ws = new WebSocket(endpoint);
+          this._ws = ws;
+          // Whether this socket ever opened decides, below, between "try the
+          // next endpoint" and "report the failure".
+          let opened = false;
 
           this._ws.onopen = () => {
+            opened = true;
             logger.info("✓ WebSocket connected");
 
             // Emit that we're ready to discover
@@ -1392,13 +1417,7 @@
               );
             }
 
-            this._sendRequest("discover", {
-              filters: [
-                {
-                  services: [PoweredUpBLE.service],
-                },
-              ],
-            })
+            this._discover([{ services: [PoweredUpBLE.service] }])
               .then((device) => {
                 logger.info(`Device discovered: ${device.name || "Unknown"}`);
 
@@ -1438,6 +1457,28 @@
           };
 
           this._ws.onerror = (error) => {
+            // Superseded socket from an earlier endpoint; its failure is
+            // already accounted for.
+            if (this._ws !== ws) return;
+            // A WebSocket error event carries no detail by design, so what the
+            // handler has to go on is whether the socket ever opened.
+            if (!opened) {
+              const next = endpointIndex + 1;
+              if (next < SCRATCH_LINK_ENDPOINTS.length) {
+                logger.warn(
+                  `Nothing listening at ${endpoint}; trying ${SCRATCH_LINK_ENDPOINTS[next]}`
+                );
+                resolve(this._connectVia(next));
+                return;
+              }
+              reject(
+                new Error(
+                  `Could not reach Scratch Link. Tried: ${SCRATCH_LINK_ENDPOINTS.join(", ")}. ` +
+                    "Inside the Brickwright app this service is built in; in a browser it needs Scratch Link installed and running."
+                )
+              );
+              return;
+            }
             logger.error("WebSocket error:", error);
 
             if (this._runtime) {
@@ -1458,7 +1499,11 @@
             logger.trace("Scratch Link message:", message);
 
             if (message.jsonrpc === "2.0") {
-              if (message.method === "characteristicDidChange") {
+              if (message.method === "didDiscoverPeripheral") {
+                if (this._onPeripheralFound) {
+                  this._onPeripheralFound(message.params);
+                }
+              } else if (message.method === "characteristicDidChange") {
                 const data = Base64Util.base64ToUint8Array(
                   message.params.message
                 );
@@ -1481,6 +1526,10 @@
           };
 
           this._ws.onclose = () => {
+            // A refused endpoint closes right after it errors, by which point
+            // the next one is already the live socket. Without this guard that
+            // close is reported as the connection being lost.
+            if (this._ws !== ws) return;
             logger.warn("WebSocket closed");
             this._connected = false;
 
@@ -1501,6 +1550,40 @@
       } finally {
         logger.groupEnd();
       }
+    }
+
+    /**
+     * Scan, and resolve with the first matching peripheral.
+     *
+     * Scratch Link answers `discover` immediately with null and then streams
+     * what it finds as `didDiscoverPeripheral` notifications. The old code
+     * read `.peripheralId` straight off that null reply, so this path threw a
+     * TypeError before it could ever reach `connect` — even against a real
+     * Scratch Link. There is no "scan finished" in the protocol, so the first
+     * hub heard from wins and the timeout carries the advice.
+     */
+    _discover(filters) {
+      const DISCOVER_TIMEOUT_MS = 15000;
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          this._onPeripheralFound = null;
+          reject(
+            new Error(
+              "No LEGO hub found. Check that it is switched on, in range, and not already connected to something else."
+            )
+          );
+        }, DISCOVER_TIMEOUT_MS);
+        this._onPeripheralFound = (peripheral) => {
+          this._onPeripheralFound = null;
+          clearTimeout(timer);
+          resolve(peripheral);
+        };
+        this._sendRequest("discover", { filters }).catch((error) => {
+          this._onPeripheralFound = null;
+          clearTimeout(timer);
+          reject(error);
+        });
+      });
     }
 
     disconnect() {
@@ -3079,8 +3162,22 @@
       logger.group("=== CONNECT ===");
       try {
         if (this._hub && this._hub.isConnected()) {
-          logger.warn("Already connected");
-          return;
+          // Same silent early return the Boost extension had: switching
+          // transport while connected returned HERE, logging only to a
+          // console no phone displays, so the block looked unwired.
+          if (this._hub._connectionType === this._connectionType) {
+            logger.warn("Already connected");
+            return;
+          }
+          logger.info(
+            `Switching connection from ${this._hub._connectionType} to ${this._connectionType}`
+          );
+          try {
+            await this._hub.disconnect();
+          } catch (e) {
+            logger.warn("Disconnect before switching failed", e);
+          }
+          this._hub = null;
         }
 
         logger.info(`Connection type: ${this._connectionType}`);

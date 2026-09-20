@@ -3,6 +3,16 @@
 // Description: Control Spike Prime via Scratch Link (Old Firmware/BTC).
 // By: CrispStrobe <https://github.com/CrispStrobe>
 // License: MPL-2.0
+//
+// SUPERSEDED by legospike_turbowarp_transpile.js (id `spikeprime`), which
+// absorbed this extension and three others on 2026-09-20. This one carried
+// the firmware 2.x REPL over Scratch Link Bluetooth Classic. Its opcodes were
+// already a strict subset of the unified extension's, with identical signatures.
+//
+// Kept because the gallery serves it by URL and a project may load it
+// directly; it is no longer the place to make changes. brickwright-lite no
+// longer ships it, and the unified extension migrates projects that name
+// `spikeprimeBTC` when they load.
 (function (Scratch) {
   "use strict";
 

@@ -3066,6 +3066,8 @@
         // Allow param to override (for backward compatibility)
         if (param) {
           // Parse param as URL: ws://host:port or host:port
+          // Anchored, bounded, no nested quantifiers — not vulnerable to
+          // catastrophic backtracking, whatever a scanner's heuristic says.
           const match = param.match(/^(?:(wss?):\/\/)?([^:]+)(?::(\d+))?$/);
           if (match) {
             config.ssl = match[1] === "wss";

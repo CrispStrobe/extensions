@@ -7,3 +7,12 @@ website
 *.md
 extensions/docs-examples
 build-snippets
+
+# TurboWarp's own extensions, which arrived unformatted and are tracked
+# against TurboWarp upstream. Running prettier on them here would fork them
+# from that upstream — the exact divergence this repository exists to avoid,
+# and the one the SPIKE consolidation spent its time undoing. They are
+# ignored rather than formatted, so `prettier . --check` means something
+# again: a failure is now OUR unformatted file, not an inherited one.
+extensions/encoding.js
+extensions/gamejolt.js

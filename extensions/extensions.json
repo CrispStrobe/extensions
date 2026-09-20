@@ -8,10 +8,21 @@
   "CrispStrobe/lego_poweredup",
   "CrispStrobe/lego_wedo2_universal",
 
+  // ─── SUPERSEDED, STILL LISTED ────────────────────────────────────────────
+  // These four became CrispStrobe/legospike_turbowarp_transpile on
+  // 2026-09-20. They are kept here so nobody's picker changes under them
+  // mid-project, and their files stay served either way — a project that
+  // loads one by URL is unaffected by this list.
+  //
+  // TO HIDE THEM: delete the four lines below. That is the whole change.
+  // Nothing else references them as a group, the files remain in the
+  // repository, and their URLs keep working. Each one's header already says
+  // what it carried and where it went.
   "CrispStrobe/legospikeprime_btc_scratchlink",
   "CrispStrobe/legospike_ble",
   "CrispStrobe/legospike_bridge",
   "CrispStrobe/legospikeprime_ble",
+  // ─────────────────────────────────────────────────────────────────────────
   "CrispStrobe/ev3_universal",
   "CrispStrobe/ev3_direct",
 
