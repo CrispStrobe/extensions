@@ -23,6 +23,11 @@
       "circuit.on": "on",
       "circuit.off": "off",
       "circuit.needsSim": "needs the simulator",
+      "circuit.noNets": "(no nets available)",
+      "circuit.noParts": "(no parts available)",
+      "circuit.noLeds": "(no LEDs available)",
+      "circuit.noBuzzers": "(no buzzers available)",
+      "circuit.noControls": "(no controls available)",
     },
     de: {
       "circuit.name": "Schaltkreis",
@@ -36,6 +41,11 @@
       "circuit.on": "ein",
       "circuit.off": "aus",
       "circuit.needsSim": "braucht den Simulator",
+      "circuit.noNets": "(keine Netze vorhanden)",
+      "circuit.noParts": "(keine Bauteile vorhanden)",
+      "circuit.noLeds": "(keine LEDs vorhanden)",
+      "circuit.noBuzzers": "(keine Summer vorhanden)",
+      "circuit.noControls": "(keine Bedienelemente vorhanden)",
     },
     fr: {
       "circuit.name": "Circuit",
@@ -49,6 +59,11 @@
       "circuit.on": "marche",
       "circuit.off": "arrêt",
       "circuit.needsSim": "nécessite le simulateur",
+      "circuit.noNets": "(aucun réseau disponible)",
+      "circuit.noParts": "(aucun composant disponible)",
+      "circuit.noLeds": "(aucune LED disponible)",
+      "circuit.noBuzzers": "(aucun buzzer disponible)",
+      "circuit.noControls": "(aucun contrôle disponible)",
     },
   };
 
@@ -106,11 +121,15 @@
     });
   }
 
+  // Use the VM's translation registry, matching STC12 Live. Do not derive the
+  // block language from navigator.language: the browser language is not the
+  // BrickWright language selected by the user. The embedded translations remain
+  // useful defaults for hosts that do not provide a catalog.
   function t(key) {
-    const tr = translations[currentLang];
-    if (tr && tr[key]) return tr[key];
-    if (translations.en && translations.en[key]) return translations.en[key];
-    return key;
+    return Scratch.translate({
+      id: key,
+      default: translations.en[key] || key,
+    });
   }
 
   // ============================================================================
@@ -241,7 +260,7 @@
             hideFromPalette: hw,
             text: t("circuit.voltage") + simOnly,
             arguments: {
-              NET: { type: Scratch.ArgumentType.STRING, defaultValue: "vcc" },
+              NET: { type: Scratch.ArgumentType.STRING, menu: "nets" },
             },
           },
           {
@@ -250,7 +269,7 @@
             hideFromPalette: hw,
             text: t("circuit.current") + simOnly,
             arguments: {
-              PART: { type: Scratch.ArgumentType.STRING, defaultValue: "led1" },
+              PART: { type: Scratch.ArgumentType.STRING, menu: "parts" },
             },
           },
           {
@@ -259,8 +278,8 @@
             hideFromPalette: hw,
             text: t("circuit.resistance") + simOnly,
             arguments: {
-              A: { type: Scratch.ArgumentType.STRING, defaultValue: "net1" },
-              B: { type: Scratch.ArgumentType.STRING, defaultValue: "net2" },
+              A: { type: Scratch.ArgumentType.STRING, menu: "nets" },
+              B: { type: Scratch.ArgumentType.STRING, menu: "nets" },
             },
           },
           {
@@ -269,7 +288,7 @@
             hideFromPalette: hw,
             text: t("circuit.brightness") + simOnly,
             arguments: {
-              PART: { type: Scratch.ArgumentType.STRING, defaultValue: "led1" },
+              PART: { type: Scratch.ArgumentType.STRING, menu: "leds" },
             },
           },
           {
@@ -280,7 +299,7 @@
             arguments: {
               PART: {
                 type: Scratch.ArgumentType.STRING,
-                defaultValue: "buzzer1",
+                menu: "buzzers",
               },
             },
           },
@@ -293,7 +312,7 @@
             arguments: {
               CONTROL: {
                 type: Scratch.ArgumentType.STRING,
-                defaultValue: "pot1",
+                menu: "controls",
               },
               VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
             },
@@ -312,6 +331,13 @@
           },
         ],
         menus: {
+          // Resolve element IDs from the active board, like STC12 resolves
+          // pin IDs from runtime declarations. Values remain stable IDs.
+          nets: { acceptReporters: false, items: "netNames" },
+          parts: { acceptReporters: false, items: "partNames" },
+          leds: { acceptReporters: false, items: "ledNames" },
+          buzzers: { acceptReporters: false, items: "buzzerNames" },
+          controls: { acceptReporters: false, items: "controlNames" },
           ON_OFF: {
             acceptReporters: false,
             items: [
@@ -321,6 +347,50 @@
           },
         },
       };
+    }
+
+    // ---- dynamic menus ---------------------------------------------------
+
+    _items(method, emptyKey, include = () => true) {
+      const board = this.board;
+      let values = [];
+      try {
+        if (board && typeof board[method] === "function")
+          values = board[method]();
+        else if (board && method === "getNets" && Array.isArray(board.nets))
+          values = board.nets;
+      } catch (e) {
+        values = [];
+      }
+      const ids = values
+        .filter(include)
+        .map((value) => (typeof value === "string" ? value : value && value.id))
+        .filter((value) => typeof value === "string" && value.length > 0);
+      return ids.length
+        ? ids.map((value) => ({ text: value, value }))
+        : [{ text: t(emptyKey), value: "" }];
+    }
+
+    netNames() {
+      // Breadboard strip nets are implementation details. A seated component
+      // creates n-col-t*/n-col-b* nodes even when no jumper or wire connects
+      // it to the circuit, so exposing them makes the menu mostly noise.
+      return this._items("getNets", "circuit.noNets", (value) => {
+        const id = typeof value === "string" ? value : value && value.id;
+        return !/^n-col-[bt]d+$/.test(id || "");
+      });
+    }
+    partNames() {
+      return this._items("getParts", "circuit.noParts");
+    }
+    ledNames() {
+      return this._items("getLeds", "circuit.noLeds");
+    }
+    buzzerNames() {
+      return this._items("getBuzzers", "circuit.noBuzzers");
+    }
+    controlNames() {
+      return this._items("getControls", "circuit.noControls");
     }
 
     // ---- display-rate sampling --------------------------------------------
