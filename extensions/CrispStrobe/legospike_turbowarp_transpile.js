@@ -3534,20 +3534,36 @@ continuous_sensor_loop()
       this.addLine("def " + funcName + "():");
       this.indentLevel++;
 
+      // Measure what the body EMITS, not how many blocks we walked. The old
+      // guard counted visited blocks, so a script made only of opcodes this
+      // transpiler has no case for produced `def f():` with nothing under it --
+      // a Python IndentationError from an otherwise valid project. Found by
+      // compiling a corpus of pseudocode programs with python3.
       let currentBlockId = hatBlock.next;
-      let blockCount = 0;
+      const bodyStart = this.pythonCode.length;
 
       while (currentBlockId) {
         const block = blocks._blocks[currentBlockId];
         if (!block) break;
 
-        blockCount++;
         this.processBlock(block, blocks);
         currentBlockId = block.next;
       }
 
-      if (blockCount === 0) {
-        this.addLine("pass");
+      // A comment is not a statement. The emitter writes
+      // `# Unknown block: <opcode>` for an opcode it has no case for, so
+      // pythonCode grows while the body stays empty as far as Python is
+      // concerned -- still an IndentationError. Require a line that is
+      // neither blank nor a comment.
+      const body = this.pythonCode.slice(bodyStart);
+      const hasStatement = body
+        .split("\n")
+        .some((line) => line.trim() !== "" && !line.trim().startsWith("#"));
+
+      if (!hasStatement) {
+        // Keep the function valid and say why it is empty, so the gap shows up
+        // in the generated source rather than at runtime on the hub.
+        this.addLine("pass  # no statement in this script could be translated");
       }
 
       this.indentLevel--;
