@@ -371,6 +371,7 @@
 
   const CMD = {
     READY_SI: 0x1d,
+    READY_RAW: 0x1c,
     CLR_CHANGES: 0x1a,
     TONE: 0x01,
     BREAK: 0x00,
@@ -3963,6 +3964,109 @@
       return this._uiReadByte(CMD.GET_VOLUME);
     }
 
+    /**
+     * Read SEVERAL values from one sensor in one command.
+     *
+     * getSensor() reads a single float, which is right for a touch or a
+     * distance and wrong for anything whose reading is a vector: RGB is three
+     * numbers, and the IR beacon reports a heading and a distance for each of
+     * four channels in one array of eight. Reading only the first of those and
+     * calling it the answer is how a block ends up ignoring its own argument
+     * and still returning something plausible.
+     */
+    async getSensorValues(port, type, mode, count) {
+      const bytes = count * 4;
+      const reply = await this.sendDirect(
+        [
+          OP.INPUT_DEVICE,
+          CMD.READY_SI,
+          0x00,
+          port,
+          ...LC0(type),
+          ...LC0(mode),
+          ...LC0(count),
+          ...GV0(0),
+        ],
+        bytes,
+        0,
+        true
+      );
+      if (!reply || reply.byteLength < bytes) return new Array(count).fill(0);
+      const view = new DataView(
+        reply.buffer,
+        reply.byteOffset,
+        reply.byteLength
+      );
+      return Array.from({ length: count }, (_, i) =>
+        view.getFloat32(i * 4, true)
+      );
+    }
+
+    /** RGB raw, as three int32s — the shape ev3_direct reads. */
+    async getColorRGB(port) {
+      const reply = await this.sendDirect(
+        [
+          OP.INPUT_DEVICE,
+          CMD.READY_RAW,
+          0x00,
+          port,
+          ...LC0(0),
+          ...LC0(4),
+          ...LC0(3),
+          ...GV0(0),
+        ],
+        12,
+        0,
+        true
+      );
+      if (!reply || reply.byteLength < 12) return { red: 0, green: 0, blue: 0 };
+      const view = new DataView(
+        reply.buffer,
+        reply.byteOffset,
+        reply.byteLength
+      );
+      return {
+        red: view.getInt32(0, true),
+        green: view.getInt32(4, true),
+        blue: view.getInt32(8, true),
+      };
+    }
+
+    /**
+     * IR beacon. One SEEK read returns eight values: heading and distance for
+     * channels 1..4, so the channel picks a PAIR. transpileIRBeaconHeading()
+     * indexes it as (channel - 1) * 2 and this matches it.
+     */
+    async getIrBeacon(port, channel) {
+      const values = await this.getSensorValues(port, 0, 1, 8);
+      const base = (Math.max(1, Math.min(4, Math.round(channel))) - 1) * 2;
+      return { heading: values[base], distance: values[base + 1] };
+    }
+
+    /**
+     * The brick has ONE hardware timer, and the block offers several. Each
+     * index keeps the brick reading it was reset at, so `timer 2` measures
+     * from its own reset rather than from whenever timer 1 was last touched.
+     * Ignoring the index would make every timer the same timer while the
+     * block's dropdown says otherwise.
+     */
+    async resetTimerIndex(index) {
+      // SNAPSHOT, do not reset the hardware timer. The brick has one, and
+      // resetting it for index 2 would send index 1 backwards — every other
+      // timer would start reading negative. Recording where this index
+      // started leaves the others untouched and keeps all of them monotonic.
+      this._timerOrigins = this._timerOrigins || {};
+      this._timerOrigins[String(index)] = await this.readTimer();
+    }
+
+    async readTimerIndex(index) {
+      const now = await this.readTimer();
+      const origins = this._timerOrigins || {};
+      const key = String(index);
+      if (origins[key] === undefined) origins[key] = now;
+      return now - origins[key];
+    }
+
     resetTimer() {
       // opTIMER_WAIT with a zero interval is how the LMS transpiler resets the
       // brick timer, and opTIMER_READ then counts from here.
@@ -5427,8 +5531,9 @@
       );
     }
 
-    colorSensorRGB(args) {
-      return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 4);
+    async colorSensorRGB(args) {
+      const rgb = await this.ev3.getColorRGB(this._sensorPort(args.PORT));
+      return rgb[String(args.COMPONENT)] ?? rgb.red;
     }
 
     async ultrasonicSensor(args) {
@@ -5460,16 +5565,40 @@
       return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x00);
     }
 
-    irBeaconHeading(args) {
-      return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x01);
+    async irBeaconHeading(args) {
+      return (
+        await this.ev3.getIrBeacon(
+          this._sensorPort(args.PORT),
+          _Cast.toNumber(args.CHANNEL)
+        )
+      ).heading;
     }
 
-    irBeaconDistance(args) {
-      return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x01);
+    async irBeaconDistance(args) {
+      return (
+        await this.ev3.getIrBeacon(
+          this._sensorPort(args.PORT),
+          _Cast.toNumber(args.CHANNEL)
+        )
+      ).distance;
     }
 
-    irRemoteButton(args) {
-      return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x02);
+    async irRemoteButton(args) {
+      // IR REMOTE mode reports one button code per channel.
+      const codes = await this.ev3.getSensorValues(
+        this._sensorPort(args.PORT),
+        0,
+        2,
+        4
+      );
+      const channel = Math.max(
+        1,
+        Math.min(4, Math.round(_Cast.toNumber(args.CHANNEL)))
+      );
+      return (
+        Math.round(codes[channel - 1]) ===
+        Math.round(_Cast.toNumber(args.BUTTON))
+      );
     }
 
     // Display methods
@@ -5539,7 +5668,7 @@
     playTone(args) {
       return this.ev3.playTone(
         _Cast.toNumber(args.FREQ),
-        _Cast.toNumber(args.MS)
+        _Cast.toNumber(args.DURATION)
       );
     }
 
@@ -5604,11 +5733,11 @@
 
     // Timer methods
     resetTimer(args) {
-      return this.ev3.resetTimer();
+      return this.ev3.resetTimerIndex(_Cast.toNumber(args.TIMER));
     }
 
     timerValue(args) {
-      return this.ev3.readTimer();
+      return this.ev3.readTimerIndex(_Cast.toNumber(args.TIMER));
     }
 
     waitSeconds(args) {
