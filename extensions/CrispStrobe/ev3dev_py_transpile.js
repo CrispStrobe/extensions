@@ -3311,6 +3311,19 @@
     }
 
     // Motors
+    /**
+     * Steering drive. The bridge's `move_steering` command takes a steering
+     * value, a speed and one of rotations or seconds; this block declares
+     * ROTATIONS, so that is what is sent.
+     */
+    moveSteering(args) {
+      this.sendCommand("move_steering", {
+        steering: Scratch.Cast.toNumber(args.STEERING),
+        speed: this.clampSpeed(args.SPEED),
+        rotations: Scratch.Cast.toNumber(args.ROTATIONS),
+      });
+    }
+
     ev3MotorRun(args) {
       this.sendCommand("motor_run", {
         port: args.PORT,
@@ -3526,6 +3539,36 @@
       );
       // server should return array in data.value
       return (data.value && data.value[idx]) || 0;
+    }
+
+    /**
+     * NXT sound and light sensors.
+     *
+     * These two blocks, and moveSteering below, were DECLARED in getInfo()
+     * with no implementing method at all — `typeof extension[opcode]` was
+     * "undefined", so dragging one out and running it threw rather than
+     * misbehaving. Nothing else was missing: the bridge already serves
+     * /sensor/sound/ and /sensor/light/, get_sensor() already maps them to
+     * ev3dev2's SoundSensor and LightSensor, and `lego-nxt-sound` /
+     * `lego-nxt-light` are already offered by the port-configuration menu.
+     * Only the four lines that join them up were absent.
+     *
+     * The mode is passed through rather than fixed: the bridge reads db /
+     * dba for sound and reflect / ambient for light, which is exactly what
+     * the soundMode and lightMode menus offer.
+     */
+    async ev3SoundSensor(args) {
+      const data = await this.getSensorData(
+        `/sensor/sound/${args.PORT}/${args.MODE}`
+      );
+      return data.value || 0;
+    }
+
+    async ev3LightSensor(args) {
+      const data = await this.getSensorData(
+        `/sensor/light/${args.PORT}/${args.MODE}`
+      );
+      return data.value || 0;
     }
 
     async ev3UltrasonicSensor(args) {
