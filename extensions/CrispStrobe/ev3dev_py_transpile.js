@@ -759,6 +759,21 @@
   // MAIN EXTENSION CLASS
   // ============================================================================
 
+  /**
+   * A Python string literal for an arbitrary Scratch value.
+   *
+   * These were built by concatenation -- `'"' + value + '"'` -- so any value
+   * containing a double quote, a backslash or a newline emitted broken
+   * Python: a text field `say "hi"` became `"say "hi""`, which python3
+   * rejects outright, and `back\slash` raised a SyntaxWarning for an invalid
+   * escape. null/undefined became the words "null"/"undefined".
+   *
+   * JSON.stringify emits a double-quoted literal with ", \\ and control
+   * characters escaped, and Python accepts that same escape vocabulary for
+   * str.
+   */
+  const pyStringLiteral = (value) => JSON.stringify(String(value ?? ""));
+
   class ScratchToEV3 {
     constructor() {
       // Constants:
@@ -5316,7 +5331,7 @@
             if (this.isNumeric(primitiveValue)) {
               return String(primitiveValue);
             }
-            return '"' + primitiveValue + '"';
+            return pyStringLiteral(primitiveValue);
           }
         } else if (typeof inputData === "string") {
           const refBlock = blocks._blocks[inputData];
@@ -5349,7 +5364,7 @@
               if (this.isNumeric(primitiveValue)) {
                 return String(primitiveValue);
               }
-              return '"' + primitiveValue + '"';
+              return pyStringLiteral(primitiveValue);
             }
           }
         }
@@ -5373,15 +5388,15 @@
       else if (block.opcode === "text") {
         const text = this.getFieldValue(block, "TEXT");
         if (this.isNumeric(text)) return String(text);
-        return '"' + (text || "") + '"';
+        return pyStringLiteral(text || "");
       }
       // Menu blocks
       else if (block.opcode === "event_broadcast_menu") {
         const broadcast = this.getFieldValue(block, "BROADCAST_OPTION");
-        return '"' + broadcast + '"';
+        return pyStringLiteral(broadcast);
       } else if (block.opcode === "sound_sounds_menu") {
         const sound = this.getFieldValue(block, "SOUND_MENU");
-        return '"' + sound + '"';
+        return pyStringLiteral(sound);
       }
       // Variables
       else if (block.opcode === "data_variable") {
