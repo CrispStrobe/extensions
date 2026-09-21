@@ -56,6 +56,7 @@
       showCode: "show generated NQC",
       downloadCode: "download as .nqc file",
       compileAndDownload: "compile to .rcx and download",
+      sendToBrick: "send to brick as program [SLOT]",
       setCompilerUrl: "use compiler service at [URL]",
       setTarget: "compile for [TARGET]",
       lastError: "last compiler message",
@@ -96,6 +97,7 @@
       showCode: "erzeugten NQC-Code anzeigen",
       downloadCode: "als .nqc-Datei herunterladen",
       compileAndDownload: "zu .rcx kompilieren und herunterladen",
+      sendToBrick: "an den Baustein senden als Programm [SLOT]",
       setCompilerUrl: "nutze Compiler-Dienst unter [URL]",
       setTarget: "kompiliere für [TARGET]",
       lastError: "letzte Compiler-Meldung",
@@ -610,6 +612,21 @@
             text: t("compileAndDownload"),
           },
           {
+            // Sends over infrared when the host can (it installs
+            // runtime.rcxDownload); saves the .rcx otherwise, and says which.
+            // The brick numbers its five program slots 1..5 on its own
+            // display, so this block does too.
+            opcode: "sendToBrick",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("sendToBrick"),
+            arguments: {
+              SLOT: {
+                type: Scratch.ArgumentType.NUMBER,
+                defaultValue: 1,
+              },
+            },
+          },
+          {
             opcode: "setTarget",
             blockType: Scratch.BlockType.COMMAND,
             text: t("setTarget"),
@@ -956,31 +973,41 @@
       return typeof fn === "function" ? fn.bind(runtime) : null;
     }
 
-    async compileAndDownload() {
+    /**
+     * Compile the current program to an .rcx image.
+     *
+     * Split out of compileAndDownload so that saving the file and sending it
+     * to a brick are two things that DO the same compile rather than two
+     * copies of it. Returns {ok, bytes, log} — the shape both callers report.
+     */
+    async _compileToImage() {
       if (!this.lastCode) this.transpile();
-      this.lastError_ = "";
 
       const local = this._localCompiler();
       if (local) {
         try {
           const result = await local(this.lastCode, this.target);
           if (!result || !result.ok) {
-            this.lastError_ = String(
-              (result && result.log) || "compilation failed"
-            );
-            return;
+            return {
+              ok: false,
+              log: String((result && result.log) || "compilation failed"),
+            };
           }
           const bytes =
             result.bytes instanceof Uint8Array
               ? result.bytes
               : new Uint8Array(result.bytes);
           if (!this._isRcxImage(bytes)) {
-            this.lastError_ = `the local compiler returned ${bytes.length} bytes that are not an RCX image`;
-            return;
+            return {
+              ok: false,
+              log: `the local compiler returned ${bytes.length} bytes that are not an RCX image`,
+            };
           }
-          this.save(bytes, "program.rcx", "application/octet-stream");
-          this.lastError_ = `compiled ${bytes.length} bytes for ${this.target} (locally)`;
-          return;
+          return {
+            ok: true,
+            bytes,
+            log: `compiled ${bytes.length} bytes for ${this.target} (locally)`,
+          };
         } catch (error) {
           // Fall through to the service rather than failing outright: a broken
           // local compiler should not take away a working remote one.
@@ -1000,39 +1027,119 @@
           }),
         });
       } catch (error) {
-        this.lastError_ = `could not reach the compiler at ${this.compilerUrl}: ${error && error.message}`;
-        return;
+        return {
+          ok: false,
+          log: `could not reach the compiler at ${this.compilerUrl}: ${error && error.message}`,
+        };
       }
       if (!response || !response.ok) {
-        this.lastError_ = `compiler returned HTTP ${response ? response.status : "(no response)"}`;
-        return;
+        return {
+          ok: false,
+          log: `compiler returned HTTP ${response ? response.status : "(no response)"}`,
+        };
       }
       let payload;
       try {
         payload = await response.json();
       } catch (error) {
-        this.lastError_ = "compiler did not return JSON";
-        return;
+        return { ok: false, log: "compiler did not return JSON" };
       }
       if (!payload.success) {
         // The compiler's own message, verbatim. It names the line and the
         // symbol, which is the only thing that helps.
-        this.lastError_ = String(payload.error || "compilation failed");
-        return;
+        return {
+          ok: false,
+          log: String(payload.error || "compilation failed"),
+        };
       }
       const bytes = Uint8Array.from(atob(payload.base64), (c) =>
         c.charCodeAt(0)
       );
       if (!this._isRcxImage(bytes)) {
-        this.lastError_ = `the service returned ${bytes.length} bytes that are not an RCX image`;
+        return {
+          ok: false,
+          log: `the service returned ${bytes.length} bytes that are not an RCX image`,
+        };
+      }
+      return {
+        ok: true,
+        bytes,
+        filename: payload.filename || "program.rcx",
+        log: `compiled ${bytes.length} bytes for ${this.target}`,
+      };
+    }
+
+    async compileAndDownload() {
+      this.lastError_ = "";
+      const image = await this._compileToImage();
+      if (!image.ok) {
+        this.lastError_ = image.log;
         return;
       }
       this.save(
-        bytes,
-        payload.filename || "program.rcx",
+        image.bytes,
+        image.filename || "program.rcx",
         "application/octet-stream"
       );
-      this.lastError_ = `compiled ${bytes.length} bytes for ${this.target}`;
+      this.lastError_ = image.log;
+    }
+
+    /**
+     * A host that can drive an infrared tower installs `runtime.rcxDownload`,
+     * and this block then sends the program straight to a brick. Looked up at
+     * call time for the same reason `runtime.nqcCompile` is: a host may
+     * install it late, and an app that has no tower support must keep working.
+     *
+     * WITHOUT THE HOOK THIS SAVES THE FILE, rather than refusing. Someone with
+     * a desktop tool and a real serial tower is better served by an .rcx they
+     * can send themselves than by a block that says "not supported here", and
+     * the message says which of the two happened.
+     */
+    async sendToBrick(args) {
+      this.lastError_ = "";
+      const runtime = this.runtime || (Scratch.vm && Scratch.vm.runtime);
+      const send = runtime && runtime.rcxDownload;
+
+      const image = await this._compileToImage();
+      if (!image.ok) {
+        this.lastError_ = image.log;
+        return;
+      }
+
+      if (typeof send !== "function") {
+        this.save(
+          image.bytes,
+          image.filename || "program.rcx",
+          "application/octet-stream"
+        );
+        this.lastError_ =
+          "this app cannot reach a tower, so the .rcx was saved instead — " +
+          "send it with NQC, Bricx Command Center or firmdl3";
+        return;
+      }
+
+      // Slots are 1..5 on the brick's own display and in every LEGO manual, so
+      // that is what the block asks for; the host API is zero-based. Doing the
+      // subtraction here rather than exposing 0..4 to a learner is the whole
+      // reason this line exists.
+      const slot = Math.min(
+        5,
+        Math.max(1, Math.round(Cast.toNumber(args.SLOT)) || 1)
+      );
+      let result;
+      try {
+        result = await send.call(runtime, image.bytes, {
+          programSlot: slot - 1,
+        });
+      } catch (error) {
+        this.lastError_ = `download failed: ${error && error.message}`;
+        return;
+      }
+      if (!result || !result.ok) {
+        this.lastError_ = String((result && result.log) || "download failed");
+        return;
+      }
+      this.lastError_ = `${image.log}; sent to program ${slot}`;
     }
 
     /**
