@@ -3560,22 +3560,86 @@
     }
 
     /**
-     * Tank and steering drive, in terms of the two-motor primitive rather than
-     * as new bytecode: both were no-ops in every EV3 extension until now.
-     * Steering is the LEGO convention, -100..100, where the sign picks the
-     * inner wheel and the magnitude scales it down to a full spin at 100.
+     * Tank and steering drive.
+     *
+     * THE SEMANTICS COME FROM THIS EXTENSION'S OWN TRANSPILER, not from the
+     * block signature. transpileTankDrive() settles three things the
+     * signature alone does not: LEFT and RIGHT are POWERS and not ports; the
+     * ports are B and C, because the block carries no port argument at all;
+     * and VALUE + UNIT is a DURATION, lowered to OUTPUT_TIME_POWER for
+     * seconds and OUTPUT_STEP_POWER for rotations and degrees. A live
+     * implementation that ran the motors continuously would disagree with the
+     * transpiled program compiled from the same blocks, which is the one
+     * thing a dual-mode extension must not do.
      */
-    tankDrive(leftPorts, rightPorts, leftPower, rightPower) {
-      this.motorRun(leftPorts, leftPower);
-      return this.motorRun(rightPorts, rightPower);
+    _driveBoth(leftPower, rightPower, value, unit) {
+      const LEFT_PORT = 1 << 1; // B
+      const RIGHT_PORT = 1 << 2; // C
+      const clamp = (p) => Math.max(-100, Math.min(100, Math.round(p)));
+      const amount = Number(value) || 0;
+
+      if (String(unit) === "seconds") {
+        const ms = Math.max(0, Math.round(amount * 1000));
+        return this.sendDirect([
+          OP.OUTPUT_TIME_POWER,
+          0x00,
+          ...LC0(LEFT_PORT),
+          ...LC1(clamp(leftPower)),
+          ...LC4(0),
+          ...LC4(ms),
+          ...LC4(0),
+          ...LC0(0),
+          OP.OUTPUT_TIME_POWER,
+          0x00,
+          ...LC0(RIGHT_PORT),
+          ...LC1(clamp(rightPower)),
+          ...LC4(0),
+          ...LC4(ms),
+          ...LC4(0),
+          ...LC0(1),
+        ]);
+      }
+      // rotations and degrees are the same opcode; a rotation is 360 degrees.
+      const degrees = Math.round(
+        String(unit) === "rotations" ? amount * 360 : amount
+      );
+      return this.sendDirect([
+        OP.OUTPUT_STEP_POWER,
+        0x00,
+        ...LC0(LEFT_PORT),
+        ...LC1(clamp(leftPower)),
+        ...LC4(0),
+        ...LC4(degrees),
+        ...LC4(0),
+        ...LC0(0),
+        OP.OUTPUT_STEP_POWER,
+        0x00,
+        ...LC0(RIGHT_PORT),
+        ...LC1(clamp(rightPower)),
+        ...LC4(0),
+        ...LC4(degrees),
+        ...LC4(0),
+        ...LC0(1),
+      ]);
     }
 
-    steerDrive(leftPorts, rightPorts, steering, power) {
-      const s = Math.max(-100, Math.min(100, steering));
-      const inner = power * (1 - Math.abs(s) / 50);
+    tankDrive(leftPower, rightPower, value, unit) {
+      return this._driveBoth(leftPower, rightPower, value, unit);
+    }
+
+    /**
+     * Steering is -100..100. The inner wheel scales to ZERO at full lock, not
+     * into reverse: the transpiler computes `speed - speed * |steering| / 100`
+     * and this must match it exactly, or the same program drives differently
+     * depending on whether it was streamed or compiled.
+     */
+    steerDrive(steering, speed, value, unit) {
+      const s = Math.max(-100, Math.min(100, Number(steering) || 0));
+      const power = Number(speed) || 0;
+      const inner = power - (power * Math.abs(s)) / 100;
       return s >= 0
-        ? this.tankDrive(leftPorts, rightPorts, power, inner)
-        : this.tankDrive(leftPorts, rightPorts, inner, power);
+        ? this._driveBoth(power, inner, value, unit)
+        : this._driveBoth(inner, power, value, unit);
     }
 
     // ---- screen ----------------------------------------------------------
@@ -5285,19 +5349,19 @@
 
     tankDrive(args) {
       return this.ev3.tankDrive(
-        this._ports(args.LEFT),
-        this._ports(args.RIGHT),
+        _Cast.toNumber(args.LEFT),
+        _Cast.toNumber(args.RIGHT),
         _Cast.toNumber(args.VALUE),
-        _Cast.toNumber(args.VALUE)
+        args.UNIT
       );
     }
 
     steerDrive(args) {
       return this.ev3.steerDrive(
-        this._ports("A"),
-        this._ports("B"),
         _Cast.toNumber(args.STEERING),
-        _Cast.toNumber(args.SPEED)
+        _Cast.toNumber(args.SPEED),
+        _Cast.toNumber(args.VALUE),
+        args.UNIT
       );
     }
 
