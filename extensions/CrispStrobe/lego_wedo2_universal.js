@@ -448,12 +448,21 @@
 
       // First brake
       const brakeCmd = [this._portId, 1, 1, 127];
-      this._parent.send(WeDo2BLE.outputCommand, new Uint8Array(brakeCmd));
+      // A dropped brake is a motor that keeps running.
+      this._parent.send(
+        WeDo2BLE.outputCommand,
+        new Uint8Array(brakeCmd),
+        false
+      );
 
       // Then float after 1 second
       this._brakeTimeout = setTimeout(() => {
         const floatCmd = [this._portId, 1, 1, 0];
-        this._parent.send(WeDo2BLE.outputCommand, new Uint8Array(floatCmd));
+        this._parent.send(
+          WeDo2BLE.outputCommand,
+          new Uint8Array(floatCmd),
+          false
+        );
         logger.trace(`Motor ${this._portId} floated after brake`);
       }, 1000);
     }
@@ -1060,7 +1069,7 @@
           0, // Units
           0, // Notifications disabled for LED
         ]);
-        await this.send(WeDo2BLE.inputCommand, ledCmd);
+        await this.send(WeDo2BLE.inputCommand, ledCmd, false);
         await this._delay(100);
 
         // Set LED to blue to indicate connected
@@ -1092,7 +1101,7 @@
       // Send disconnect command
       try {
         const cmd = new Uint8Array([1]);
-        await this.send(WeDo2BLE.disconnect, cmd);
+        await this.send(WeDo2BLE.disconnect, cmd, false);
       } catch (error) {
         logger.warn("Could not send disconnect command:", error);
       }
@@ -1151,11 +1160,19 @@
       return device instanceof WeDo2Sensor ? device : null;
     }
 
-    send(characteristic, data) {
-      if (!this._rateLimiter.okayToSend()) {
-        logger.trace("Rate limiter: message queued");
-        // For critical commands, we might want to queue rather than drop
-        // For now, we'll just drop non-critical messages
+    /**
+     * @param {boolean} useLimiter pass false for a command that must not be
+     *   dropped. The limiter exists so that a slider dragged across the stage
+     *   cannot outrun the hub's 20 Hz link; it must never eat a STOP.
+     */
+    send(characteristic, data, useLimiter = true) {
+      // This used to compute okayToSend(), log "message queued", and then send
+      // anyway -- the verdict was discarded and nothing was ever queued or
+      // dropped, so the limiter was decorative. scratch-vm's wedo2 returns
+      // early here, and now so do we.
+      if (useLimiter && !this._rateLimiter.okayToSend()) {
+        logger.trace("Rate limiter: dropped a throttled message");
+        return Promise.resolve();
       }
 
       return this._connection.send(characteristic, data);
@@ -1379,7 +1396,7 @@
         1, // Enable notifications
       ]);
 
-      await this.send(WeDo2BLE.inputCommand, cmd);
+      await this.send(WeDo2BLE.inputCommand, cmd, false);
       await this._delay(100);
     }
 

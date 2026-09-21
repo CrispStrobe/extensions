@@ -594,6 +594,22 @@
   // ============================================================================
   // UTILITY FUNCTIONS
   // ============================================================================
+  /**
+   * A Python string literal for an arbitrary Scratch value.
+   *
+   * Every call site used to build one by concatenation -- `'"' + value + '"'`
+   * -- which emits broken Python the moment a value contains a double quote,
+   * a backslash, or a newline. A sprite named `say "hi"` produced
+   * `"say "hi""`. Two call sites half-knew this and stripped quotes with
+   * .replace(/"/g, ""), which mangles the user's text instead of escaping it.
+   *
+   * JSON.stringify is the right primitive: it emits a double-quoted literal
+   * with ", \\ and control characters escaped, and Python accepts that same
+   * escape vocabulary for str. The value is coerced first so null/undefined
+   * become "" rather than the words "null"/"undefined".
+   */
+  const pyStringLiteral = (value) => JSON.stringify(String(value ?? ""));
+
   const MathUtil = {
     clamp: (val, min, max) => Math.max(min, Math.min(val, max)),
     wrapClamp: (val, min, max) => {
@@ -3518,20 +3534,36 @@ continuous_sensor_loop()
       this.addLine("def " + funcName + "():");
       this.indentLevel++;
 
+      // Measure what the body EMITS, not how many blocks we walked. The old
+      // guard counted visited blocks, so a script made only of opcodes this
+      // transpiler has no case for produced `def f():` with nothing under it --
+      // a Python IndentationError from an otherwise valid project. Found by
+      // compiling a corpus of pseudocode programs with python3.
       let currentBlockId = hatBlock.next;
-      let blockCount = 0;
+      const bodyStart = this.pythonCode.length;
 
       while (currentBlockId) {
         const block = blocks._blocks[currentBlockId];
         if (!block) break;
 
-        blockCount++;
         this.processBlock(block, blocks);
         currentBlockId = block.next;
       }
 
-      if (blockCount === 0) {
-        this.addLine("pass");
+      // A comment is not a statement. The emitter writes
+      // `# Unknown block: <opcode>` for an opcode it has no case for, so
+      // pythonCode grows while the body stays empty as far as Python is
+      // concerned -- still an IndentationError. Require a line that is
+      // neither blank nor a comment.
+      const body = this.pythonCode.slice(bodyStart);
+      const hasStatement = body
+        .split("\n")
+        .some((line) => line.trim() !== "" && !line.trim().startsWith("#"));
+
+      if (!hasStatement) {
+        // Keep the function valid and say why it is empty, so the gap shows up
+        // in the generated source rather than at runtime on the hub.
+        this.addLine("pass  # no statement in this script could be translated");
       }
 
       this.indentLevel--;
@@ -4284,7 +4316,7 @@ continuous_sensor_loop()
           if (this.isNumeric(value)) {
             return String(value);
           }
-          return '"' + value + '"';
+          return pyStringLiteral(value);
         }
 
         console.warn(`[DEBUG] ${inputName} not found in inputs or fields`);
@@ -4348,7 +4380,7 @@ continuous_sensor_loop()
             if (this.isNumeric(primitiveValue)) {
               return String(primitiveValue);
             }
-            return '"' + primitiveValue + '"';
+            return pyStringLiteral(primitiveValue);
           }
         } else if (typeof inputData === "string") {
           const refBlock = blocks._blocks[inputData];
@@ -4384,7 +4416,7 @@ continuous_sensor_loop()
               if (this.isNumeric(primitiveValue)) {
                 return String(primitiveValue);
               }
-              return '"' + primitiveValue + '"';
+              return pyStringLiteral(primitiveValue);
             }
           }
         }
@@ -4415,7 +4447,7 @@ continuous_sensor_loop()
       else if (block.opcode === "text") {
         const text = this.getFieldValue(block, "TEXT");
         if (this.isNumeric(text)) return String(text);
-        return '"' + (text || "") + '"';
+        return pyStringLiteral(text || "");
       }
 
       // Menu blocks - extract field value
@@ -4462,13 +4494,13 @@ continuous_sensor_loop()
           return String(value); // Return as number (no quotes)
         }
 
-        return '"' + value + '"'; // Return as string (with quotes)
+        return pyStringLiteral(value); // Return as string (with quotes)
       }
 
       // Event broadcast menu
       else if (block.opcode === "event_broadcast_menu") {
         const broadcast = this.getFieldValue(block, "BROADCAST_OPTION");
-        return '"' + (broadcast || "message1") + '"';
+        return pyStringLiteral(broadcast || "message1");
       }
 
       // Variables

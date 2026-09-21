@@ -547,6 +547,16 @@
 
   // ==================== DEBUG LOGGER ====================
 
+  /**
+   * An NXC string literal for an arbitrary Scratch value.
+   *
+   * Two sites concatenated quotes without escaping and a third escaped only
+   * the double quote, leaving backslashes and newlines to break the emitted
+   * NXC. NXC is C-like, so the JSON escape vocabulary (\", \\, \n, \t and
+   * \uXXXX) is accepted by nbc for string literals.
+   */
+  const nxcStringLiteral = (value) => JSON.stringify(String(value ?? ""));
+
   class DebugLogger {
     constructor(prefix = "LEGO NXT") {
       this.prefix = prefix;
@@ -1872,7 +1882,7 @@
             }
 
             this.logger.success(`✓ String primitive: "${primitiveValue}"`);
-            return '"' + primitiveValue + '"';
+            return nxcStringLiteral(primitiveValue);
           }
           // Broadcast primitive (11) - Scratch 3.0 specific
           else if (primitiveType === 11) {
@@ -1981,7 +1991,7 @@
               this.logger.success(
                 `✓ Type 3 shadow string: "${primitiveValue}"`
               );
-              return '"' + primitiveValue + '"';
+              return nxcStringLiteral(primitiveValue);
             } else if (primitiveType === 11) {
               // Broadcast in shadow
               const broadcastId = shadowData[1];
@@ -2035,7 +2045,7 @@
       } else if (opcode === "text") {
         const text = this.getFieldValue(block, "TEXT");
         if (this.isNumeric(text)) return String(text);
-        return '"' + (text || "").replace(/"/g, '\\"') + '"';
+        return nxcStringLiteral(text);
       } else if (opcode === "data_variable") {
         const varName = this.getFieldValue(block, "VARIABLE");
         return this.sanitizeName(varName);
