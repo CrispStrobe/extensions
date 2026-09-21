@@ -9,6 +9,11 @@
   if (!Scratch.extensions.unsandboxed)
     throw new Error("can not load out side unsandboxed mode");
 
+  const { Cast, vm } = Scratch;
+  const { runtime } = vm;
+
+  const extensionId = "gsaHTTPRequests";
+
   const setType = (value, type) => {
     switch (type) {
       case "string":
@@ -17,7 +22,7 @@
           case "boolean":
           case "number":
           case "function":
-            return String(value);
+            return Cast.toString(value);
           case "object":
             try {
               return JSON.stringify(value);
@@ -29,11 +34,9 @@
       case "number":
         switch (typeof value) {
           case "string":
-            return String(value);
           case "boolean":
-            return Boolean(value);
           case "number":
-            return value;
+            return Cast.toNumber(value);
           case "function":
           case "object":
             return NaN;
@@ -45,7 +48,7 @@
           case "boolean":
           case "function":
           case "number":
-            return Boolean(value);
+            return Cast.toBoolean(value);
           case "object":
             return false;
         }
@@ -73,9 +76,10 @@
   const parseType = (text) => {
     // this isnt text and we just pass it down as what ever it is
     if (typeof text !== "string") return text;
-    if (!isNaN(Number(text))) {
-      return Number(text);
-    } else {
+
+    const asNumber = Number(text); // loose cast to allow NaN and other values
+    if (!isNaN(asNumber)) return asNumber;
+    else {
       try {
         const parsed = JSON.parse(text);
         if (typeof parsed === "object") return parsed;
@@ -86,31 +90,32 @@
       }
     }
   };
+  const isUnsafePathSegment = (name) =>
+    name === "__proto__" || name === "constructor" || name === "prototype";
   const getPathArray = (path) => {
     const names = path.split(".");
     for (let index = 0; index < names.length; index++) {
       let name = names[index];
       name = name.replaceAll(/(?<!\\)&dot/g, ".");
+      if (isUnsafePathSegment(name)) return null;
+      names[index] = name;
     }
     return names;
   };
   const getValueAtPath = (object, path) => {
+    if (!path) return "";
     for (const name of path) {
       object = object?.[name];
     }
     return setType(object, "string");
   };
   const setValueAtPath = (object, path, value) => {
-    for (const name of path.slice(0, -1)) {
-      object = object[name];
+    if (!path) return;
+    for (let i = 0; i < path.length - 1; i++) {
+      object = object[path[i]];
     }
-    object[path.at(-1)] = value;
+    object[path[path.length - 1]] = value;
   };
-
-  const { vm } = Scratch;
-  const { runtime } = vm;
-
-  const extensionId = "gsaHTTPRequests";
 
   // the funny class to make event blocks look better
   class Events {
@@ -147,7 +152,7 @@
   const createBlockId = (block) => `${extensionId}_${block}`;
 
   /* ------- BLOCKS -------- */
-  const { BlockType, Cast, ArgumentType } = Scratch;
+  const { BlockType, ArgumentType } = Scratch;
 
   class WebRequests {
     static get defaultRequest() {
@@ -385,7 +390,7 @@
             arguments: {
               text: {
                 type: ArgumentType.STRING,
-                default: "Apple!",
+                defaultValue: "Apple!",
               },
             },
             text: Scratch.translate("set request body to [text]"),
@@ -614,7 +619,7 @@
 
     getHeaderValue(args) {
       const name = Cast.toString(args.name);
-      return this.response.get(name);
+      return this.response.headers.get(name);
     }
 
     getHeaderJSON() {
@@ -718,7 +723,7 @@
         const body = await this.response.blob.text();
         this.response.text = body;
       } catch (err) {
-        this.response.error = String(err);
+        this.response.error = Cast.toString(err);
         console.warn("request failed with error", err);
         this.request.fail = true;
         this.request.end = true;
