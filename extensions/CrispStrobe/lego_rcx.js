@@ -939,9 +939,55 @@
      * compiled to nothing, and this codebase has spent real effort removing
      * exactly that shape from its LEGO extensions.
      */
+    /**
+     * The local compiler, if the host has one.
+     *
+     * NQC is MPL-2.0, so unlike a GPL toolchain it can be shipped inside an
+     * application. A host that has done so installs `runtime.nqcCompile`, and
+     * compiling then needs no network at all — no service, no cold start, and
+     * it works offline. Absent that, the service is used.
+     *
+     * Looked up at call time rather than cached, because a host may install it
+     * lazily, after this extension has already loaded.
+     */
+    _localCompiler() {
+      const runtime = this.runtime || (Scratch.vm && Scratch.vm.runtime);
+      const fn = runtime && runtime.nqcCompile;
+      return typeof fn === "function" ? fn.bind(runtime) : null;
+    }
+
     async compileAndDownload() {
       if (!this.lastCode) this.transpile();
       this.lastError_ = "";
+
+      const local = this._localCompiler();
+      if (local) {
+        try {
+          const result = await local(this.lastCode, this.target);
+          if (!result || !result.ok) {
+            this.lastError_ = String(
+              (result && result.log) || "compilation failed"
+            );
+            return;
+          }
+          const bytes =
+            result.bytes instanceof Uint8Array
+              ? result.bytes
+              : new Uint8Array(result.bytes);
+          if (!this._isRcxImage(bytes)) {
+            this.lastError_ = `the local compiler returned ${bytes.length} bytes that are not an RCX image`;
+            return;
+          }
+          this.save(bytes, "program.rcx", "application/octet-stream");
+          this.lastError_ = `compiled ${bytes.length} bytes for ${this.target} (locally)`;
+          return;
+        } catch (error) {
+          // Fall through to the service rather than failing outright: a broken
+          // local compiler should not take away a working remote one.
+          this.lastError_ = `local compiler failed (${error && error.message}); trying the service`;
+        }
+      }
+
       let response;
       try {
         response = await Scratch.fetch(this.compilerUrl, {
@@ -977,12 +1023,8 @@
       const bytes = Uint8Array.from(atob(payload.base64), (c) =>
         c.charCodeAt(0)
       );
-      // A .rcx image starts with the ASCII magic RCXI. Checked because a
-      // service that returns 200 with the wrong body would otherwise save a
-      // file the brick silently refuses.
-      const magic = String.fromCharCode(...bytes.slice(0, 4));
-      if (magic !== "RCXI") {
-        this.lastError_ = `compiler returned ${bytes.length} bytes that are not an RCX image (magic "${magic}")`;
+      if (!this._isRcxImage(bytes)) {
+        this.lastError_ = `the service returned ${bytes.length} bytes that are not an RCX image`;
         return;
       }
       this.save(
@@ -991,6 +1033,26 @@
         "application/octet-stream"
       );
       this.lastError_ = `compiled ${bytes.length} bytes for ${this.target}`;
+    }
+
+    /**
+     * A .rcx image begins with the ASCII magic RCXI.
+     *
+     * Checked on BOTH routes, because either could return the wrong thing with
+     * every appearance of success — a proxy serving an error page with HTTP
+     * 200, or a local compiler handing back an empty buffer. Saving those
+     * produces a file the brick silently refuses, which is the hardest kind of
+     * failure to trace back to its cause.
+     */
+    _isRcxImage(bytes) {
+      return (
+        bytes &&
+        bytes.length >= 4 &&
+        bytes[0] === 0x52 &&
+        bytes[1] === 0x43 &&
+        bytes[2] === 0x58 &&
+        bytes[3] === 0x49
+      );
     }
 
     save(data, filename, mime) {
