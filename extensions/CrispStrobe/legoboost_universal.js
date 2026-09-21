@@ -858,7 +858,9 @@
         [0, BoostMotorMaxPowerAdd, BoostMotorProfile.DO_NOT_USE]
       );
 
-      this._parent.send(BoostBLE.characteristic, cmd);
+      // A dropped stop is a motor that keeps running, so this one
+      // bypasses the rate limiter.
+      this._parent.send(BoostBLE.characteristic, cmd, false);
     }
 
     setAcceleration(time) {
@@ -1580,9 +1582,13 @@
       await this._delay(100);
     }
 
-    send(characteristic, data) {
-      if (!this._rateLimiter.okayToSend()) {
-        logger.trace("Rate limiter: message queued");
+    send(characteristic, data, useLimiter = true) {
+      // This used to compute okayToSend(), log, and send anyway -- the verdict
+      // was discarded, so the limiter was decorative. scratch-vm returns early
+      // here. `useLimiter: false` is for commands that must not be dropped.
+      if (useLimiter && !this._rateLimiter.okayToSend()) {
+        logger.trace("Rate limiter: dropped a throttled message");
+        return Promise.resolve();
       }
 
       return this._connection.send(characteristic, data);

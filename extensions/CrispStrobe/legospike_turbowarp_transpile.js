@@ -594,6 +594,22 @@
   // ============================================================================
   // UTILITY FUNCTIONS
   // ============================================================================
+  /**
+   * A Python string literal for an arbitrary Scratch value.
+   *
+   * Every call site used to build one by concatenation -- `'"' + value + '"'`
+   * -- which emits broken Python the moment a value contains a double quote,
+   * a backslash, or a newline. A sprite named `say "hi"` produced
+   * `"say "hi""`. Two call sites half-knew this and stripped quotes with
+   * .replace(/"/g, ""), which mangles the user's text instead of escaping it.
+   *
+   * JSON.stringify is the right primitive: it emits a double-quoted literal
+   * with ", \\ and control characters escaped, and Python accepts that same
+   * escape vocabulary for str. The value is coerced first so null/undefined
+   * become "" rather than the words "null"/"undefined".
+   */
+  const pyStringLiteral = (value) => JSON.stringify(String(value ?? ""));
+
   const MathUtil = {
     clamp: (val, min, max) => Math.max(min, Math.min(val, max)),
     wrapClamp: (val, min, max) => {
@@ -4284,7 +4300,7 @@ continuous_sensor_loop()
           if (this.isNumeric(value)) {
             return String(value);
           }
-          return '"' + value + '"';
+          return pyStringLiteral(value);
         }
 
         console.warn(`[DEBUG] ${inputName} not found in inputs or fields`);
@@ -4348,7 +4364,7 @@ continuous_sensor_loop()
             if (this.isNumeric(primitiveValue)) {
               return String(primitiveValue);
             }
-            return '"' + primitiveValue + '"';
+            return pyStringLiteral(primitiveValue);
           }
         } else if (typeof inputData === "string") {
           const refBlock = blocks._blocks[inputData];
@@ -4384,7 +4400,7 @@ continuous_sensor_loop()
               if (this.isNumeric(primitiveValue)) {
                 return String(primitiveValue);
               }
-              return '"' + primitiveValue + '"';
+              return pyStringLiteral(primitiveValue);
             }
           }
         }
@@ -4415,7 +4431,7 @@ continuous_sensor_loop()
       else if (block.opcode === "text") {
         const text = this.getFieldValue(block, "TEXT");
         if (this.isNumeric(text)) return String(text);
-        return '"' + (text || "") + '"';
+        return pyStringLiteral(text || "");
       }
 
       // Menu blocks - extract field value
@@ -4462,13 +4478,13 @@ continuous_sensor_loop()
           return String(value); // Return as number (no quotes)
         }
 
-        return '"' + value + '"'; // Return as string (with quotes)
+        return pyStringLiteral(value); // Return as string (with quotes)
       }
 
       // Event broadcast menu
       else if (block.opcode === "event_broadcast_menu") {
         const broadcast = this.getFieldValue(block, "BROADCAST_OPTION");
-        return '"' + (broadcast || "message1") + '"';
+        return pyStringLiteral(broadcast || "message1");
       }
 
       // Variables
