@@ -3546,6 +3546,39 @@
       );
     }
 
+    /**
+     * A motor's tacho: speed and position come back in ONE reply.
+     *
+     * opOUTPUT_READ writes an int8 speed at global offset 0 and an int32
+     * position at offset 4, so both reporters issue the same command and read
+     * different fields of it. `ports` is a bitmask and must name a single
+     * motor — the brick answers for one, and a combined mask would silently
+     * report whichever it picked.
+     */
+    async _motorTacho(ports) {
+      const reply = await this.sendDirect(
+        [OP.OUTPUT_READ, 0x00, ...LC0(ports), ...GV0(0), ...GV0(4)],
+        8,
+        0,
+        true
+      );
+      if (!reply || reply.byteLength < 8) return { speed: 0, position: 0 };
+      const view = new DataView(
+        reply.buffer,
+        reply.byteOffset,
+        reply.byteLength
+      );
+      return { speed: view.getInt8(0), position: view.getInt32(4, true) };
+    }
+
+    async getMotorPosition(ports) {
+      return (await this._motorTacho(ports)).position;
+    }
+
+    async getMotorSpeed(ports) {
+      return (await this._motorTacho(ports)).speed;
+    }
+
     motorReset(ports) {
       return this.sendDirect([OP.OUTPUT_RESET, 0x00, ...LC0(ports)]);
     }
@@ -5366,11 +5399,11 @@
     }
 
     motorPosition(args) {
-      return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x00);
+      return this.ev3.getMotorPosition(this._ports(args.PORT));
     }
 
     motorSpeed(args) {
-      return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x01);
+      return this.ev3.getMotorSpeed(this._ports(args.PORT));
     }
 
     // Sensor methods
