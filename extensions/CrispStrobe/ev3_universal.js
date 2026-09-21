@@ -143,6 +143,16 @@
       downloadLMS: "download LMS code",
       compileRBF: "compile to RBF",
       showRBF: "show RBF bytecode",
+
+      // --- added by the EV3 consolidation (2026-09-21) -------------------
+      getConnectionMode: "connection mode",
+      invertRect: "invert rectangle x:[X] y:[Y] w:[W] h:[H]",
+      selectFont: "select font [SIZE]",
+      nxtLight: "NXT light sensor [PORT] brightness",
+      nxtSound: "NXT sound sensor [PORT] loudness",
+      enableStreaming: "enable streaming mode",
+      disableStreaming: "disable streaming mode",
+      testDiagnostics: "show full transpilation diagnostics",
     },
 
     de: {
@@ -261,6 +271,16 @@
       downloadLMS: "LMS-Code herunterladen",
       compileRBF: "zu RBF kompilieren",
       showRBF: "RBF-Bytecode anzeigen",
+
+      // --- added by the EV3 consolidation (2026-09-21) -------------------
+      getConnectionMode: "Verbindungsart",
+      invertRect: "Rechteck invertieren x:[X] y:[Y] b:[W] h:[H]",
+      selectFont: "Schriftgröße [SIZE] wählen",
+      nxtLight: "NXT-Lichtsensor [PORT] Helligkeit",
+      nxtSound: "NXT-Schallsensor [PORT] Lautstärke",
+      enableStreaming: "Streaming-Modus einschalten",
+      disableStreaming: "Streaming-Modus ausschalten",
+      testDiagnostics: "vollständige Transpilations-Diagnose anzeigen",
     },
   };
 
@@ -351,6 +371,7 @@
 
   const CMD = {
     READY_SI: 0x1d,
+    CLR_CHANGES: 0x1a,
     TONE: 0x01,
     BREAK: 0x00,
     FILLWINDOW: 0x13,
@@ -399,6 +420,53 @@
     return bytes;
   };
   const GV0 = (i) => [0x60 | (i & 0x1f)];
+
+  /** Note name -> Hz, equal temperament at A4 = 440. Ported from ev3_direct.js. */
+  const NOTE_FREQ = {
+    C4: 262,
+    "C#4": 277,
+    D4: 294,
+    "D#4": 311,
+    E4: 330,
+    F4: 349,
+    "F#4": 370,
+    G4: 392,
+    "G#4": 415,
+    A4: 440,
+    "A#4": 466,
+    B4: 494,
+    C5: 523,
+    "C#5": 554,
+    D5: 587,
+    "D#5": 622,
+    E5: 659,
+    F5: 698,
+    "F#5": 740,
+    G5: 784,
+    "G#5": 831,
+    A5: 880,
+    "A#5": 932,
+    B5: 988,
+    C6: 1047,
+  };
+
+  /** EV3 LED patterns (opUI_WRITE / LED). */
+  const LED_PATTERN = { OFF: 0, GREEN: 1, RED: 2, ORANGE: 3 };
+
+  /** opUI_BUTTON button ids. */
+  const BUTTON_ID = {
+    up: 1,
+    enter: 2,
+    down: 3,
+    right: 4,
+    left: 5,
+    back: 6,
+    any: 7,
+  };
+
+  /** opINPUT_READSI modes, per sensor family. */
+  const COLOR_MODE = { reflected: 0, ambient: 1, color: 2, raw: 3 };
+  const GYRO_MODE = { angle: 0, rate: 1, fast: 2, angle_rate: 3 };
 
   const Base64Util = {
     uint8ArrayToBase64: (array) => btoa(String.fromCharCode.apply(null, array)),
@@ -559,7 +627,7 @@
       log.debug("SerialBackend: Initialized");
     }
 
-    async connect() {
+    async connect(opts = {}) {
       log.info("SerialBackend: Starting connection");
       if (!navigator.serial) {
         log.error("SerialBackend: Web Serial API not available");
@@ -567,8 +635,29 @@
       }
 
       try {
-        log.debug("SerialBackend: Requesting port");
-        this.port = await navigator.serial.requestPort();
+        // An already-authorised port needs NO user gesture, and reusing one is
+        // what lets `auto` probe Web Serial at all: requestPort() opens a
+        // browser chooser and throws without a gesture, so a silent probe can
+        // only ever look at getPorts(). It is also the right behaviour on its
+        // own — before this, every connect re-prompted for a port the user had
+        // already granted.
+        if (!this.port && !opts.forcePrompt) {
+          const granted = await navigator.serial.getPorts();
+          if (granted && granted.length) {
+            this.port = granted[0];
+            log.info("SerialBackend: Reusing an already-authorised port");
+          }
+        }
+        if (!this.port) {
+          if (opts.noPrompt) {
+            log.debug(
+              "SerialBackend: No authorised port and prompting is not allowed"
+            );
+            return false;
+          }
+          log.debug("SerialBackend: Requesting port");
+          this.port = await navigator.serial.requestPort();
+        }
         log.debug("SerialBackend: Port selected, opening at 115200 baud");
         await this.port.open({ baudRate: 115200, flowControl: "none" });
 
@@ -2996,7 +3085,8 @@
   class EV3Peripheral {
     constructor(runtime) {
       this.runtime = runtime;
-      this.mode = "serial";
+      this.mode = "auto";
+      this.detectedMode = null;
       this.backend = null;
       this.messageCounter = 0;
       this.pendingRequests = new Map();
@@ -3038,6 +3128,14 @@
      */
     async connect(param) {
       log.info(`EV3Peripheral: Connecting via ${this.mode}...`);
+
+      // `auto` is the default. It probes and, on success, leaves this.mode set
+      // to whatever answered, so every later block behaves exactly as if the
+      // user had chosen that mode by hand.
+      if (this.mode === "auto") {
+        const found = await this.detect();
+        return found !== null;
+      }
 
       if (this.mode === "serial") {
         this.backend = new SerialBackend(
@@ -3097,6 +3195,115 @@
       }
 
       return false;
+    }
+
+    /**
+     * Find a brick without being told where it is.
+     *
+     * WHY AN ORDER, AND WHY THIS ONE
+     * ------------------------------
+     * Until now the user had to know which of four transports their EV3 was
+     * on and pick it from a menu before anything worked, which is the same
+     * question the four separate EV3 extensions used to ask by making you
+     * choose between them. The transports are not equally probeable, so the
+     * order is not arbitrary:
+     *
+     *   1. Web Serial, but ONLY via getPorts() — a port the user has already
+     *      authorised for this origin. No gesture, no dialog, instant.
+     *   2. Scratch Link, on its fixed loopback port. Either the helper is
+     *      running or the socket refuses at once.
+     *   3. The WebSocket bridge, at whatever host/port has been configured.
+     *   4. HTTP to the brick's IP.
+     *
+     * Web Serial's requestPort() is LAST and is never reached by probing: it
+     * opens a browser chooser and throws outright without a user gesture, so
+     * a speculative probe cannot use it. If nothing answers, the caller is
+     * told to pick a mode rather than being handed a dialog it cannot open.
+     *
+     * Every probe is bounded. A bridge or brick IP that simply does not answer
+     * would otherwise hang the whole chain on its own TCP timeout, and "auto
+     * detection hangs" is a worse failure than "auto detection found nothing".
+     */
+    async detect({ timeoutMs = 1500 } = {}) {
+      const tried = [];
+      for (const mode of ["serial", "scratchlink", "bridge", "http"]) {
+        tried.push(mode);
+        log.info(`EV3Peripheral: auto — probing ${mode}`);
+        let ok = false;
+        try {
+          ok = await this._probe(mode, timeoutMs);
+        } catch (error) {
+          log.debug(
+            `EV3Peripheral: auto — ${mode} threw`,
+            error && error.message
+          );
+          ok = false;
+        }
+        if (ok) {
+          this.mode = mode;
+          this.detectedMode = mode;
+          log.info(`EV3Peripheral: auto — connected via ${mode}`);
+          return mode;
+        }
+        await this.disconnect();
+      }
+      this.detectedMode = null;
+      log.warn(
+        `EV3Peripheral: auto — nothing answered (tried ${tried.join(", ")})`
+      );
+      return null;
+    }
+
+    /** One bounded connection attempt. Resolves false rather than throwing. */
+    async _probe(mode, timeoutMs) {
+      const deadline = new Promise((resolve) =>
+        setTimeout(() => resolve("timeout"), timeoutMs)
+      );
+      const attempt = (async () => {
+        if (mode === "serial") {
+          if (!navigator.serial) return false;
+          // Silent probe only: an authorised port, or nothing.
+          const granted = await navigator.serial.getPorts();
+          if (!granted || !granted.length) return false;
+          this.backend = new SerialBackend(
+            () => this._onConnect(),
+            (data) => this._onMessage(data)
+          );
+          return await this.backend.connect({ noPrompt: true });
+        }
+        if (mode === "scratchlink") {
+          this.backend = new ScratchLinkBackend(
+            this.runtime,
+            "legoev3",
+            () => this._onConnect(),
+            (data) => this._onMessage(data)
+          );
+          this.backend.connect();
+          // ScratchLinkBackend.connect() is fire-and-forget, so the only
+          // honest signal is whether it reports itself connected in time.
+          for (let i = 0; i < 10 && !this.isConnected(); i++) {
+            await new Promise((r) => setTimeout(r, timeoutMs / 10));
+          }
+          return this.isConnected();
+        }
+        if (mode === "bridge") {
+          this.backend = new BridgeBackend(
+            () => this._onConnect(),
+            (data) => this._onMessage(data)
+          );
+          return await this.backend.connect({ ...this.bridgeConfig });
+        }
+        if (mode === "http") {
+          this.backend = new HTTPBackend(
+            () => this._onConnect(),
+            (data) => this._onMessage(data)
+          );
+          return await this.backend.connect(this.ev3IP, this.ev3Port);
+        }
+        return false;
+      })();
+      const result = await Promise.race([attempt, deadline]);
+      return result === "timeout" ? false : Boolean(result);
     }
 
     async disconnect() {
@@ -3265,6 +3472,438 @@
       log.warn("EV3Peripheral: No sensor response");
       return 0;
     }
+
+    // ========================================================================
+    // LIVE-MODE BYTECODE, PORTED FROM ev3_direct.js (2026-09-21)
+    // ========================================================================
+    //
+    // These are the direct commands the consolidated extension was missing.
+    // Before the merge, THIRTY of this extension's seventy-four blocks were
+    // live-mode no-ops — `motorRun(args) { log.debug(...) }` and nothing else —
+    // so drive, stop, every drawing block, every sound block, the LEDs and the
+    // waits did nothing at all unless you transpiled and uploaded. The block
+    // surface and the LMS transpiler were here; the working direct-protocol
+    // code was in ev3_direct.js, which was Web Serial only.
+    //
+    // Porting them onto sendDirect() rather than copying ev3_direct's own
+    // writer is the whole point: sendDirect goes through `this.backend`, and
+    // all four backends implement send(). So these work over Web Serial,
+    // Scratch Link, the WebSocket bridge AND HTTP, where the originals worked
+    // over Web Serial alone.
+    //
+    // `0x00` in the layer position is the daisy-chain layer, always 0 for the
+    // brick you are connected to; ev3_direct spelled it LAYER.
+
+    /** Run motors continuously. `ports` is the EV3 port bitmask (A=1,B=2,C=4,D=8). */
+    motorRun(ports, power) {
+      return this.motorOn(ports, power);
+    }
+
+    motorStop(ports, brake = true) {
+      return this.sendDirect([
+        OP.OUTPUT_STOP,
+        0x00,
+        ...LC0(ports),
+        ...LC0(brake ? 1 : 0),
+      ]);
+    }
+
+    /** Run for a wall-clock duration. ramp-up/down are 0: constant speed. */
+    motorRunTime(ports, power, seconds, brake = true) {
+      const ms = Math.max(0, Math.round(seconds * 1000));
+      return this.sendDirect([
+        OP.OUTPUT_TIME_SPEED,
+        0x00,
+        ...LC0(ports),
+        ...LC1(Math.max(-100, Math.min(100, power))),
+        ...LC4(0),
+        ...LC4(ms),
+        ...LC4(0),
+        ...LC0(brake ? 1 : 0),
+      ]);
+    }
+
+    /** Degrees and rotations are the same opcode; a rotation is 360 degrees. */
+    motorRunDegreesBraked(ports, power, degrees, brake = true) {
+      return this.sendDirect([
+        OP.OUTPUT_STEP_SPEED,
+        0x00,
+        ...LC0(ports),
+        ...LC1(Math.max(-100, Math.min(100, power))),
+        ...LC4(0),
+        ...LC4(Math.round(degrees)),
+        ...LC4(0),
+        ...LC0(brake ? 1 : 0),
+      ]);
+    }
+
+    motorRunRotations(ports, power, rotations, brake = true) {
+      return this.motorRunDegreesBraked(
+        ports,
+        power,
+        Math.round(rotations * 360),
+        brake
+      );
+    }
+
+    motorReset(ports) {
+      return this.sendDirect([OP.OUTPUT_RESET, 0x00, ...LC0(ports)]);
+    }
+
+    motorPolarity(ports, polarity) {
+      return this.sendDirect([
+        OP.OUTPUT_POLARITY,
+        0x00,
+        ...LC0(ports),
+        ...LC1(polarity),
+      ]);
+    }
+
+    /**
+     * Tank and steering drive, in terms of the two-motor primitive rather than
+     * as new bytecode: both were no-ops in every EV3 extension until now.
+     * Steering is the LEGO convention, -100..100, where the sign picks the
+     * inner wheel and the magnitude scales it down to a full spin at 100.
+     */
+    tankDrive(leftPorts, rightPorts, leftPower, rightPower) {
+      this.motorRun(leftPorts, leftPower);
+      return this.motorRun(rightPorts, rightPower);
+    }
+
+    steerDrive(leftPorts, rightPorts, steering, power) {
+      const s = Math.max(-100, Math.min(100, steering));
+      const inner = power * (1 - Math.abs(s) / 50);
+      return s >= 0
+        ? this.tankDrive(leftPorts, rightPorts, power, inner)
+        : this.tankDrive(leftPorts, rightPorts, inner, power);
+    }
+
+    // ---- screen ----------------------------------------------------------
+
+    screenClear() {
+      return this.sendDirect([
+        OP.UI_DRAW,
+        CMD.FILLWINDOW,
+        ...LC0(0x00),
+        ...LC2(0),
+        ...LC2(0),
+        OP.UI_DRAW,
+        CMD.UPDATE,
+      ]);
+    }
+
+    screenUpdate() {
+      return this.sendDirect([OP.UI_DRAW, CMD.UPDATE]);
+    }
+
+    /** `invert` fills the whole window with the inverse colour. */
+    screenInvert() {
+      return this.sendDirect([
+        OP.UI_DRAW,
+        CMD.INVERSERECT,
+        ...LC2(0),
+        ...LC2(0),
+        ...LC2(178),
+        ...LC2(128),
+        OP.UI_DRAW,
+        CMD.UPDATE,
+      ]);
+    }
+
+    selectFont(size) {
+      return this.sendDirect([OP.UI_DRAW, CMD.SELECT_FONT, ...LC0(size)]);
+    }
+
+    /**
+     * `large` selects font 1 for the duration and puts font 0 back, which is
+     * what ev3_lms emits for its "show large text" block.
+     */
+    screenText(text, x, y, large = false) {
+      const draw = [
+        OP.UI_DRAW,
+        CMD.TEXT,
+        ...LC0(1),
+        ...LC2(x),
+        ...LC2(y),
+        ..._LCS(String(text)),
+      ];
+      const cmd = large
+        ? [
+            OP.UI_DRAW,
+            CMD.SELECT_FONT,
+            ...LC0(1),
+            ...draw,
+            OP.UI_DRAW,
+            CMD.SELECT_FONT,
+            ...LC0(0),
+          ]
+        : draw;
+      return this.sendDirect([...cmd, OP.UI_DRAW, CMD.UPDATE]);
+    }
+
+    drawPixel(x, y) {
+      return this.sendDirect([
+        OP.UI_DRAW,
+        CMD.PIXEL,
+        ...LC0(1),
+        ...LC2(x),
+        ...LC2(y),
+        OP.UI_DRAW,
+        CMD.UPDATE,
+      ]);
+    }
+
+    drawLine(x1, y1, x2, y2) {
+      return this.sendDirect([
+        OP.UI_DRAW,
+        CMD.LINE,
+        ...LC0(1),
+        ...LC2(x1),
+        ...LC2(y1),
+        ...LC2(x2),
+        ...LC2(y2),
+        OP.UI_DRAW,
+        CMD.UPDATE,
+      ]);
+    }
+
+    drawCircle(x, y, r, filled = false) {
+      return this.sendDirect([
+        OP.UI_DRAW,
+        filled ? CMD.FILLCIRCLE : CMD.CIRCLE,
+        ...LC0(1),
+        ...LC2(x),
+        ...LC2(y),
+        ...LC2(r),
+        OP.UI_DRAW,
+        CMD.UPDATE,
+      ]);
+    }
+
+    drawRect(x, y, w, h, filled = false) {
+      return this.sendDirect([
+        OP.UI_DRAW,
+        filled ? CMD.FILLRECT : CMD.RECT,
+        ...LC0(1),
+        ...LC2(x),
+        ...LC2(y),
+        ...LC2(w),
+        ...LC2(h),
+        OP.UI_DRAW,
+        CMD.UPDATE,
+      ]);
+    }
+
+    invertRect(x, y, w, h) {
+      return this.sendDirect([
+        OP.UI_DRAW,
+        CMD.INVERSERECT,
+        ...LC2(x),
+        ...LC2(y),
+        ...LC2(w),
+        ...LC2(h),
+        OP.UI_DRAW,
+        CMD.UPDATE,
+      ]);
+    }
+
+    // ---- sound, LEDs, timing --------------------------------------------
+
+    /**
+     * This extension's `notes` menu carries NOTE NAMES ("C4" … "C5"), not MIDI
+     * numbers, so the name is resolved against the table and only a numeric
+     * argument is treated as MIDI. Doing the MIDI arithmetic on "C4" yields
+     * NaN, and NaN reaches the brick as a frequency of 0 — a silent failure
+     * that looks exactly like a disconnected speaker.
+     */
+    playNote(note, beats, tempo = 120) {
+      const named = NOTE_FREQ[String(note).toUpperCase()];
+      const midi = Number(note);
+      const freq =
+        named !== undefined
+          ? named
+          : Number.isFinite(midi) && midi > 0
+            ? Math.round(440 * Math.pow(2, (midi - 69) / 12))
+            : 440;
+      const ms = Math.max(0, Math.round((Number(beats) * 60000) / tempo));
+      return this.playTone(freq, ms);
+    }
+
+    beep() {
+      return this.playTone(1000, 200);
+    }
+
+    stopSound() {
+      return this.sendDirect([OP.SOUND, CMD.BREAK]);
+    }
+
+    setVolume(volume) {
+      const v = Math.max(0, Math.min(100, Math.round(volume)));
+      return this.sendDirect([OP.UI_WRITE, CMD.SET_VOLUME, ...LC0(v)]);
+    }
+
+    setLED(pattern) {
+      return this.sendDirect([OP.UI_WRITE, CMD.LED, ...LC0(pattern)]);
+    }
+
+    ledAllOff() {
+      return this.setLED(0);
+    }
+
+    waitMillis(ms) {
+      return this.sendDirect([
+        OP.TIMER_WAIT,
+        ...LC4(Math.max(0, Math.round(ms))),
+        GV0(0),
+      ]);
+    }
+
+    waitSeconds(seconds) {
+      return this.waitMillis(Number(seconds) * 1000);
+    }
+
+    async readTimer() {
+      const reply = await this.sendDirect(
+        [OP.TIMER_READ, ...GV0(0)],
+        4,
+        0,
+        true
+      );
+      if (!reply || reply.byteLength < 4) return 0;
+      // FLOAT32, not an integer. ev3_direct reads it as a float and the brick
+      // writes it as one; reading it as a uint32 returns a plausible-looking
+      // large number rather than a failure, which is the kind of wrong that
+      // does not announce itself.
+      const view = new DataView(
+        reply.buffer,
+        reply.byteOffset,
+        reply.byteLength
+      );
+      return view.getFloat32(0, true);
+    }
+
+    /**
+     * NXT light and sound sensors on EV3 ports. Only ev3_direct supported
+     * these, and they are the one capability a careless merge would genuinely
+     * have dropped: no other EV3 extension reads NXT analogue sensors at all.
+     *
+     * Both are TYPE 0 ("keep", i.e. let the brick use whatever it detected)
+     * and MODE 0, so it is the PORT that selects which sensor answers, not the
+     * mode. That is not a simplification of ev3_direct — its own calls read
+     * `readSensor(port, 0, "SI")` against a two-parameter
+     * `readSensor(port, mode)`, so the third argument was silently dropped and
+     * both blocks already issued the identical command. Written out here so
+     * the next reader does not go looking for the distinction.
+     */
+    gyroReset(port) {
+      return this.sendDirect([
+        OP.INPUT_DEVICE,
+        CMD.CLR_CHANGES,
+        0x00,
+        ...LC0(port),
+      ]);
+    }
+
+    async getButton(button) {
+      const reply = await this.sendDirect(
+        [OP.UI_BUTTON, CMD.PRESSED, ...LC0(button), ...GV0(0)],
+        1,
+        0,
+        true
+      );
+      return reply && reply.byteLength >= 1 ? reply[0] : 0;
+    }
+
+    /**
+     * Battery and volume, READ FROM THE BRICK.
+     *
+     * These three replace constants. The extension answered `batteryLevel`
+     * with a flat 100, `batteryVoltage` with 9.0 and `getVolume` with 80 —
+     * values that look like readings, move like nothing, and cannot be told
+     * from a working sensor by looking at the stage. A learner watching the
+     * battery "hold at 100%" for an hour learns something false about their
+     * robot. opUI_READ has had all three all along.
+     */
+    async _uiReadFloat(subcode) {
+      const reply = await this.sendDirect(
+        [OP.UI_READ, subcode, ...GV0(0)],
+        4,
+        0,
+        true
+      );
+      if (!reply || reply.byteLength < 4) return 0;
+      const view = new DataView(
+        reply.buffer,
+        reply.byteOffset,
+        reply.byteLength
+      );
+      return view.getFloat32(0, true);
+    }
+
+    async _uiReadByte(subcode) {
+      const reply = await this.sendDirect(
+        [OP.UI_READ, subcode, ...GV0(0)],
+        1,
+        0,
+        true
+      );
+      return reply && reply.byteLength >= 1 ? reply[0] : 0;
+    }
+
+    getBatteryVoltage() {
+      return this._uiReadFloat(CMD.GET_VBATT);
+    }
+
+    getBatteryCurrent() {
+      return this._uiReadFloat(CMD.GET_IBATT);
+    }
+
+    getBatteryLevel() {
+      return this._uiReadByte(CMD.GET_LBATT);
+    }
+
+    getVolume() {
+      return this._uiReadByte(CMD.GET_VOLUME);
+    }
+
+    resetTimer() {
+      // opTIMER_WAIT with a zero interval is how the LMS transpiler resets the
+      // brick timer, and opTIMER_READ then counts from here.
+      return this.sendDirect([OP.TIMER_WAIT, ...LC4(0), ...GV0(0)]);
+    }
+
+    async waitForButton(button) {
+      return await this.sendDirect(
+        [OP.UI_BUTTON, CMD.WAIT_FOR_PRESS, ...LC0(button)],
+        0,
+        0,
+        true
+      );
+    }
+
+    async freeMemory() {
+      const reply = await this.sendDirect(
+        [OP.INFO, CMD.GET_FREE, ...GV0(0)],
+        4,
+        0,
+        true
+      );
+      if (!reply || reply.byteLength < 4) return 0;
+      const view = new DataView(
+        reply.buffer,
+        reply.byteOffset,
+        reply.byteLength
+      );
+      return view.getUint32(0, true);
+    }
+
+    readNXTLight(port) {
+      return this.getSensor(port, 0x00, 0x00);
+    }
+
+    readNXTSound(port) {
+      return this.getSensor(port, 0x00, 0x00);
+    }
   }
 
   // ============================================================================
@@ -3310,6 +3949,11 @@
           // Connection mode
           { blockType: Scratch.BlockType.LABEL, text: t("connectionMode") },
           {
+            opcode: "getConnectionMode",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("getConnectionMode"),
+          },
+          {
             opcode: "setMode",
             blockType: Scratch.BlockType.COMMAND,
             text: t("setMode"),
@@ -3317,7 +3961,7 @@
               MODE: {
                 type: Scratch.ArgumentType.STRING,
                 menu: "connectionModes",
-                defaultValue: "serial",
+                defaultValue: "auto",
               },
             },
           },
@@ -3976,10 +4620,70 @@
               TIME: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1000 },
             },
           },
+          "---",
+          {
+            opcode: "invertRect",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("invertRect"),
+            arguments: {
+              X: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              Y: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              W: { type: Scratch.ArgumentType.NUMBER, defaultValue: 50 },
+              H: { type: Scratch.ArgumentType.NUMBER, defaultValue: 20 },
+            },
+          },
+          {
+            opcode: "selectFont",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("selectFont"),
+            arguments: {
+              SIZE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "nxtLight",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("nxtLight"),
+            arguments: {
+              PORT: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "sensorPorts",
+                defaultValue: "1",
+              },
+            },
+          },
+          {
+            opcode: "nxtSound",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("nxtSound"),
+            arguments: {
+              PORT: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "sensorPorts",
+                defaultValue: "2",
+              },
+            },
+          },
+          {
+            opcode: "enableStreaming",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("enableStreaming"),
+          },
+          {
+            opcode: "disableStreaming",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("disableStreaming"),
+          },
+          {
+            opcode: "testDiagnostics",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("testDiagnostics"),
+          },
         ],
         menus: {
           connectionModes: {
             items: [
+              { text: "🔎 Auto-detect", value: "auto" },
               { text: "📱 Web Serial (Chrome/Edge)", value: "serial" },
               { text: "🔵 Scratch Link (Bluetooth)", value: "scratchlink" },
               { text: "🌉 Bridge Server (WebSocket)", value: "bridge" },
@@ -4036,6 +4740,86 @@
           },
         },
       };
+    }
+
+    // ---- blocks the consolidation brought in ---------------------------
+
+    /**
+     * What `auto` actually chose. Without this the auto mode is a black box:
+     * a program that fails to reach the brick cannot tell "nothing answered"
+     * from "the wrong transport answered", which is the question you ask
+     * first. Returns the empty string when nothing is connected rather than a
+     * mode name that was only ever a default.
+     */
+    getConnectionMode() {
+      if (!this.ev3.isConnected()) return "";
+      return this.ev3.detectedMode || this.ev3.mode || "";
+    }
+
+    invertRect(args) {
+      return this.ev3.invertRect(
+        _Cast.toNumber(args.X),
+        _Cast.toNumber(args.Y),
+        _Cast.toNumber(args.W),
+        _Cast.toNumber(args.H)
+      );
+    }
+
+    selectFont(args) {
+      return this.ev3.selectFont(_Cast.toNumber(args.SIZE));
+    }
+
+    nxtLight(args) {
+      return this.ev3.readNXTLight(this._sensorPort(args.PORT));
+    }
+
+    nxtSound(args) {
+      return this.ev3.readNXTSound(this._sensorPort(args.PORT));
+    }
+
+    enableStreaming() {
+      this.streamingEnabled = true;
+      log.info("EV3: streaming mode enabled");
+    }
+
+    disableStreaming() {
+      this.streamingEnabled = false;
+      log.info("EV3: streaming mode disabled");
+    }
+
+    testDiagnostics() {
+      return this.showFullDiagnostics();
+    }
+
+    /**
+     * The `motorPorts` menu carries letters and the brick wants a BITMASK
+     * (A=1, B=2, C=4, D=8), so "A+C" is 5. Combinations and ALL are accepted
+     * the way ev3_direct accepted them, and anything unrecognised falls back
+     * to A rather than to 0 — a mask of 0 addresses no motor at all and would
+     * make a mistyped port look like a dead connection.
+     */
+    _ports(value) {
+      const name = String(value == null ? "A" : value)
+        .toUpperCase()
+        .trim();
+      if (name === "ALL") return 0x0f;
+      let mask = 0;
+      for (const ch of name.replace(/[^ABCD]/g, "")) {
+        mask |= 1 << "ABCD".indexOf(ch);
+      }
+      return mask || 1;
+    }
+
+    /** The `sensorPorts` menu is 1-based; opINPUT_* wants a 0-based index. */
+    _sensorPort(value) {
+      const n = parseInt(String(value), 10);
+      return Number.isFinite(n) && n >= 1 && n <= 4 ? n - 1 : 0;
+    }
+
+    /** The ultrasonic sensor reports centimetres; the menu also offers inches. */
+    _scaleDistance(cm, unit) {
+      const v = Number(cm) || 0;
+      return String(unit) === "inch" ? v / 2.54 : v;
     }
 
     async setMode(args) {
@@ -4451,230 +5235,291 @@
 
     // Motor methods (real-time control when connected)
     motorRun(args) {
-      log.debug("motorRun called", args);
+      return this.ev3.motorRun(
+        this._ports(args.PORT),
+        _Cast.toNumber(args.POWER)
+      );
     }
 
     motorRunTime(args) {
-      log.debug("motorRunTime called", args);
+      return this.ev3.motorRunTime(
+        this._ports(args.PORT),
+        _Cast.toNumber(args.POWER),
+        _Cast.toNumber(args.TIME)
+      );
     }
 
     motorRunRotations(args) {
-      log.debug("motorRunRotations called", args);
+      return this.ev3.motorRunRotations(
+        this._ports(args.PORT),
+        _Cast.toNumber(args.POWER),
+        _Cast.toNumber(args.ROTATIONS)
+      );
     }
 
     motorRunDegrees(args) {
-      log.debug("motorRunDegrees called", args);
+      return this.ev3.motorRunDegreesBraked(
+        this._ports(args.PORT),
+        _Cast.toNumber(args.POWER),
+        _Cast.toNumber(args.DEGREES)
+      );
     }
 
     motorStop(args) {
-      log.debug("motorStop called", args);
+      return this.ev3.motorStop(
+        this._ports(args.PORT),
+        String(args.BRAKE) !== "coast"
+      );
     }
 
     motorReset(args) {
-      log.debug("motorReset called", args);
+      return this.ev3.motorReset(this._ports(args.PORT));
     }
 
     motorPolarity(args) {
-      log.debug("motorPolarity called", args);
+      return this.ev3.motorPolarity(
+        this._ports(args.PORT),
+        _Cast.toNumber(args.POLARITY)
+      );
     }
 
     tankDrive(args) {
-      log.debug("tankDrive called", args);
+      return this.ev3.tankDrive(
+        this._ports(args.LEFT),
+        this._ports(args.RIGHT),
+        _Cast.toNumber(args.VALUE),
+        _Cast.toNumber(args.VALUE)
+      );
     }
 
     steerDrive(args) {
-      log.debug("steerDrive called", args);
+      return this.ev3.steerDrive(
+        this._ports("A"),
+        this._ports("B"),
+        _Cast.toNumber(args.STEERING),
+        _Cast.toNumber(args.SPEED)
+      );
     }
 
     motorPosition(args) {
-      log.debug("motorPosition called", args);
-      return 0;
+      return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x00);
     }
 
     motorSpeed(args) {
-      log.debug("motorSpeed called", args);
-      return 0;
+      return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x01);
     }
 
     // Sensor methods
-    touchSensor(args) {
-      log.debug("touchSensor called", args);
-      return false;
+    async touchSensor(args) {
+      return (
+        (await this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x00)) > 0
+      );
     }
 
-    touchSensorBumped(args) {
-      log.debug("touchSensorBumped called", args);
-      return false;
+    async touchSensorBumped(args) {
+      return (
+        (await this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x01)) > 0
+      );
     }
 
     colorSensor(args) {
-      log.debug("colorSensor called", args);
-      return 0;
+      return this.ev3.getSensor(
+        this._sensorPort(args.PORT),
+        0x00,
+        COLOR_MODE[String(args.MODE)] ?? 0
+      );
     }
 
     colorSensorRGB(args) {
-      log.debug("colorSensorRGB called", args);
-      return 0;
+      return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 4);
     }
 
-    ultrasonicSensor(args) {
-      log.debug("ultrasonicSensor called", args);
-      return 0;
+    async ultrasonicSensor(args) {
+      return this._scaleDistance(
+        await this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x00),
+        args.UNIT
+      );
     }
 
-    ultrasonicListen(args) {
-      log.debug("ultrasonicListen called", args);
-      return false;
+    async ultrasonicListen(args) {
+      return (
+        (await this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x02)) > 0
+      );
     }
 
     gyroSensor(args) {
-      log.debug("gyroSensor called", args);
-      return 0;
+      return this.ev3.getSensor(
+        this._sensorPort(args.PORT),
+        0x00,
+        GYRO_MODE[String(args.MODE)] ?? 0
+      );
     }
 
     gyroReset(args) {
-      log.debug("gyroReset called", args);
+      return this.ev3.gyroReset(this._sensorPort(args.PORT));
     }
 
     irProximity(args) {
-      log.debug("irProximity called", args);
-      return 0;
+      return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x00);
     }
 
     irBeaconHeading(args) {
-      log.debug("irBeaconHeading called", args);
-      return 0;
+      return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x01);
     }
 
     irBeaconDistance(args) {
-      log.debug("irBeaconDistance called", args);
-      return 0;
+      return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x01);
     }
 
     irRemoteButton(args) {
-      log.debug("irRemoteButton called", args);
-      return false;
+      return this.ev3.getSensor(this._sensorPort(args.PORT), 0x00, 0x02);
     }
 
     // Display methods
     screenClear() {
-      log.debug("screenClear called");
+      return this.ev3.screenClear();
     }
 
     screenText(args) {
-      log.debug("screenText called", args);
+      return this.ev3.screenText(
+        String(args.TEXT),
+        _Cast.toNumber(args.X),
+        _Cast.toNumber(args.Y),
+        false
+      );
     }
 
     screenTextLarge(args) {
-      log.debug("screenTextLarge called", args);
+      return this.ev3.screenText(
+        String(args.TEXT),
+        _Cast.toNumber(args.X),
+        _Cast.toNumber(args.Y),
+        true
+      );
     }
 
     drawPixel(args) {
-      log.debug("drawPixel called", args);
+      return this.ev3.drawPixel(_Cast.toNumber(args.X), _Cast.toNumber(args.Y));
     }
 
     drawLine(args) {
-      log.debug("drawLine called", args);
+      return this.ev3.drawLine(
+        _Cast.toNumber(args.X1),
+        _Cast.toNumber(args.Y1),
+        _Cast.toNumber(args.X2),
+        _Cast.toNumber(args.Y2)
+      );
     }
 
     drawCircle(args) {
-      log.debug("drawCircle called", args);
+      return this.ev3.drawCircle(
+        _Cast.toNumber(args.X),
+        _Cast.toNumber(args.Y),
+        _Cast.toNumber(args.R),
+        String(args.FILL) === "filled"
+      );
     }
 
     drawRectangle(args) {
-      log.debug("drawRectangle called", args);
+      return this.ev3.drawRect(
+        _Cast.toNumber(args.X),
+        _Cast.toNumber(args.Y),
+        _Cast.toNumber(args.W),
+        _Cast.toNumber(args.H),
+        String(args.FILL) === "filled"
+      );
     }
 
     screenUpdate() {
-      log.debug("screenUpdate called");
+      return this.ev3.screenUpdate();
     }
 
     screenInvert() {
-      log.debug("screenInvert called");
+      return this.ev3.screenInvert();
     }
 
     // Sound methods
     playTone(args) {
-      log.debug("playTone called", args);
+      return this.ev3.playTone(
+        _Cast.toNumber(args.FREQ),
+        _Cast.toNumber(args.MS)
+      );
     }
 
     playNote(args) {
-      log.debug("playNote called", args);
+      return this.ev3.playNote(args.NOTE, _Cast.toNumber(args.DURATION));
     }
 
     beep() {
-      log.debug("beep called");
+      return this.ev3.beep();
     }
 
     setVolume(args) {
-      log.debug("setVolume called", args);
+      return this.ev3.setVolume(_Cast.toNumber(args.VOLUME));
     }
 
     getVolume() {
-      log.debug("getVolume called");
-      return 80;
+      return this.ev3.getVolume();
     }
 
     stopSound() {
-      log.debug("stopSound called");
+      return this.ev3.stopSound();
     }
 
     // LED methods
     setLED(args) {
-      log.debug("setLED called", args);
+      return this.ev3.setLED(
+        LED_PATTERN[String(args.COLOR).toUpperCase()] ?? 0
+      );
     }
 
     ledAllOff() {
-      log.debug("ledAllOff called");
+      return this.ev3.ledAllOff();
     }
 
     // Button methods
-    buttonPressed(args) {
-      log.debug("buttonPressed called", args);
-      return false;
+    async buttonPressed(args) {
+      return (
+        (await this.ev3.getButton(BUTTON_ID[String(args.BUTTON)] ?? 7)) > 0
+      );
     }
 
     waitForButton(args) {
-      log.debug("waitForButton called", args);
+      return this.ev3.waitForButton(BUTTON_ID[String(args.BUTTON)] ?? 7);
     }
 
     // System methods
     batteryLevel() {
-      log.debug("batteryLevel called");
-      return 100;
+      return this.ev3.getBatteryLevel();
     }
 
     batteryCurrent() {
-      log.debug("batteryCurrent called");
-      return 0;
+      return this.ev3.getBatteryCurrent();
     }
 
     batteryVoltage() {
-      log.debug("batteryVoltage called");
-      return 9.0;
+      return this.ev3.getBatteryVoltage();
     }
 
     freeMemory() {
-      log.debug("freeMemory called");
-      return 0;
+      return this.ev3.freeMemory();
     }
 
     // Timer methods
     resetTimer(args) {
-      log.debug("resetTimer called", args);
+      return this.ev3.resetTimer();
     }
 
     timerValue(args) {
-      log.debug("timerValue called", args);
-      return 0;
+      return this.ev3.readTimer();
     }
 
     waitSeconds(args) {
-      log.debug("waitSeconds called", args);
+      return this.ev3.waitSeconds(_Cast.toNumber(args.TIME));
     }
 
     waitMillis(args) {
-      log.debug("waitMillis called", args);
+      return this.ev3.waitMillis(_Cast.toNumber(args.TIME));
     }
 
     // Utility methods
