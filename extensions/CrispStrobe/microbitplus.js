@@ -17,6 +17,13 @@
   class MicrobitPlus {
     constructor(runtime) {
       this._runtime = runtime;
+      // A new run is a new game: the score and lives start over on the
+      // green flag, as they do when a MakeCode program starts.
+      if (runtime && typeof runtime.on === "function") {
+        runtime.on("PROJECT_START", () => {
+          this._gameState = null;
+        });
+      }
     }
 
     // ---- the circuit board, if one is open ---------------------------
@@ -109,6 +116,29 @@
                 menu: "onoff",
               },
             },
+          },
+          {
+            opcode: "toggle",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "toggle x [X] y [Y]",
+            arguments: { ...n("X", 0), ...n("Y", 0) },
+          },
+          {
+            opcode: "plotbargraph",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "plot bar graph of [VALUE] up to [HIGH]",
+            arguments: { ...n("VALUE", 0), ...n("HIGH", 0) },
+          },
+          {
+            opcode: "setbrightness",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set display brightness to [BRIGHTNESS]",
+            arguments: n("BRIGHTNESS", 255),
+          },
+          {
+            opcode: "stopanimation",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "stop animation",
           },
 
           // ── Buttons, logo, gestures (events) ─────────────────────
@@ -353,6 +383,19 @@
             },
           },
 
+          {
+            opcode: "map",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "map [VALUE] from low [FROMLOW] high [FROMHIGH] to low [TOLOW] high [TOHIGH]",
+            arguments: {
+              ...n("VALUE", 0),
+              ...n("FROMLOW", 0),
+              ...n("FROMHIGH", 1023),
+              ...n("TOLOW", 0),
+              ...n("TOHIGH", 4),
+            },
+          },
+
           // ── Actuators ────────────────────────────────────────────
           "---",
           {
@@ -403,6 +446,37 @@
               },
               ...n("SPD", 0),
             },
+          },
+
+          // ── Game: score and lives (MakeCode's `game`) ───────────
+          "---",
+          {
+            opcode: "addscore",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "change game score by [POINTS]",
+            arguments: n("POINTS", 1),
+          },
+          {
+            opcode: "setscore",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set game score to [VALUE]",
+            arguments: n("VALUE", 0),
+          },
+          {
+            opcode: "score",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "game score",
+          },
+          {
+            opcode: "removelife",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "remove game life [LIFE]",
+            arguments: n("LIFE", 1),
+          },
+          {
+            opcode: "gameover",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "game over",
           },
 
           // ── Radio ────────────────────────────────────────────────
@@ -536,6 +610,10 @@
     scrolltext() {}
     cleardisplay() {}
     plot() {}
+    toggle() {}
+    plotbargraph() {}
+    setbrightness() {}
+    stopanimation() {}
 
     // ── Events: buttons, logo, gestures ───────────────────────
     whenbutton() {
@@ -654,12 +732,48 @@
       return false;
     }
 
+    // MakeCode's pins.map, as MakeCode computes it — pure arithmetic, so it
+    // gives the same number here as on the board.
+    map(args) {
+      const v = Number(args.VALUE) || 0;
+      const a = Number(args.FROMLOW) || 0;
+      const b = Number(args.FROMHIGH) || 0;
+      const c = Number(args.TOLOW) || 0;
+      const d = Number(args.TOHIGH) || 0;
+      return ((v - a) * (d - c)) / (b - a) + c;
+    }
+
     // ── Actuators ────────────────────────────────────────────
     playtone() {}
     playnote() {}
     stoptone() {}
     servo() {}
     servocont() {}
+
+    // ── Game ─────────────────────────────────────────────────
+    // The score and lives are plain numbers, so they are kept here too and a
+    // program that counts can be watched in the editor. They start where
+    // MakeCode's do (0 points, 3 lives) and clamp where its setScore/setLife
+    // do. Game over itself is a display sequence, which the simulator draws.
+    _game() {
+      if (!this._gameState) this._gameState = { score: 0, life: 3 };
+      return this._gameState;
+    }
+    addscore(args) {
+      const g = this._game();
+      g.score = Math.max(0, g.score + (Number(args.POINTS) || 0));
+    }
+    setscore(args) {
+      this._game().score = Math.max(0, Number(args.VALUE) || 0);
+    }
+    score() {
+      return this._game().score;
+    }
+    removelife(args) {
+      const g = this._game();
+      g.life = Math.max(0, g.life - (Number(args.LIFE) || 0));
+    }
+    gameover() {}
 
     // ── Radio ────────────────────────────────────────────────
     radioon() {}
