@@ -32,6 +32,10 @@ jobs:
       - name: Prettier (--check) on CrispStrobe extensions
         run: npx prettier --check 'extensions/CrispStrobe/**/*.js'
 
+      # Pure protocol encoders that can be checked without hardware.
+      - name: Circuit Cubes protocol tests
+        run: node development/test-circuitcubes.js
+
   validate:
     name: Gallery validate (informational)
     runs-on: ubuntu-latest
