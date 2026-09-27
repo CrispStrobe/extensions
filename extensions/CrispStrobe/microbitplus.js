@@ -285,6 +285,11 @@
             },
           },
           {
+            opcode: "islogo",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "logo touched?",
+          },
+          {
             opcode: "whenlogo",
             blockType: Scratch.BlockType.HAT,
             isEdgeActivated: true,
@@ -535,6 +540,72 @@
           // MakeCode's music timing and melodies. A beat is 60000 / tempo ms
           // and its fractions shift it; a note's frequency is MakeCode's Note
           // enum, by member name, so `Note.FSharp5` round-trips as itself.
+          // MakeCode's music.play(tonePlayable) with its playback mode, the V2
+          // built-in sounds and createSoundEffect. Sound itself is the
+          // simulator's (audio.SoundEffect in MicroPython V2), as for playtone.
+          {
+            opcode: "playtonemode",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "play tone [FREQ] Hz for [MS] ms [MODE]",
+            arguments: {
+              ...n("FREQ", 262),
+              ...n("MS", 500),
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "until done",
+                menu: "soundMode",
+              },
+            },
+          },
+          {
+            opcode: "playsound",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "play sound [SOUND] [MODE]",
+            arguments: {
+              SOUND: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "giggle",
+                menu: "builtinSound",
+              },
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "until done",
+                menu: "soundMode",
+              },
+            },
+          },
+          {
+            opcode: "playsoundeffect",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "play sound effect [WAVE] from [FROM] to [TO] Hz volume [VFROM] to [VTO] for [MS] ms effect [FX] curve [CURVE] [MODE]",
+            arguments: {
+              WAVE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "square",
+                menu: "waveShape",
+              },
+              ...n("FROM", 5000),
+              ...n("TO", 0),
+              ...n("VFROM", 255),
+              ...n("VTO", 0),
+              ...n("MS", 500),
+              FX: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "none",
+                menu: "soundFx",
+              },
+              CURVE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "linear",
+                menu: "soundCurve",
+              },
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "until done",
+                menu: "soundMode",
+              },
+            },
+          },
           {
             opcode: "rest",
             blockType: Scratch.BlockType.COMMAND,
@@ -695,6 +766,11 @@
             text: "last radio number",
           },
           {
+            opcode: "radiorssi",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "last radio signal strength",
+          },
+          {
             opcode: "whenradiostr",
             blockType: Scratch.BlockType.HAT,
             isEdgeActivated: true,
@@ -795,6 +871,37 @@
             acceptReporters: false,
             items: ["until done", "in background", "looping in background"],
           },
+          soundMode: {
+            acceptReporters: false,
+            items: ["until done", "in background"],
+          },
+          builtinSound: {
+            acceptReporters: false,
+            items: [
+              "giggle",
+              "happy",
+              "hello",
+              "mysterious",
+              "sad",
+              "slide",
+              "soaring",
+              "spring",
+              "twinkle",
+              "yawn",
+            ],
+          },
+          waveShape: {
+            acceptReporters: false,
+            items: ["sine", "sawtooth", "triangle", "square", "noise"],
+          },
+          soundFx: {
+            acceptReporters: false,
+            items: ["none", "vibrato", "tremolo", "warble"],
+          },
+          soundCurve: {
+            acceptReporters: false,
+            items: ["linear", "curve", "logarithmic"],
+          },
           connState: {
             acceptReporters: false,
             items: ["connected", "disconnected"],
@@ -828,6 +935,9 @@
       return false;
     }
     whenlogo() {
+      return false;
+    }
+    islogo() {
       return false;
     }
     whengesture() {
@@ -953,6 +1063,9 @@
     playnote() {}
     stoptone() {}
     rest() {}
+    playtonemode() {}
+    playsound() {}
+    playsoundeffect() {}
     playmelody() {}
 
     // The timing is plain arithmetic, so it is kept here too: a beat reads
@@ -1029,6 +1142,9 @@
     }
     radiolaststr() {
       return "";
+    }
+    radiorssi() {
+      return 0;
     }
 
     // ── Connection ───────────────────────────────────────────
