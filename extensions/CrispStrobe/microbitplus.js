@@ -100,6 +100,27 @@
     "PowerDown",
   ];
 
+  // Math.clamp as pxt-core defines it: min(high, max(low, v)), NaN stays NaN.
+  const clamp = (low, high, v) => Math.min(high, Math.max(low, v));
+  // LedSpriteProperty -> the field that holds it.
+  const SPRITE_KEYS = {
+    x: "x",
+    y: "y",
+    direction: "dir",
+    brightness: "brightness",
+    blink: "blink",
+  };
+  // game.ts move(): the step per LED for each direction; anything else is -135.
+  const SPRITE_STEPS = {
+    0: [0, -1],
+    45: [1, -1],
+    90: [1, 0],
+    135: [1, 1],
+    180: [0, 1],
+    "-45": [-1, -1],
+    "-90": [-1, 0],
+  };
+
   class MicrobitPlus {
     constructor(runtime) {
       this._runtime = runtime;
@@ -656,6 +677,156 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "game over",
           },
+          {
+            opcode: "startcountdown",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "start countdown [MS] ms",
+            arguments: n("MS", 10000),
+          },
+          {
+            opcode: "setlife",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set game life to [VALUE]",
+            arguments: n("VALUE", 3),
+          },
+          {
+            opcode: "addlife",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "add game life [LIVES]",
+            arguments: n("LIVES", 1),
+          },
+          {
+            opcode: "life",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "game life",
+          },
+          {
+            opcode: "isgameover",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "game is over",
+          },
+          {
+            opcode: "isrunning",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "game is running",
+          },
+          {
+            opcode: "ispaused",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "game is paused",
+          },
+          {
+            opcode: "pausegame",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "pause game",
+          },
+          {
+            opcode: "resumegame",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "resume game",
+          },
+
+          // ── LED sprites (MakeCode's game.LedSprite) ─────────────
+          // A sprite is a numbered handle (1, 2, 3 in creation order; 0 is
+          // none), kept in an ordinary variable or list.
+          "---",
+          {
+            opcode: "createsprite",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "create sprite at x [X] y [Y]",
+            arguments: { ...n("X", 2), ...n("Y", 2) },
+          },
+          {
+            opcode: "spriteget",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "[PROPERTY] of sprite [SPRITE]",
+            arguments: {
+              PROPERTY: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "x",
+                menu: "spriteProperty",
+              },
+              ...n("SPRITE", 1),
+            },
+          },
+          {
+            opcode: "spriteset",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set sprite [SPRITE] [PROPERTY] to [VALUE]",
+            arguments: {
+              ...n("SPRITE", 1),
+              PROPERTY: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "x",
+                menu: "spriteProperty",
+              },
+              ...n("VALUE", 0),
+            },
+          },
+          {
+            opcode: "spritechange",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "change sprite [SPRITE] [PROPERTY] by [VALUE]",
+            arguments: {
+              ...n("SPRITE", 1),
+              PROPERTY: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "x",
+                menu: "spriteProperty",
+              },
+              ...n("VALUE", 1),
+            },
+          },
+          {
+            opcode: "spritemove",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "move sprite [SPRITE] by [LEDS]",
+            arguments: { ...n("SPRITE", 1), ...n("LEDS", 1) },
+          },
+          {
+            opcode: "spriteturn",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "turn sprite [SPRITE] [DIRECTION] by [DEGREES] degrees",
+            arguments: {
+              ...n("SPRITE", 1),
+              DIRECTION: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "right",
+                menu: "turnDirection",
+              },
+              ...n("DEGREES", 45),
+            },
+          },
+          {
+            opcode: "spritebounce",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "bounce sprite [SPRITE] if on edge",
+            arguments: n("SPRITE", 1),
+          },
+          {
+            opcode: "spritedelete",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "delete sprite [SPRITE]",
+            arguments: n("SPRITE", 1),
+          },
+          {
+            opcode: "spritetouching",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "sprite [SPRITE] touching sprite [OTHER]",
+            arguments: { ...n("SPRITE", 1), ...n("OTHER", 2) },
+          },
+          {
+            opcode: "spritetouchingedge",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "sprite [SPRITE] touching edge",
+            arguments: n("SPRITE", 1),
+          },
+          {
+            opcode: "spritedeleted",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "sprite [SPRITE] deleted",
+            arguments: n("SPRITE", 1),
+          },
 
           // ── Radio ────────────────────────────────────────────────
           "---",
@@ -799,6 +970,12 @@
             acceptReporters: false,
             items: ["connected", "disconnected"],
           },
+          // MakeCode's LedSpriteProperty, in its order.
+          spriteProperty: {
+            acceptReporters: false,
+            items: ["x", "y", "direction", "brightness", "blink"],
+          },
+          turnDirection: { acceptReporters: false, items: ["right", "left"] },
         },
       };
     }
@@ -994,7 +1171,8 @@
     // MakeCode's do (0 points, 3 lives) and clamp where its setScore/setLife
     // do. Game over itself is a display sequence, which the simulator draws.
     _game() {
-      if (!this._gameState) this._gameState = { score: 0, life: 3 };
+      if (!this._gameState)
+        this._gameState = { score: 0, life: 3, paused: false, sprites: [] };
       return this._gameState;
     }
     addscore(args) {
@@ -1012,6 +1190,151 @@
       g.life = Math.max(0, g.life - (Number(args.LIFE) || 0));
     }
     gameover() {}
+    startcountdown() {}
+    setlife(args) {
+      this._game().life = Math.max(0, Number(args.VALUE) || 0);
+    }
+    addlife(args) {
+      const g = this._game();
+      g.life = Math.max(0, g.life + (Number(args.LIVES) || 0));
+    }
+    life() {
+      return this._game().life;
+    }
+    isgameover() {
+      return false;
+    }
+    isrunning() {
+      const g = this._game();
+      return !g.paused && g.sprites.length > 0;
+    }
+    ispaused() {
+      return this._game().paused;
+    }
+    pausegame() {
+      this._game().paused = true;
+    }
+    resumegame() {
+      this._game().paused = false;
+    }
+
+    // ── LED sprites ──────────────────────────────────────────
+    // The sprites' STATE, as pxt-microbit 9.1.1 libs/core/game.ts keeps it, so
+    // a sprite program's numbers can be watched in the editor; the picture is
+    // the MicroPython simulator's, like the rest of the display group. A handle
+    // that names no sprite does nothing and reads 0.
+    _sprite(handle) {
+      const h = Math.floor(Number(handle));
+      const list = this._game().sprites;
+      return h >= 1 && h <= list.length ? list[h - 1] : null;
+    }
+    _setDirection(s, degrees) {
+      // (Math.floor(d / 45) % 8) * 45, JavaScript's remainder, folded into -135..180
+      let d = (Math.floor(degrees / 45) % 8) * 45;
+      if (d <= -180) d += 360;
+      else if (d > 180) d -= 360;
+      s.dir = d;
+    }
+    createsprite(args) {
+      const list = this._game().sprites;
+      list.push({
+        x: clamp(0, 4, Number(args.X) || 0),
+        y: clamp(0, 4, Number(args.Y) || 0),
+        dir: 90,
+        brightness: 255,
+        // MakeCode never initialises a sprite's blink: changing it gives NaN.
+        blink: NaN,
+        alive: true,
+      });
+      return list.length;
+    }
+    spriteget(args) {
+      const s = this._sprite(args.SPRITE);
+      if (!s) return 0;
+      const key = SPRITE_KEYS[String(args.PROPERTY).toLowerCase()] || "x";
+      return s[key];
+    }
+    _spriteSet(s, property, value) {
+      switch (String(property).toLowerCase()) {
+        case "y":
+          s.y = clamp(0, 4, value);
+          break;
+        case "direction":
+          this._setDirection(s, value);
+          break;
+        case "brightness":
+          s.brightness = clamp(0, 255, value);
+          break;
+        case "blink":
+          s.blink = clamp(0, 10000, value);
+          break;
+        default:
+          s.x = clamp(0, 4, value);
+      }
+    }
+    spriteset(args) {
+      const s = this._sprite(args.SPRITE);
+      if (s) this._spriteSet(s, args.PROPERTY, Number(args.VALUE) || 0);
+    }
+    spritechange(args) {
+      const s = this._sprite(args.SPRITE);
+      if (!s) return;
+      const key = SPRITE_KEYS[String(args.PROPERTY).toLowerCase()] || "x";
+      this._spriteSet(s, args.PROPERTY, s[key] + (Number(args.VALUE) || 0));
+    }
+    spritemove(args) {
+      const s = this._sprite(args.SPRITE);
+      if (!s) return;
+      const n = Number(args.LEDS) || 0;
+      const step = SPRITE_STEPS[s.dir] || [-1, 1];
+      s.x = clamp(0, 4, s.x + step[0] * n);
+      s.y = clamp(0, 4, s.y + step[1] * n);
+    }
+    spriteturn(args) {
+      const s = this._sprite(args.SPRITE);
+      if (!s) return;
+      const deg = Number(args.DEGREES) || 0;
+      const left = String(args.DIRECTION).toLowerCase() === "left";
+      this._setDirection(s, left ? s.dir - deg : s.dir + deg);
+    }
+    spritebounce(args) {
+      const s = this._sprite(args.SPRITE);
+      if (!s) return;
+      const { x, y, dir } = s;
+      if (dir === 0 && y === 0) s.dir = 180;
+      else if (dir === 45 && (x === 4 || y === 0))
+        s.dir = x === 0 && y === 0 ? -135 : y === 0 ? 135 : -45;
+      else if (dir === 90 && x === 4) s.dir = -90;
+      else if (dir === 135 && (x === 4 || y === 4))
+        s.dir = x === 4 && y === 4 ? -45 : y === 4 ? 45 : -135;
+      else if (dir === 180 && y === 4) s.dir = 0;
+      else if (dir === -45 && (x === 0 || y === 0))
+        s.dir = x === 0 && y === 0 ? 135 : y === 0 ? -135 : 45;
+      else if (dir === -90 && x === 0) s.dir = 90;
+      else if (dir === -135 && (x === 0 || y === 4))
+        s.dir = x === 0 && y === 4 ? 45 : y === 4 ? -45 : 135;
+    }
+    spritedelete(args) {
+      const s = this._sprite(args.SPRITE);
+      if (s) s.alive = false;
+    }
+    spritetouching(args) {
+      const s = this._sprite(args.SPRITE);
+      const t = this._sprite(args.OTHER);
+      return !!(s && t && s.alive && t.alive && s.x === t.x && s.y === t.y);
+    }
+    spritetouchingedge(args) {
+      const s = this._sprite(args.SPRITE);
+      return !!(
+        s &&
+        s.alive &&
+        (s.x === 0 || s.x === 4 || s.y === 0 || s.y === 4)
+      );
+    }
+    spritedeleted(args) {
+      const s = this._sprite(args.SPRITE);
+      return !!(s && !s.alive);
+    }
 
     // ── Radio ────────────────────────────────────────────────
     radioon() {}
