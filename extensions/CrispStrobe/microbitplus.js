@@ -173,6 +173,30 @@
               },
             },
           },
+          // MakeCode's basic.showLeds and basic.showIcon: the same picture
+          // as `show pattern`, then the pause each one makes (400 / 600 ms).
+          {
+            opcode: "showleds",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "show leds [MATRIX]",
+            arguments: {
+              MATRIX: {
+                type: Scratch.ArgumentType.MATRIX,
+                defaultValue: "0101010101100010101000100",
+              },
+            },
+          },
+          {
+            opcode: "showicon",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "show icon [MATRIX]",
+            arguments: {
+              MATRIX: {
+                type: Scratch.ArgumentType.MATRIX,
+                defaultValue: "0101010101100010101000100",
+              },
+            },
+          },
           {
             opcode: "showtext",
             blockType: Scratch.BlockType.COMMAND,
@@ -785,6 +809,8 @@
     // projects load and so the compiler's opcode table stays complete.
     // ── Display (no-op — sim renders via MicroPython) ───────────
     showmatrix() {}
+    showleds() {}
+    showicon() {}
     showtext() {}
     scrolltext() {}
     cleardisplay() {}
