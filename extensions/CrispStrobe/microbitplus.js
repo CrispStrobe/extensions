@@ -219,6 +219,15 @@
             },
           },
           {
+            // MakeCode's basic.showNumber: it waits while the number is shown
+            // (a digit 5 x interval ms, a longer number while it scrolls), where
+            // `display` moves on at once.
+            opcode: "shownumber",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "show number [VALUE] delay [MS] ms",
+            arguments: { ...n("VALUE", 0), ...n("MS", 150) },
+          },
+          {
             opcode: "showtext",
             blockType: Scratch.BlockType.COMMAND,
             text: "show text [TEXT]",
@@ -1095,6 +1104,7 @@
     showmatrix() {}
     showleds() {}
     showicon() {}
+    shownumber() {}
     showtext() {}
     scrolltext() {}
     cleardisplay() {}
