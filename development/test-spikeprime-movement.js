@@ -281,6 +281,43 @@ test("the MotorPair line is valid Python (python3, when present)", async () => {
   assert.equal(run.stdout, "stop ('A', 'B')\npair ('C', 'D')\n");
 });
 
+test("a SPIKE 3 notification with a 3x3 matrix record keeps the records after it", () => {
+  const ext = loadExtension();
+  const hub = ext._peripheral._spike3;
+  // Header (0x3c + size), a 3x3 matrix on port F, then a distance sensor on
+  // port A reading 345 mm. Before the 0x0e case the parser stopped at the
+  // matrix record, so every record after it was lost.
+  const records = [
+    0x0e,
+    5,
+    9,
+    0,
+    0,
+    0,
+    9,
+    0,
+    0,
+    0,
+    9,
+    0x0d,
+    0,
+    345 & 0xff,
+    345 >> 8,
+  ];
+  const data = Uint8Array.from([
+    0x3c,
+    records.length & 0xff,
+    records.length >> 8,
+    ...records,
+  ]);
+  hub._handleDeviceNotification(data);
+  assert.equal(
+    JSON.stringify(hub.portValues.F),
+    JSON.stringify({ type: "matrix3", pixels: [9, 0, 0, 0, 9, 0, 0, 0, 9] })
+  );
+  assert.equal(hub.portValues.A.distance, 34.5);
+});
+
 let failed = 0;
 for (const { name, fn } of tests) {
   try {

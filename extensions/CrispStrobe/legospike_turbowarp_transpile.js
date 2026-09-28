@@ -2662,6 +2662,20 @@ continuous_sensor_loop()
             break;
           }
 
+          case SPIKE3.DEV_MATRIX_3X3: {
+            // Type, port and nine pixel bytes, as emitted by the SPIKE 3 hub.
+            if (remaining < 11) return;
+            const port = SpikePorts[data[offset + 1]];
+            if (port) {
+              this._portValues[port] = {
+                type: "matrix3",
+                pixels: Array.from(data.slice(offset + 2, offset + 11)),
+              };
+            }
+            offset += 11;
+            break;
+          }
+
           default:
             // An unknown record has an unknown width, so the rest of the
             // payload cannot be walked safely. Stop rather than guess.
