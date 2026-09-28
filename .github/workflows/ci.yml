@@ -32,6 +32,10 @@ jobs:
       - name: Prettier (--check) on CrispStrobe extensions
         run: npx prettier --check 'extensions/CrispStrobe/**/*.js'
 
+      # Movement blocks of the unified SPIKE extension, against a stub hub.
+      - name: SPIKE movement tests
+        run: node development/test-spikeprime-movement.js
+
   validate:
     name: Gallery validate (informational)
     runs-on: ubuntu-latest
