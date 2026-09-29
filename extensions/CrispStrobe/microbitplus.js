@@ -101,6 +101,14 @@
   ];
 
   // Math.clamp as pxt-core defines it: min(high, max(low, v)), NaN stays NaN.
+  // The micro:bit's default analog period is 20 ms (MakeCode and MicroPython
+  // alike), and a servo frame is 20 ms with CODAL's default range 2000 us
+  // about a 1500 us centre, i.e. 500..2500 us for 0..180 degrees.
+  const ANALOG_HZ = 50;
+  const SERVO_HZ = 50;
+  const SERVO_MIN_US = 500;
+  const SERVO_RANGE_US = 2000;
+
   const clamp = (low, high, v) => Math.min(high, Math.max(low, v));
   // LedSpriteProperty -> the field that holds it.
   const SPRITE_KEYS = {
@@ -1360,16 +1368,21 @@
     analogwrite(args) {
       const board = this.board;
       if (!board) return;
-      // There is no PWM in the solver: a duty cycle is a time average and
-      // the board is solved per instant. So this drives high above half
-      // and low below it — right at both ends of the range and wrong in
-      // the middle, which is stated here rather than presented as dimming.
       const pct = Number(args.PCT);
-      board.setPin(
-        this._pinId(args.PIN),
-        "pushpull",
-        isFinite(pct) && pct >= 50
-      );
+      const pin = this._pinId(args.PIN);
+      // A PWM the board switches itself (bw-board setPwm): the pin really
+      // toggles at the duty's edges, so an LED on it dims and a motor slows.
+      // 50 Hz is the micro:bit's default analog period (20 ms), the same
+      // carrier the MakeCode simulator bridge uses.
+      if (typeof board.setPwm === "function" && isFinite(pct)) {
+        board.setPwm(pin, Math.max(0, Math.min(100, pct)), {
+          hz: ANALOG_HZ,
+        });
+        return;
+      }
+      // A board older than setPwm can only take a level: high above half,
+      // low below — right at both ends of the range and wrong in the middle.
+      board.setPin(pin, "pushpull", isFinite(pct) && pct >= 50);
     }
 
     setpull(args) {
@@ -1441,8 +1454,30 @@
     tempo() {
       return this._bpm();
     }
-    servo() {}
-    servocont() {}
+    // A servo is driven the way the micro:bit drives one: CODAL's
+    // setServoValue(angle) is a 50 Hz frame whose pulse is
+    // 500 + angle * 2000 / 180 us (range 2000, centre 1500). The board's
+    // servo decodes that pulse from the pin, so the horn and the angle
+    // reporter follow the program. A board without setPwm cannot carry a
+    // pulse train and is left alone rather than given a guessed level.
+    _servoPulse(pin, degrees) {
+      const board = this.board;
+      if (!board || typeof board.setPwm !== "function") return;
+      const deg = Math.max(0, Math.min(180, Number(degrees) || 0));
+      board.setPwm(this._pinId(pin), 0, {
+        hz: SERVO_HZ,
+        pulseUs: SERVO_MIN_US + (deg * SERVO_RANGE_US) / 180,
+      });
+    }
+    servo(args) {
+      this._servoPulse(args.PIN, args.DEG);
+    }
+    // MakeCode's servos.ContinuousServo.run(speed): -100..100 % mapped onto
+    // 0..180 degrees (stop at 90), then the same pulse.
+    servocont(args) {
+      const spd = Math.max(-100, Math.min(100, Number(args.SPD) || 0));
+      this._servoPulse(args.PIN, ((spd + 100) * 180) / 200);
+    }
 
     // ── Game ─────────────────────────────────────────────────
     // The score and lives are plain numbers, so they are kept here too and a
