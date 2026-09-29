@@ -342,6 +342,44 @@ test("two commands sent in the same millisecond both reach the hub, in order", a
   assert.ok(text[0].length > 0 && text[1].length > 0);
 });
 
+// SPIKE 3 device notifications read back through the blocks. The AXIS menu
+// names a rotation; the hub's gyro is per sensor axis, and yaw is about z.
+test("gyro rate [yaw] reads the IMU record's z rate (and pitch y, roll x)", () => {
+  const ext = loadExtension();
+  ext._peripheral._activeProtocol = "spike3";
+  const imu = new Uint8Array(21);
+  imu[0] = 0x01;
+  const view = new DataView(imu.buffer);
+  view.setInt16(15, 11, true); // gyro x
+  view.setInt16(17, -22, true); // gyro y
+  view.setInt16(19, 90, true); // gyro z
+  ext._peripheral._spike3._handleDeviceNotification(
+    Uint8Array.from([0x3c, imu.length, 0, ...imu])
+  );
+  assert.equal(ext.getGyroRate({ AXIS: "yaw" }), 90);
+  assert.equal(ext.getGyroRate({ AXIS: "pitch" }), -22);
+  assert.equal(ext.getGyroRate({ AXIS: "roll" }), 11);
+  assert.equal(ext.getFilteredGyroRate({ AXIS: "yaw" }), 90);
+});
+
+test("raw colour channels read the colour record's red, green and blue", () => {
+  const ext = loadExtension();
+  ext._peripheral._activeProtocol = "spike3";
+  const record = new Uint8Array(9);
+  record.set([0x0c, 2, 9]); // port C, colour red
+  const view = new DataView(record.buffer);
+  view.setUint16(3, 900, true);
+  view.setUint16(5, 150, true);
+  view.setUint16(7, 140, true);
+  ext._peripheral._spike3._handleDeviceNotification(
+    Uint8Array.from([0x3c, record.length, 0, ...record])
+  );
+  assert.equal(ext.getColorRGB({ PORT: "C", CHANNEL: "red" }), 900);
+  assert.equal(ext.getColorRGB({ PORT: "C", CHANNEL: "green" }), 150);
+  assert.equal(ext.getColorRGB({ PORT: "C", CHANNEL: "blue" }), 140);
+  assert.equal(ext.getColorRGB({ PORT: "D", CHANNEL: "red" }), 0);
+});
+
 let failed = 0;
 for (const { name, fn } of tests) {
   try {
