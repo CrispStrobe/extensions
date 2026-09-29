@@ -636,15 +636,37 @@
       this._lastSendTime = 0;
       this._sendInterval = 1000 / maxRate;
     }
-    okayToSend() {
+    /**
+     * Reserves the next send slot and returns how many milliseconds to wait
+     * for it (0 = send now). Slots are handed out in call order, so commands
+     * keep their order and none is lost.
+     *
+     * The limiter used to DROP a command that came too soon after the previous
+     * one (okayToSend() returned false and the send was skipped), and said so
+     * to nobody. Two blocks that run within 25 ms of each other --
+     * which happens whenever a busy browser fires two VM steps back to back --
+     * lost the second: "start moving" vanished after "set movement speed",
+     * and the robot never moved. A command is a request the program made; it
+     * is delayed, never discarded. The caller's promise resolves when it is
+     * actually sent, so a block that sends in a loop waits for its slot
+     * instead of queueing without bound.
+     */
+    reserve() {
       const now = Date.now();
-      if (now - this._lastSendTime >= this._sendInterval) {
-        this._lastSendTime = now;
-        return true;
-      }
-      return false;
+      const slot = Math.max(now, this._lastSendTime + this._sendInterval);
+      this._lastSendTime = slot;
+      return slot - now;
     }
   }
+
+  /** Runs send() in the limiter's next slot; see RateLimiter.reserve. */
+  const whenSlot = (limiter, isConnected, send) => {
+    const wait = limiter.reserve();
+    if (wait <= 0) return send();
+    return new Promise((resolve) => setTimeout(resolve, wait)).then(() =>
+      isConnected() ? send() : undefined
+    );
+  };
 
   // ============================================================================
   // JSONRPC CLASS
@@ -1784,8 +1806,13 @@
      */
     sendRaw(text, useLimiter = false, id = null) {
       if (!this.isConnected()) return Promise.resolve();
-      if (useLimiter && !this._rateLimiter.okayToSend())
-        return Promise.resolve();
+      if (useLimiter) {
+        return whenSlot(
+          this._rateLimiter,
+          () => this.isConnected(),
+          () => this.sendRaw(text, false, id)
+        );
+      }
 
       const options = {
         message: Base64Util.uint8ArrayToBase64(new TextEncoder().encode(text)),
@@ -2396,8 +2423,13 @@ continuous_sensor_loop()
 
     _send(message, useLimiter = false) {
       if (!this.isConnected()) return Promise.resolve();
-      if (useLimiter && !this._rateLimiter.okayToSend())
-        return Promise.resolve();
+      if (useLimiter) {
+        return whenSlot(
+          this._rateLimiter,
+          () => this.isConnected(),
+          () => this._send(message, false)
+        );
+      }
       const packed = COBS.pack(message);
       return Promise.resolve(
         this._link.write(

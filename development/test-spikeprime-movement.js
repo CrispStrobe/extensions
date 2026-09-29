@@ -46,6 +46,8 @@ function loadExtension() {
     setInterval: () => 0,
     clearInterval: () => {},
     TextEncoder,
+    btoa,
+    atob,
     Date,
     Promise,
   });
@@ -316,6 +318,28 @@ test("a SPIKE 3 notification with a 3x3 matrix record keeps the records after it
     JSON.stringify({ type: "matrix3", pixels: [9, 0, 0, 0, 9, 0, 0, 0, 9] })
   );
   assert.equal(hub.portValues.A.distance, 34.5);
+});
+
+test("two commands sent in the same millisecond both reach the hub, in order", async () => {
+  const ext = loadExtension();
+  const hub = ext._peripheral._spike3;
+  const writes = [];
+  hub._link = {
+    isConnected: () => true,
+    write: (_service, _char, base64) => {
+      writes.push(Buffer.from(base64, "base64"));
+      return Promise.resolve();
+    },
+  };
+  // Back to back, as two blocks do when a busy browser fires two VM steps
+  // within one rate-limit interval. The second used to be dropped silently.
+  const first = hub.sendPythonCommand("motors.set_default_speed(30)");
+  const second = hub.sendPythonCommand("motors.start(0, speed=30)");
+  assert.equal(writes.length, 1, "the first goes at once");
+  await Promise.all([first, second]);
+  assert.equal(writes.length, 2, "the second is delayed, not lost");
+  const text = writes.map((w) => w.toString("latin1"));
+  assert.ok(text[0].length > 0 && text[1].length > 0);
 });
 
 let failed = 0;
