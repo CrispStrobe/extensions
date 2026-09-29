@@ -38,10 +38,79 @@
     return "8051";
   }
 
-  /** The board state this extension maintains, for whoever is watching. */
+  /**
+   * The extension's own record of what the program wrote. It is the answer a
+   * read gives when no circuit is attached, and the store for the frame
+   * buffers and part state the circuit layer does not model yet. It is NOT how
+   * a pin reaches the circuit: for a long time it was the only place a pin
+   * write went, and nothing read it, so `turn on LED` lit nothing even on a
+   * wired bench. The circuit is reached through circuitBoard() below.
+   */
   function board(runtime) {
     if (!runtime._stc12Pins) runtime._stc12Pins = Object.create(null);
     return runtime._stc12Pins;
+  }
+
+  /**
+   * The simulated board the Circuit tab publishes (vm.runtime.circuitBoard,
+   * the same seam the devices, circuit and micro:bit+ extensions use), or
+   * null when no circuit is attached.
+   */
+  function circuitBoard(runtime) {
+    const b = runtime && runtime.circuitBoard;
+    return b && typeof b.setPin === "function" ? b : null;
+  }
+
+  /**
+   * The board terminal a PIN declaration names. The same mapping the stc12
+   * JS/Python drivers use: 8051 pins are P<port>.<bit>; board-class devices
+   * (Nano D13/A0, Pico GP25, Mega D22) carry their terminal in `where`. A
+   * 6502 VIA pin (PA0..PB7) is the eater6502 part's via1.pa0..via1.pb7.
+   */
+  function terminalOf(p) {
+    if (p.port !== undefined && p.port !== null && p.bit !== undefined)
+      return "P" + p.port + "." + p.bit;
+    if (p.portLetter)
+      return "via1.p" + String(p.portLetter).toLowerCase() + p.bit;
+    return String(p.where || p.pin || p.name).toLowerCase();
+  }
+
+  /**
+   * The pin mode the drivers use: outputs push-pull; analog inputs high-Z;
+   * 8051 inputs quasi-bidirectional (the weak pull-up); board-class inputs a
+   * programmed pull (active-low -> pull-up, else pull-down).
+   */
+  function modeOf(p) {
+    if (p.direction === "output") return "pushpull";
+    if (p.direction === "analog") return "input";
+    if (p.port !== undefined && p.port !== null) return "quasi";
+    return p.activeLow ? "input-pullup" : "input-pulldown";
+  }
+
+  /**
+   * Arm every declared INPUT pin once per board instance, as the drivers do:
+   * nothing else ever calls setPin on a read-only pin, so without this it has
+   * no pin state and its net floats. The third argument is the pull's rail —
+   * a quasi pin idles HIGH, which IS the 8051 weak pull-up.
+   */
+  const armed = typeof WeakSet === "function" ? new WeakSet() : null;
+  function arm(runtime, b) {
+    if (!armed || armed.has(b)) return;
+    armed.add(b);
+    for (const p of decls(runtime)) {
+      if (p.direction === "output") continue;
+      const m = modeOf(p);
+      b.setPin(terminalOf(p), m, m === "quasi");
+    }
+  }
+
+  /** The attached board, armed, and the declaration of `name` — or nulls. */
+  function attached(runtime, name) {
+    const b = circuitBoard(runtime);
+    if (!b) return { b: null, p: null };
+    arm(runtime, b);
+    const p = decls(runtime).find((d) => d.name === name) || null;
+    return { b, p };
   }
 
   class STC12 {
@@ -475,31 +544,68 @@
             : state === "high"
               ? 1
               : 0;
-      board(this.runtime)[args.PIN] = level;
+      this._drive(args.PIN, level);
     }
 
     toggle(args) {
-      const b = board(this.runtime);
-      b[args.PIN] = b[args.PIN] ? 0 : 1;
+      this._drive(args.PIN, this._level(args.PIN) ? 0 : 1);
     }
 
     writepin(args) {
-      board(this.runtime)[args.PIN] = Number(args.VALUE) ? 1 : 0;
+      this._drive(args.PIN, Number(args.VALUE) ? 1 : 0);
+    }
+
+    /** Record the level, and drive it onto the circuit's pin if one is attached. */
+    _drive(name, level) {
+      board(this.runtime)[name] = level;
+      const { b, p } = attached(this.runtime, name);
+      if (b && p) b.setPin(terminalOf(p), modeOf(p), !!level);
+    }
+
+    /**
+     * The raw level of a pin: the circuit's, when one is attached (an input
+     * reads what the button did, not what the program last wrote), else the
+     * program's own last write.
+     */
+    _level(name) {
+      const { b, p } = attached(this.runtime, name);
+      if (b && p && typeof b.readPin === "function")
+        return Number(b.readPin(terminalOf(p))) ? 1 : 0;
+      const m = board(this.runtime);
+      return Object.prototype.hasOwnProperty.call(m, name) ? m[name] : 0;
     }
 
     read(args) {
-      const b = board(this.runtime);
-      return Object.prototype.hasOwnProperty.call(b, args.PIN)
-        ? b[args.PIN]
-        : 0;
+      const { b, p } = attached(this.runtime, args.PIN);
+      // An ANALOG pin reads volts from the board; the MCU scales to counts
+      // (the drivers' rule, 5 V full scale).
+      if (b && p && p.direction === "analog" && b.readAnalog) {
+        const v = Number(b.readAnalog(terminalOf(p)));
+        return isFinite(v)
+          ? Math.max(0, Math.min(1023, Math.round((v / 5.0) * 1023)))
+          : 0;
+      }
+      return this._level(args.PIN);
     }
 
     setpwm(args) {
-      board(this.runtime)[args.PIN + "_pwm"] = Number(args.VALUE);
+      const pct = Number(args.VALUE);
+      board(this.runtime)[args.PIN + "_pwm"] = pct;
+      const { b, p } = attached(this.runtime, args.PIN);
+      if (!b || !p) return;
+      // The board switches the pin itself at the duty's edges (bw-board
+      // setPwm), so an LED dims and a motor slows. A board without setPwm is
+      // told nothing rather than a guess: a threshold would light a 25 % LED
+      // at full or not at all.
+      if (typeof b.setPwm === "function") b.setPwm(terminalOf(p), pct);
     }
 
     settone(args) {
-      board(this.runtime)[args.PIN + "_tone"] = Number(args.VALUE);
+      const hz = Number(args.VALUE);
+      board(this.runtime)[args.PIN + "_tone"] = hz;
+      const { b, p } = attached(this.runtime, args.PIN);
+      if (b && p && typeof b.setTone === "function")
+        b.setTone(terminalOf(p), hz);
     }
 
     setport(args) {
@@ -623,10 +729,7 @@
       // logical level (polarity-aware). isEdgeActivated makes scratch-vm
       // call this once per tick and fire the hat on a false→true transition.
       const pin = decls(this.runtime).find((p) => p.name === args.PIN);
-      const b = board(this.runtime);
-      const raw = Object.prototype.hasOwnProperty.call(b, args.PIN)
-        ? b[args.PIN]
-        : 0;
+      const raw = this._level(args.PIN);
       const level = pin && pin.activeLow ? !raw : !!raw;
       return args.EDGE === "pressed" ? level : !level;
     }

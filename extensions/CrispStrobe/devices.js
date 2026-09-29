@@ -19,6 +19,8 @@
   const OLED_KINDS = /^(ssd1306|sh1106|oled)$/i;
   const TFT_KINDS = /^(ili9341|ili9341_par|ili9341_parallel|st7735|tft)$/i;
   const LCD_KINDS = /^(hd44780|char_lcd|char_lcd_i2c|lcd)$/i;
+  const SERVO_KINDS = /^servo$/i;
+  const MOTOR_KINDS = /^dc_motor$/i;
 
   // Stubs: blocks with no real C driver.  Hidden from palette, methods
   // still exist so saved projects load.  Remove from this set when a
@@ -518,20 +520,35 @@
     }
 
     // ---- Commands (real) ----
+    // Servos and motors are addressed like displays: by exact part id, or by
+    // ordinal within their family ("servo 1" is the first servo on the
+    // bench), which is how the dialect and the C drivers number them.
     setservo(a) {
       const b = this._board();
       if (b && b.setDeviceControl)
-        b.setDeviceControl(a.SERVO, "angle", num(a.ANGLE));
+        b.setDeviceControl(
+          this._device(a.SERVO, SERVO_KINDS),
+          "angle",
+          num(a.ANGLE)
+        );
     }
     setmotor(a) {
       const b = this._board();
       if (b && b.setDeviceControl)
-        b.setDeviceControl(a.MOTOR, "speed", num(a.SPEED));
+        b.setDeviceControl(
+          this._device(a.MOTOR, MOTOR_KINDS),
+          "speed",
+          num(a.SPEED)
+        );
     }
     setdirection(a) {
       const b = this._board();
       if (b && b.setDeviceControl)
-        b.setDeviceControl(a.MOTOR, "direction", String(a.DIR));
+        b.setDeviceControl(
+          this._device(a.MOTOR, MOTOR_KINDS),
+          "direction",
+          String(a.DIR)
+        );
     }
     setrelay(a) {
       const b = this._board();
@@ -721,15 +738,15 @@
 
     // ---- Reporters (real) ----
     servoangle(a) {
-      const st = this._state(a.SERVO);
+      const st = this._state(this._device(a.SERVO, SERVO_KINDS));
       return st ? (st.targetAngle ?? 0) : 0;
     }
     motorspeed(a) {
-      const st = this._state(a.MOTOR);
+      const st = this._state(this._device(a.MOTOR, MOTOR_KINDS));
       return st ? (st.omega ?? 0) : 0;
     }
     motordirection(a) {
-      const st = this._state(a.MOTOR);
+      const st = this._state(this._device(a.MOTOR, MOTOR_KINDS));
       return st ? (st.direction ?? "stopped") : "stopped";
     }
     temperature(a) {
