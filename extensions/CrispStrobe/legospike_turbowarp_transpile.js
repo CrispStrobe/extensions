@@ -147,6 +147,7 @@
       getColor: "[PORT] color",
       getReflection: "[PORT] reflection",
       getAmbientLight: "[PORT] ambient light",
+      getColorRGB: "[PORT] raw [CHANNEL]",
       getForce: "[PORT] force",
       isForceSensorPressed: "[PORT] force sensor pressed?",
       whenColor: "when [PORT] sees [COLOR]",
@@ -293,6 +294,7 @@
       getColor: "[PORT] Farbe",
       getReflection: "[PORT] Reflexion",
       getAmbientLight: "[PORT] Umgebungslicht",
+      getColorRGB: "[PORT] Rohwert [CHANNEL]",
       getForce: "[PORT] Kraft",
       isForceSensorPressed: "[PORT] Kraftsensor gedrückt?",
       whenColor: "wenn [PORT] sieht [COLOR]",
@@ -4607,6 +4609,18 @@ continuous_sensor_loop()
         );
         this.usedSensors.add(port);
         return `(get_sensor("${port}").get()[1] if get_sensor("${port}") else 0)`;
+      } else if (block.opcode === "spikeprime_getColorRGB") {
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
+        const channel = this.getInputValue(block, "CHANNEL", blocks).replace(
+          /"/g,
+          ""
+        );
+        const idx = { red: 3, green: 4, blue: 5 }[channel] ?? 3;
+        this.usedSensors.add(port);
+        return `(get_sensor("${port}").get()[${idx}] if get_sensor("${port}") else 0)`;
       } else if (block.opcode === "spikeprime_getForce") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
@@ -5707,6 +5721,26 @@ continuous_sensor_loop()
             },
           },
           {
+            // One raw channel of the colour sensor, 0-1024, as the hub sends
+            // it: both firmware generations carry red, green and blue in the
+            // colour record (SPIKE 3 Python's color_sensor.rgbi() items 0-2).
+            opcode: "getColorRGB",
+            text: t("getColorRGB"),
+            blockType: BlockType.REPORTER,
+            arguments: {
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "PORT",
+                defaultValue: "A",
+              },
+              CHANNEL: {
+                type: ArgumentType.STRING,
+                menu: "RGB_CHANNEL",
+                defaultValue: "red",
+              },
+            },
+          },
+          {
             opcode: "getForce",
             text: t("getForce"),
             blockType: BlockType.REPORTER,
@@ -5934,6 +5968,10 @@ continuous_sensor_loop()
           },
           AXIS: { acceptReporters: false, items: ["pitch", "roll", "yaw"] },
           AXIS_XYZ: { acceptReporters: false, items: ["x", "y", "z"] },
+          RGB_CHANNEL: {
+            acceptReporters: false,
+            items: ["red", "green", "blue"],
+          },
           DIRECTION: {
             acceptReporters: false,
             items: [
@@ -6745,13 +6783,20 @@ continuous_sensor_loop()
       const axis = Cast.toString(args.AXIS);
       return this._peripheral.angle[axis] || 0;
     }
+    // The AXIS menu names a rotation (yaw, pitch, roll); both hubs report
+    // the gyro per sensor axis (x, y, z). Yaw is the turn about z, the axis
+    // that points up out of a flat hub; pitch is about y and roll about x.
+    // Reading gyro[axis] with the menu's word found no such key, so these
+    // blocks reported 0 whatever the hub sent.
+    _gyroAxis(axis) {
+      const name = Cast.toString(axis).toLowerCase();
+      return { yaw: "z", pitch: "y", roll: "x" }[name] || name;
+    }
     getGyroRate(args) {
-      const axis = Cast.toString(args.AXIS);
-      return this._peripheral.gyro[axis] || 0;
+      return this._peripheral.gyro[this._gyroAxis(args.AXIS)] || 0;
     }
     getFilteredGyroRate(args) {
-      const axis = Cast.toString(args.AXIS);
-      return this._peripheral.gyroFiltered[axis] || 0;
+      return this._peripheral.gyroFiltered[this._gyroAxis(args.AXIS)] || 0;
     }
     getAcceleration(args) {
       const axis = Cast.toString(args.AXIS);
@@ -7011,6 +7056,14 @@ continuous_sensor_loop()
       const port = Cast.toString(args.PORT).trim().toUpperCase();
       const portData = this._peripheral.portValues[port];
       if (portData && portData.type === "color") return portData.ambient || 0;
+      return 0;
+    }
+    getColorRGB(args) {
+      const port = Cast.toString(args.PORT).trim().toUpperCase();
+      const channel = Cast.toString(args.CHANNEL).toLowerCase();
+      if (!["red", "green", "blue"].includes(channel)) return 0;
+      const portData = this._peripheral.portValues[port];
+      if (portData && portData.type === "color") return portData[channel] || 0;
       return 0;
     }
     getForce(args) {
