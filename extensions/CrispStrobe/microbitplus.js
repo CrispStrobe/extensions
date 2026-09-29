@@ -281,6 +281,64 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "stop animation",
           },
+          // MakeCode's led.plotBrightness and led.point.
+          {
+            opcode: "plotbrightness",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "plot x [X] y [Y] brightness [BRIGHTNESS]",
+            arguments: { ...n("X", 0), ...n("Y", 0), ...n("BRIGHTNESS", 255) },
+          },
+          {
+            opcode: "point",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "point x [X] y [Y]",
+            arguments: { ...n("X", 0), ...n("Y", 0) },
+          },
+
+          // ── Images (MakeCode's Image) ─────────────────────────────
+          // An image is a VALUE: kept in a variable or list, changed pixel
+          // by pixel, shown from a column offset while the program runs.
+          "---",
+          {
+            opcode: "createimage",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "create image [MATRIX]",
+            arguments: {
+              MATRIX: {
+                type: Scratch.ArgumentType.MATRIX,
+                defaultValue: "0000000000000000000000000",
+              },
+            },
+          },
+          {
+            opcode: "imagesetpixel",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set pixel x [X] y [Y] of image [IMAGE] to [VALUE]",
+            arguments: {
+              ...n("X", 0),
+              ...n("Y", 0),
+              ...n("IMAGE", 1),
+              ...n("VALUE", 1),
+            },
+          },
+          {
+            opcode: "imagepixel",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "pixel x [X] y [Y] of image [IMAGE]",
+            arguments: { ...n("X", 0), ...n("Y", 0), ...n("IMAGE", 1) },
+          },
+          {
+            opcode: "showimage",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "show image [IMAGE] offset [OFFSET]",
+            arguments: { ...n("IMAGE", 1), ...n("OFFSET", 0) },
+          },
+          {
+            opcode: "plotimage",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "plot image [IMAGE] offset [OFFSET]",
+            arguments: { ...n("IMAGE", 1), ...n("OFFSET", 0) },
+          },
 
           // ── Buttons, logo, gestures (events) ─────────────────────
           "---",
@@ -318,6 +376,33 @@
             opcode: "islogo",
             blockType: Scratch.BlockType.BOOLEAN,
             text: "logo touched?",
+          },
+          // MakeCode's input.onSound and input.setSoundThreshold.
+          {
+            opcode: "whensound",
+            blockType: Scratch.BlockType.HAT,
+            isEdgeActivated: true,
+            text: "when [LEVEL] sound",
+            arguments: {
+              LEVEL: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "loud",
+                menu: "soundLevel",
+              },
+            },
+          },
+          {
+            opcode: "soundthreshold",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set [LEVEL] sound threshold to [THRESHOLD]",
+            arguments: {
+              LEVEL: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "loud",
+                menu: "soundLevel",
+              },
+              ...n("THRESHOLD", 128),
+            },
           },
           {
             opcode: "whenlogo",
@@ -950,6 +1035,37 @@
             blockType: Scratch.BlockType.REPORTER,
             text: "last radio signal strength",
           },
+          // MakeCode's radio.setTransmitSerialNumber, the packet's
+          // RadioPacketProperty.SerialNumber and control.deviceSerialNumber.
+          {
+            opcode: "radioserial",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "radio transmit serial number [STATE]",
+            arguments: {
+              STATE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "on",
+                menu: "onoff",
+              },
+            },
+          },
+          {
+            opcode: "radiolastserial",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "last radio serial number",
+          },
+          {
+            opcode: "deviceserial",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "device serial number",
+          },
+          // MakeCode's parseFloat ("parse to number").
+          {
+            opcode: "parsenumber",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "number from text [TEXT]",
+            arguments: str("TEXT", "123"),
+          },
           {
             opcode: "whenradiostr",
             blockType: Scratch.BlockType.HAT,
@@ -1092,6 +1208,7 @@
             items: ["x", "y", "direction", "brightness", "blink"],
           },
           turnDirection: { acceptReporters: false, items: ["right", "left"] },
+          soundLevel: { acceptReporters: false, items: ["loud", "quiet"] },
         },
       };
     }
@@ -1113,6 +1230,41 @@
     plotbargraph() {}
     setbrightness() {}
     stopanimation() {}
+    plotbrightness() {}
+    point() {
+      return false;
+    }
+
+    // ── Images: pixels are kept (so a program reads back what it set);
+    // showing one is the simulator's, as the other display blocks are.
+    createimage(args) {
+      if (!this._images) this._images = [];
+      const digits = String(args.MATRIX || "")
+        .replace(/[^0-9]/g, "")
+        .padEnd(25, "0")
+        .slice(0, 25);
+      this._images.push([...digits].map((d) => d !== "0"));
+      return this._images.length;
+    }
+    _image(handle) {
+      return (this._images || [])[Math.round(Number(handle)) - 1] || null;
+    }
+    imagesetpixel(args) {
+      const img = this._image(args.IMAGE);
+      const x = Math.round(Number(args.X));
+      const y = Math.round(Number(args.Y));
+      if (img && x >= 0 && x < 5 && y >= 0 && y < 5) {
+        img[y * 5 + x] = Scratch.Cast.toBoolean(args.VALUE);
+      }
+    }
+    imagepixel(args) {
+      const img = this._image(args.IMAGE);
+      const x = Math.round(Number(args.X));
+      const y = Math.round(Number(args.Y));
+      return !!img && x >= 0 && x < 5 && y >= 0 && y < 5 && img[y * 5 + x];
+    }
+    showimage() {}
+    plotimage() {}
 
     // ── Events: buttons, logo, gestures ───────────────────────
     whenbutton() {
@@ -1127,6 +1279,10 @@
     islogo() {
       return false;
     }
+    whensound() {
+      return false;
+    }
+    soundthreshold() {}
     whengesture() {
       return false;
     }
@@ -1478,6 +1634,17 @@
     }
     radiorssi() {
       return 0;
+    }
+    radioserial() {}
+    radiolastserial() {
+      return 0;
+    }
+    deviceserial() {
+      return 0;
+    }
+    // JavaScript's own parseFloat, as MakeCode's is.
+    parsenumber(args) {
+      return parseFloat(String(args.TEXT));
     }
 
     // ── Connection ───────────────────────────────────────────
