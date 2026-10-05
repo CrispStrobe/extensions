@@ -88,10 +88,29 @@
   }
 
   /**
+   * The board terminal of a pin a PORT or PART declaration claims: an 8051
+   * {port, bit} is P<port>.<bit>, a board-class {where} its own name — the
+   * same mapping terminalOf gives a PIN.
+   */
+  function pinTerminal(pin) {
+    if (pin.port !== undefined && pin.port !== null && pin.bit !== undefined)
+      return "P" + pin.port + "." + pin.bit;
+    return String(pin.where).toLowerCase();
+  }
+
+  /** A keypad declared in the board-class form (micro:bit/Pico `where`). */
+  function genericKeypad(part) {
+    return !!(part.rows && part.rows[0] && part.rows[0].where !== undefined);
+  }
+
+  /**
    * Arm every declared INPUT pin once per board instance, as the drivers do:
    * nothing else ever calls setPin on a read-only pin, so without this it has
    * no pin state and its net floats. The third argument is the pull's rail —
-   * a quasi pin idles HIGH, which IS the 8051 weak pull-up.
+   * a quasi pin idles HIGH, which IS the 8051 weak pull-up. An INPUT PORT's
+   * eight pins and a KEYPAD4X4's rows and columns are armed the same way:
+   * 8051 pins quasi-high (the scanner's idle state), a board-class keypad's
+   * columns pulled up and its rows released (the MicroPython scanner's).
    */
   const armed = typeof WeakSet === "function" ? new WeakSet() : null;
   function arm(runtime, b) {
@@ -101,6 +120,23 @@
       if (p.direction === "output") continue;
       const m = modeOf(p);
       b.setPin(terminalOf(p), m, m === "quasi");
+    }
+    for (const w of portDecls(runtime)) {
+      if (w.direction === "output") continue;
+      for (let i = 0; i < 8; i++)
+        b.setPin("P" + w.port + "." + i, "quasi", true);
+    }
+    for (const k of partDecls(runtime)) {
+      if (k.type !== "keypad4x4") continue;
+      const generic = genericKeypad(k);
+      for (const r of k.rows) {
+        if (generic) b.setPin(pinTerminal(r), "input", false);
+        else b.setPin(pinTerminal(r), "quasi", true);
+      }
+      for (const c of k.cols) {
+        if (generic) b.setPin(pinTerminal(c), "input-pullup", true);
+        else b.setPin(pinTerminal(c), "quasi", true);
+      }
     }
   }
 
@@ -608,18 +644,68 @@
         b.setTone(terminalOf(p), hz);
     }
 
+    /**
+     * `set PORT to N`: the C is `P<n> = N`, all eight latches at once, so the
+     * eight pins of the declared port are driven bit by bit (bit 0 = P<n>.0).
+     * No ACTIVE LOW inversion, as in the C. An OUTPUT port is push-pull like
+     * an OUTPUT PIN; writing an INPUT port sets its quasi latches.
+     */
     setport(args) {
-      board(this.runtime)["port_" + args.PORT] = Number(args.VALUE) & 0xff;
+      const v = Number(args.VALUE) & 0xff;
+      board(this.runtime)["port_" + args.PORT] = v;
+      const w = portDecls(this.runtime).find((d) => d.name === args.PORT);
+      const b = circuitBoard(this.runtime);
+      if (!b || !w) return;
+      arm(this.runtime, b);
+      const mode = w.direction === "output" ? "pushpull" : "quasi";
+      for (let i = 0; i < 8; i++)
+        b.setPin("P" + w.port + "." + i, mode, !!((v >> i) & 1));
     }
 
+    /** `read PORT`: the eight pins' levels from the circuit (the C reads P<n>). */
     readport(args) {
-      const b = board(this.runtime);
+      const w = portDecls(this.runtime).find((d) => d.name === args.PORT);
+      const b = circuitBoard(this.runtime);
+      if (b && w && typeof b.readPin === "function") {
+        arm(this.runtime, b);
+        let v = 0;
+        for (let i = 0; i < 8; i++)
+          if (Number(b.readPin("P" + w.port + "." + i))) v |= 1 << i;
+        return v;
+      }
+      const rec = board(this.runtime);
       const k = "port_" + args.PORT;
-      return Object.prototype.hasOwnProperty.call(b, k) ? b[k] : 0;
+      return Object.prototype.hasOwnProperty.call(rec, k) ? rec[k] : 0;
     }
 
+    /**
+     * `set PART to N` on a 74HC595: the C's shift_out — latch low, then per
+     * bit MSB first {clock low, the bit on DATA (inverted for ACTIVE LOW),
+     * clock high}, latch high — on the three pins the declaration claims, so
+     * the board's 595 model shifts and latches it. Any other PART has no
+     * value to be set to (the C emits shift_out for a 595 only); the value
+     * is recorded and nothing is driven.
+     */
     setpart(args) {
-      board(this.runtime)["part_" + args.PART] = Number(args.VALUE) & 0xff;
+      let v = Number(args.VALUE) & 0xff;
+      board(this.runtime)["part_" + args.PART] = v;
+      const part = partDecls(this.runtime).find((d) => d.name === args.PART);
+      const b = circuitBoard(this.runtime);
+      if (!b || !part || part.type !== "74hc595") return;
+      arm(this.runtime, b);
+      const data = pinTerminal(part.data);
+      const clock = pinTerminal(part.clock);
+      const latch = pinTerminal(part.latch);
+      b.setPin(latch, "pushpull", false);
+      for (let i = 0; i < 8; i++) {
+        b.setPin(clock, "pushpull", false);
+        let bit = v & 0x80 ? 1 : 0;
+        if (part.activeLow) bit ^= 1;
+        b.setPin(data, "pushpull", !!bit);
+        v = (v << 1) & 0xff;
+        b.setPin(clock, "pushpull", true);
+      }
+      b.setPin(latch, "pushpull", true);
     }
 
     // ---- MATRIX8X8: an 8x8 SCREEN. The editor keeps a simple 8-byte
@@ -627,6 +713,15 @@
     // renderer reads it. bit7 of a row byte = the LEFT column, matching the C
     // driver and the image literals. Brightness is collapsed to on/off in this
     // preview (monochrome); the generated C carries the real 2-bit depth.
+    //
+    // NOT DRIVEN ONTO THE CIRCUIT, and named rather than faked: the screen
+    // exists only as persistence of vision. The firmware scans one row per
+    // Timer-0 tick (595 rows, port columns) and bw-board's matrix8x8 lights a
+    // pixel by the fraction of each 20 ms window it was on. The VM has no tick
+    // on board time, and a scan written in zero time is a zero-length window:
+    // the model shows nothing. The other PART verbs below reach the circuit
+    // because their models LATCH (sevenseg8, ledbank8, the 595) or are read
+    // on demand (the keypad).
     _scr(part) {
       const b = board(this.runtime);
       const k = "scr_" + part;
@@ -660,9 +755,14 @@
     }
 
     matrix_image(args) {
-      // The circuit layer feeds tab_<name> as an 8-byte array (the TABLE
-      // values); blit it, or clear the screen if the table is absent.
-      const img = board(this.runtime)["tab_" + args.TABLE];
+      // The image is the TABLE's values (8 row bytes), from the declaration
+      // the Code tab made. This read `tab_<name>` off the record, which
+      // nothing has ever written, so every image cleared the screen.
+      const tbl = tableDecls(this.runtime).find((t) => t.name === args.TABLE);
+      const img =
+        tbl && Array.isArray(tbl.values)
+          ? tbl.values
+          : board(this.runtime)["tab_" + args.TABLE];
       const buf = this._scr(args.PART);
       for (let y = 0; y < 8; y++)
         buf[y] = Array.isArray(img) ? Number(img[y]) & 0xff : 0;
@@ -736,14 +836,55 @@
 
     // ---- KEYPAD4X4 / SEVENSEG8 / LEDBANK8 implementations. Byte-for-byte
     // the semantics of the reference copy and of the emitted C: the display
-    // verbs write an 8-byte frame buffer, the LED verbs write a shadow byte,
-    // and the keypad reads what the board layer scanned. Nothing here drives
-    // a pin directly — the ISR does, on silicon and in the simulator alike.
+    // verbs write an 8-byte frame buffer, the LED verbs write a shadow byte.
+    // On silicon the ISR pushes both to the pins every tick; here there is
+    // no tick, so each verb pushes what CHANGED onto the circuit at once —
+    // the board's sevenseg8 and ledbank8 models latch it — and the keypad is
+    // scanned when it is read, as the C scanner does. These used to stop at
+    // the buffers, and nothing read them: a wired A2 bench showed nothing.
+
+    /**
+     * The C scanner (bw_part_<name>_read): each row in turn driven low, the
+     * four columns read, the first low column wins as row*4+col; -1 for no
+     * key. 8051 rows go quasi-low then back to quasi-high; a board-class
+     * keypad's row is driven low and released, its columns pulled up.
+     */
+    _scanKeypad(part, b) {
+      arm(this.runtime, b);
+      const generic = genericKeypad(part);
+      const rows = part.rows.map(pinTerminal);
+      const cols = part.cols.map(pinTerminal);
+      const release = (t) =>
+        generic ? b.setPin(t, "input", false) : b.setPin(t, "quasi", true);
+      for (let r = 0; r < rows.length; r++) {
+        b.setPin(rows[r], generic ? "pushpull" : "quasi", false);
+        for (let c = 0; c < cols.length; c++) {
+          if (!Number(b.readPin(cols[c]))) {
+            release(rows[r]);
+            return r * 4 + c;
+          }
+        }
+        release(rows[r]);
+      }
+      return -1;
+    }
+
+    /** The key on a KEYPAD4X4 from the circuit, or null with none attached. */
+    _keyOn(part) {
+      const b = circuitBoard(this.runtime);
+      if (!b || !part || typeof b.readPin !== "function") return null;
+      return this._scanKeypad(part, b);
+    }
 
     keypad(args) {
       // The scanned key 0..15, or -1 for none — same contract as the C
-      // scanner (PART KEYPAD4X4). The circuit layer feeds keypad_<name>;
-      // absent hardware reads as "nothing pressed".
+      // scanner (PART KEYPAD4X4). With no circuit, the record's
+      // keypad_<name> answers (absent = "nothing pressed").
+      const part = partDecls(this.runtime).find(
+        (d) => d.name === args.PART && d.type === "keypad4x4"
+      );
+      const key = this._keyOn(part);
+      if (key !== null) return key;
       const b = board(this.runtime);
       const k = "keypad_" + args.PART;
       return Object.prototype.hasOwnProperty.call(b, k) ? Number(b[k]) : -1;
@@ -752,12 +893,95 @@
     whenkey(args) {
       // Edge hat on the sole KEYPAD4X4: true while the scanned key equals
       // KEY; isEdgeActivated turns the false-to-true transition into the
-      // fire. The sole-keypad rule means any keypad_* entry is the one.
-      const b = board(this.runtime);
-      const k = Object.keys(b).find((n) => n.indexOf("keypad_") === 0);
-      const cur = k ? Number(b[k]) : -1;
+      // fire. The sole-keypad rule means the first declared one is the one.
+      const part = partDecls(this.runtime).find((d) => d.type === "keypad4x4");
+      let cur = this._keyOn(part);
+      if (cur === null) {
+        const b = board(this.runtime);
+        const k = Object.keys(b).find((n) => n.indexOf("keypad_") === 0);
+        cur = k ? Number(b[k]) : -1;
+      }
       const held = cur === Number(args.KEY);
       return args.EDGE === "pressed" ? held : !held;
+    }
+
+    /**
+     * Push a SEVENSEG8's frame buffer onto the circuit: for each digit whose
+     * byte changed, its segments onto the segment port, then the 74HC138
+     * address onto the three select pins — the order the ISR keeps (segments,
+     * then select). The board's sevenseg8 latches a digit when the address
+     * CHANGES and is seen on two updates, so the last select pin is written
+     * twice, and a digit equal to the current address is reached by way of
+     * its neighbour. Common anode inverts the segments, as the C does.
+     */
+    _segpush(name) {
+      const part = partDecls(this.runtime).find(
+        (d) => d.name === name && d.type === "sevenseg8"
+      );
+      const b = circuitBoard(this.runtime);
+      if (!b || !part) return;
+      arm(this.runtime, b);
+      if (!this._segShown) this._segShown = {};
+      let shown = this._segShown[name];
+      if (!shown || shown.board !== b) {
+        // A new board starts every digit blank at address 0.
+        shown = { board: b, digits: new Array(8).fill(-1), sel: 0 };
+        this._segShown[name] = shown;
+      }
+      const fb = this._segfb(name);
+      const sel = part.selPins.map(pinTerminal);
+      const put = (d) => {
+        const byte = part.commonAnode ? ~fb[d] & 0xff : fb[d];
+        for (let i = 0; i < 8; i++)
+          b.setPin(
+            "P" + part.segPort + "." + i,
+            "pushpull",
+            !!((byte >> i) & 1)
+          );
+        for (let k = 0; k < 3; k++)
+          b.setPin(sel[k], "pushpull", !!((d >> k) & 1));
+        b.setPin(sel[2], "pushpull", !!((d >> 2) & 1));
+        shown.sel = d;
+        shown.digits[d] = fb[d];
+      };
+      for (let d = 0; d < 8; d++) {
+        if (shown.digits[d] === fb[d]) continue;
+        if (d === shown.sel) put((d + 1) & 7);
+        put(d);
+      }
+    }
+
+    /**
+     * Push a LEDBANK8's shadow byte onto its port (inverted when ACTIVE LOW),
+     * as the ISR does. On the A2 the port also carries a SEVENSEG8's select
+     * pins: the write moves its address, as on silicon (the importer warns
+     * the two cannot hold independent patterns), so that display is marked
+     * stale and pushed again.
+     */
+    _ledpush(name) {
+      const part = partDecls(this.runtime).find(
+        (d) => d.name === name && d.type === "ledbank8"
+      );
+      const b = circuitBoard(this.runtime);
+      if (!b || !part) return;
+      arm(this.runtime, b);
+      const shadow = this._bank(name);
+      const byte = part.activeLow ? ~shadow & 0xff : shadow & 0xff;
+      for (let i = 0; i < 8; i++)
+        b.setPin("P" + part.ledPort + "." + i, "pushpull", !!((byte >> i) & 1));
+      for (const ss of partDecls(this.runtime)) {
+        if (ss.type !== "sevenseg8") continue;
+        if (!(ss.selPins || []).some((p) => p.port === part.ledPort)) continue;
+        const shown = this._segShown && this._segShown[ss.name];
+        if (shown && shown.board === b) {
+          shown.digits.fill(-1);
+          shown.sel = ss.selPins.reduce(
+            (a, p, k) => a | (((byte >> p.bit) & 1) << k),
+            0
+          );
+        }
+        this._segpush(ss.name);
+      }
     }
 
     _segfb(part) {
@@ -786,6 +1010,7 @@
         i--;
       } while (u);
       if (neg && i > 0) fb[i - 1] = 0x40;
+      this._segpush(args.PART);
     }
 
     seg_showdigit(args) {
@@ -796,16 +1021,19 @@
       const d = Number(args.DIGIT) | 0;
       if (d < 0 || d > 7) return;
       this._segfb(args.PART)[d] = FONT[(Number(args.VALUE) | 0) & 0x0f];
+      this._segpush(args.PART);
     }
 
     seg_setsegs(args) {
       const d = Number(args.DIGIT) | 0;
       if (d < 0 || d > 7) return;
       this._segfb(args.PART)[d] = Number(args.SEGS) & 0xff;
+      this._segpush(args.PART);
     }
 
     seg_clear(args) {
       this._segfb(args.PART).fill(0);
+      this._segpush(args.PART);
     }
 
     _bank(part) {
@@ -819,23 +1047,27 @@
       const n = Number(args.N) | 0;
       if (n < 0 || n > 7) return;
       this._banks[args.PART] = this._bank(args.PART) | (1 << n);
+      this._ledpush(args.PART);
     }
 
     led_off(args) {
       const n = Number(args.N) | 0;
       if (n < 0 || n > 7) return;
       this._banks[args.PART] = this._bank(args.PART) & ~(1 << n);
+      this._ledpush(args.PART);
     }
 
     led_set(args) {
       this._bank(args.PART);
       this._banks[args.PART] = Number(args.VALUE) & 0xff;
+      this._ledpush(args.PART);
     }
 
     led_only(args) {
       const n = Number(args.N) | 0;
       this._bank(args.PART);
       this._banks[args.PART] = n < 0 || n > 7 ? 0 : 1 << n;
+      this._ledpush(args.PART);
     }
 
     tableindex(args) {
