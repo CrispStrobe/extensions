@@ -67,6 +67,28 @@
       "arrays.listAll": "list all arrays",
       "arrays.ascending": "ascending",
       "arrays.descending": "descending",
+      "arrays.namedReference": "reference to named array [NAME]",
+      "arrays.parseLegacyValue": "parse array input [VALUE]",
+      "arrays.jsonValue": "JSON text of value [VALUE]",
+      "arrays.referenceValues": "array value [VALUE] followed by [REST]",
+      "arrays.createReference": "new array reference from [VALUES]",
+      "arrays.specialValue": "[KIND] value",
+      "arrays.valueBinary": "value [LEFT] [OP] [RIGHT]",
+      "arrays.valueUnary": "[OP] value [VALUE]",
+      "arrays.valueTruthy": "truthiness of value [VALUE]",
+      "arrays.valueCompare": "compare value [LEFT] [OP] with [RIGHT]",
+      "arrays.referenceTruthy":
+        "truthiness of item [INDEX] of array reference [ARRAY]",
+      "arrays.referenceItem": "item [INDEX] of array reference [ARRAY]",
+      "arrays.referenceRemove":
+        "remove value [VALUE] from array reference [ARRAY]",
+      "arrays.referenceRandom": "random item of array reference [ARRAY]",
+      "arrays.referenceLength": "length of array reference [ARRAY]",
+      "arrays.referenceTake": "[OP] from array reference [ARRAY] index [INDEX]",
+      "arrays.referenceIndexOf":
+        "index of [VALUE] in array reference [ARRAY] from [INDEX]",
+      "arrays.mutateReference":
+        "array reference [ARRAY] [OP] index [INDEX] value [VALUE]",
     },
     de: {
       "arrays.showTable": "Tabelle [NAME] bei x [X] y [Y] zeigen",
@@ -265,7 +287,257 @@
   const tables = {};
   let _nextTempId = 0;
 
+  // ==========================================================================
+  // MAKECODE VALUES — the rules the array-reference blocks compute with.
+  //
+  // undefined is a value in MakeCode, but a Scratch reporter that returns
+  // undefined means "reported nothing", so it travels as a tagged object
+  // (UNDEFINED) that survives project JSON. An array reference is
+  // {bwReference: {kind, id, scope}}: the id names an array in a heap kept per
+  // runtime, the scope changes on every project start/load so a reference
+  // saved in a project never names a live array of another run. Arithmetic
+  // and comparison are JavaScript's (+ joins text, === is strict, NaN is
+  // not equal to itself), as MakeCode runs them.
+  //
+  // A host that shares these rules between extensions (BrickWright Lite's
+  // VM, whose Arcade sprites and images are references too) provides them as
+  // Scratch.BWValues, with this same interface; they are then one heap and
+  // one set of rules for every extension. Anywhere else this built-in copy
+  // is used.
+  // ==========================================================================
+  const makeValues = () => {
+    const isUndefined = (value) =>
+      Boolean(value) &&
+      typeof value === "object" &&
+      Object.keys(value).length === 1 &&
+      value.bwUndefined === true;
+    const UNDEFINED = Object.freeze(
+      Object.defineProperties(
+        { bwUndefined: true },
+        {
+          toString: { value: () => "undefined" },
+          valueOf: { value: () => NaN },
+        }
+      )
+    );
+    const KINDS = [
+      "array",
+      "image",
+      "tile",
+      "animation",
+      "scene",
+      "physics-engine",
+    ];
+    const scopes = new WeakMap();
+    const session =
+      Date.now().toString(36) + ":" + Math.random().toString(36).slice(2);
+    let nextScope = 0;
+    const references = new Map();
+    const collected =
+      typeof FinalizationRegistry === "function"
+        ? new FinalizationRegistry((key) => {
+            const held = references.get(key);
+            if (!held || !held.deref()) references.delete(key);
+          })
+        : null;
+    const isReference = (value) =>
+      Boolean(value) &&
+      typeof value === "object" &&
+      Object.keys(value).length === 1 &&
+      Boolean(value.bwReference) &&
+      KINDS.includes(value.bwReference.kind) &&
+      typeof value.bwReference.id === "string" &&
+      typeof value.bwReference.scope === "string";
+    const restoreReference = (value) => {
+      const ref = value.bwReference;
+      const key = JSON.stringify([ref.scope, ref.kind, ref.id]);
+      const held = references.get(key);
+      const existing = held && held.deref();
+      if (existing) return existing;
+      if (typeof WeakRef === "function") {
+        references.set(key, new WeakRef(value));
+        if (collected) collected.register(value, key);
+      }
+      return value;
+    };
+    // Without a runtime (a unit test, a headless load) one key stands in.
+    const NO_RUNTIME = {};
+    const keyOf = (runtime) => runtime || NO_RUNTIME;
+    const listen = (runtime, events, handler) => {
+      if (runtime && typeof runtime.on === "function") {
+        for (const event of events) runtime.on(event, handler);
+      }
+    };
+    const scopeOf = (runtime) => {
+      const key = keyOf(runtime);
+      if (!scopes.has(key)) {
+        scopes.set(key, session + ":" + ++nextScope);
+        listen(runtime, ["PROJECT_START", "PROJECT_LOADED"], () =>
+          scopes.set(key, session + ":" + ++nextScope)
+        );
+      }
+      return scopes.get(key);
+    };
+    const reference = (runtime, kind, id) =>
+      restoreReference({ bwReference: { kind, id, scope: scopeOf(runtime) } });
+    const heaps = new WeakMap();
+    const heapOf = (runtime) => {
+      const key = keyOf(runtime);
+      if (!heaps.has(key)) {
+        const heap = { values: new Map(), objects: new WeakMap(), next: 0 };
+        heaps.set(key, heap);
+        listen(
+          runtime,
+          ["PROJECT_START", "PROJECT_LOADED", "RUNTIME_DISPOSED"],
+          () => {
+            heap.values.clear();
+            heap.objects = new WeakMap();
+          }
+        );
+      }
+      return heaps.get(key);
+    };
+    const referenceId = (runtime, value, kind) =>
+      isReference(value) &&
+      value.bwReference.kind === kind &&
+      value.bwReference.scope === scopes.get(keyOf(runtime))
+        ? value.bwReference.id
+        : null;
+    const arrayReference = (runtime, array) => {
+      if (!Array.isArray(array)) {
+        throw new TypeError("Array reference requires an array");
+      }
+      const heap = heapOf(runtime);
+      let id = heap.objects.get(array);
+      if (!id) {
+        id = "array-reference:" + ++heap.next;
+        heap.objects.set(array, id);
+        heap.values.set(id, array);
+      }
+      return reference(runtime, "array", id);
+    };
+    const arrayValue = (runtime, value) => {
+      const id = referenceId(runtime, value, "array");
+      return id === null ? undefined : heapOf(runtime).values.get(id);
+    };
+    const sameReference = (a, b) =>
+      isReference(a) &&
+      isReference(b) &&
+      ["kind", "id", "scope"].every(
+        (key) => a.bwReference[key] === b.bwReference[key]
+      );
+    const SPECIAL_NUMBERS = ["NaN", "Infinity", "-Infinity", "-0"];
+    const decode = (value) => {
+      if (isUndefined(value)) return undefined;
+      if (isReference(value)) return restoreReference(value);
+      if (
+        value &&
+        typeof value === "object" &&
+        Object.keys(value).length === 1 &&
+        SPECIAL_NUMBERS.includes(value.bwNumber)
+      ) {
+        return Number(value.bwNumber);
+      }
+      return value;
+    };
+    const encode = (value) =>
+      value === undefined || isUndefined(value) ? UNDEFINED : decode(value);
+    const equal = (a, b) => sameReference(a, b) || decode(a) === decode(b);
+    const indexOf = (array, value, from = 0) => {
+      const start = Math.trunc(Number(from)) || 0;
+      for (
+        let i = start < 0 ? Math.max(array.length + start, 0) : start;
+        i < array.length;
+        i++
+      ) {
+        if (i in array && equal(array[i], value)) return i;
+      }
+      return -1;
+    };
+    const binary = (left, op, right) => {
+      const a = decode(left);
+      const b = decode(right);
+      switch (op) {
+        case "+":
+          return a + b;
+        case "-":
+          return a - b;
+        case "*":
+          return a * b;
+        case "/":
+          return a / b;
+        case "%":
+          return a % b;
+        default:
+          throw new Error("Unknown value arithmetic " + op);
+      }
+    };
+    const unary = (op, value) => {
+      const a = decode(value);
+      if (op === "+") return +a;
+      if (op === "-") return -a;
+      throw new Error("Unknown unary value arithmetic " + op);
+    };
+    const compare = (left, op, right) => {
+      const a = decode(left);
+      const b = sameReference(left, right) ? a : decode(right);
+      switch (op) {
+        // JavaScript's comparisons on purpose, loose null/undefined equality
+        // and strict primitive distinctions included.
+        case "==":
+          return a == b;
+        case "!=":
+          return a != b;
+        case "===":
+          return a === b;
+        case "!==":
+          return a !== b;
+        case "<":
+          return a < b;
+        case ">":
+          return a > b;
+        case "<=":
+          return a <= b;
+        case ">=":
+          return a >= b;
+        default:
+          throw new Error("Unknown value comparison " + op);
+      }
+    };
+    const jsonReplacer = (_key, value) =>
+      typeof value === "number" &&
+      (!Number.isFinite(value) || Object.is(value, -0))
+        ? { bwNumber: Object.is(value, -0) ? "-0" : String(value) }
+        : value;
+    return {
+      UNDEFINED,
+      arrayReference,
+      arrayValue,
+      reference,
+      referenceId,
+      isReference,
+      decode,
+      encode,
+      equal,
+      indexOf,
+      binary,
+      unary,
+      compare,
+      jsonReplacer,
+      truth: (value) => Boolean(decode(value)),
+    };
+  };
+  let builtinValues = null;
+  const valuesFor = () =>
+    (typeof Scratch !== "undefined" && Scratch.BWValues) ||
+    builtinValues ||
+    (builtinValues = makeValues());
+
   class ArrayExtension {
+    constructor() {
+      this._runtime = (Scratch.vm && Scratch.vm.runtime) || null;
+    }
+
     getInfo() {
       return {
         id: "arrays",
@@ -868,8 +1140,230 @@
               },
             },
           },
+          "---",
+          // Array REFERENCES and MakeCode values (see the section below the
+          // class): what an imported MakeCode Arcade program's arrays are.
+          {
+            opcode: "namedReference",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.namedReference"),
+            arguments: {
+              NAME: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "myArray",
+              },
+            },
+          },
+          {
+            opcode: "parseLegacyValue",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.parseLegacyValue"),
+            arguments: {
+              VALUE: { type: Scratch.ArgumentType.STRING, defaultValue: "" },
+            },
+          },
+          {
+            opcode: "jsonValue",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.jsonValue"),
+            arguments: {
+              VALUE: { type: Scratch.ArgumentType.STRING, defaultValue: "" },
+            },
+          },
+          {
+            opcode: "referenceValues",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.referenceValues"),
+            arguments: {
+              VALUE: { type: Scratch.ArgumentType.STRING, defaultValue: "" },
+              REST: { type: Scratch.ArgumentType.STRING, defaultValue: "[]" },
+            },
+          },
+          {
+            opcode: "createReference",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.createReference"),
+            arguments: {
+              VALUES: { type: Scratch.ArgumentType.STRING, defaultValue: "[]" },
+            },
+          },
+          {
+            opcode: "specialValue",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.specialValue"),
+            arguments: {
+              KIND: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "specialValues",
+                defaultValue: "undefined",
+              },
+            },
+          },
+          {
+            opcode: "valueBinary",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.valueBinary"),
+            arguments: {
+              LEFT: { type: Scratch.ArgumentType.STRING },
+              OP: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "valueOperations",
+                defaultValue: "+",
+              },
+              RIGHT: { type: Scratch.ArgumentType.STRING },
+            },
+          },
+          {
+            opcode: "valueUnary",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.valueUnary"),
+            arguments: {
+              OP: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "valueUnaryOperations",
+                defaultValue: "-",
+              },
+              VALUE: { type: Scratch.ArgumentType.STRING },
+            },
+          },
+          {
+            opcode: "valueTruthy",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: t("arrays.valueTruthy"),
+            arguments: {
+              VALUE: { type: Scratch.ArgumentType.STRING },
+            },
+          },
+          {
+            opcode: "valueCompare",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: t("arrays.valueCompare"),
+            arguments: {
+              LEFT: { type: Scratch.ArgumentType.STRING },
+              OP: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "valueComparisons",
+                defaultValue: "===",
+              },
+              RIGHT: { type: Scratch.ArgumentType.STRING },
+            },
+          },
+          {
+            opcode: "referenceTruthy",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: t("arrays.referenceTruthy"),
+            arguments: {
+              INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              ARRAY: { type: Scratch.ArgumentType.STRING },
+            },
+          },
+          {
+            opcode: "referenceItem",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.referenceItem"),
+            arguments: {
+              INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              ARRAY: { type: Scratch.ArgumentType.STRING },
+            },
+          },
+          {
+            opcode: "referenceRemove",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: t("arrays.referenceRemove"),
+            arguments: {
+              VALUE: { type: Scratch.ArgumentType.STRING },
+              ARRAY: { type: Scratch.ArgumentType.STRING },
+            },
+          },
+          {
+            opcode: "referenceRandom",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.referenceRandom"),
+            arguments: {
+              ARRAY: { type: Scratch.ArgumentType.STRING },
+            },
+          },
+          {
+            opcode: "referenceLength",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.referenceLength"),
+            arguments: {
+              ARRAY: { type: Scratch.ArgumentType.STRING },
+            },
+          },
+          {
+            opcode: "referenceTake",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.referenceTake"),
+            arguments: {
+              OP: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "referenceTakeOperations",
+                defaultValue: "pop",
+              },
+              ARRAY: { type: Scratch.ArgumentType.STRING },
+              INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "referenceIndexOf",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.referenceIndexOf"),
+            arguments: {
+              VALUE: { type: Scratch.ArgumentType.STRING },
+              ARRAY: { type: Scratch.ArgumentType.STRING },
+              INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "mutateReference",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("arrays.mutateReference"),
+            arguments: {
+              ARRAY: { type: Scratch.ArgumentType.STRING },
+              OP: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "referenceMutations",
+                defaultValue: "push",
+              },
+              INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              VALUE: { type: Scratch.ArgumentType.STRING },
+            },
+          },
         ],
         menus: {
+          specialValues: {
+            acceptReporters: false,
+            items: ["undefined", "null"],
+          },
+          valueOperations: {
+            acceptReporters: false,
+            items: ["+", "-", "*", "/", "%"],
+          },
+          valueUnaryOperations: { acceptReporters: false, items: ["+", "-"] },
+          valueComparisons: {
+            acceptReporters: false,
+            items: ["==", "!=", "===", "!==", "<", ">", "<=", ">="],
+          },
+          referenceTakeOperations: {
+            acceptReporters: true,
+            items: ["pop", "shift", "removeAt"],
+          },
+          referenceMutations: {
+            acceptReporters: true,
+            items: [
+              "push",
+              "unshift",
+              "set",
+              "insertAt",
+              "removeAt",
+              "removeElement",
+              "pop",
+              "shift",
+              "reverse",
+              "length",
+            ],
+          },
           sortOrder: {
             acceptReporters: true,
             items: [
@@ -883,6 +1377,9 @@
 
     // Helper to parse value (try number, then JSON, then string)
     parseValue(val) {
+      // A MakeCode value (undefined, an array reference) arriving from a
+      // reference block is its value here, not the text of its wrapper.
+      val = valuesFor().decode(val);
       if (val === "") return "";
       const num = Number(val);
       if (!isNaN(num)) return num;
@@ -1228,6 +1725,241 @@
 
     listAll() {
       return JSON.stringify(Object.keys(arrays));
+    }
+
+    // ========================================================================
+    // ARRAY REFERENCES AND MAKECODE VALUES
+    //
+    // A MakeCode Arcade program shares arrays by IDENTITY (two variables, one
+    // array; a function that pushes onto its argument) and computes with
+    // JavaScript's values (undefined, null, ===, + that joins text). The
+    // named arrays above are values copied by name, so an imported program's
+    // arrays are REFERENCES instead: a reporter returns a small token naming
+    // an array in a per-runtime heap, and these blocks act on the array it
+    // names. The value rules live in valuesFor() below.
+    // ========================================================================
+
+    _error(message) {
+      if (this._runtime && this._runtime.emit) {
+        this._runtime.emit("BLOCKS_ERROR", message);
+      }
+    }
+
+    _array(args) {
+      const array = valuesFor().arrayValue(this._runtime, args.ARRAY);
+      if (!array) this._error("Array reference is null or expired");
+      return array;
+    }
+
+    _arrayResult(value) {
+      const values = valuesFor();
+      return Array.isArray(value)
+        ? values.arrayReference(this._runtime, value)
+        : values.encode(value);
+    }
+
+    specialValue(args) {
+      return String(args.KIND) === "null" ? null : valuesFor().UNDEFINED;
+    }
+
+    valueBinary(args) {
+      return valuesFor().binary(args.LEFT, String(args.OP), args.RIGHT);
+    }
+
+    valueUnary(args) {
+      return valuesFor().unary(String(args.OP), args.VALUE);
+    }
+
+    valueTruthy(args) {
+      return valuesFor().truth(args.VALUE);
+    }
+
+    valueCompare(args) {
+      return valuesFor().compare(args.LEFT, String(args.OP), args.RIGHT);
+    }
+
+    referenceValues(args) {
+      let rest;
+      try {
+        rest = JSON.parse(String(args.REST));
+      } catch (e) {
+        rest = null;
+      }
+      if (!Array.isArray(rest)) {
+        this._error("Array value chain requires an array tail");
+        return "[]";
+      }
+      return JSON.stringify([args.VALUE, ...rest], valuesFor().jsonReplacer);
+    }
+
+    createReference(args) {
+      let list;
+      try {
+        list = JSON.parse(String(args.VALUES));
+      } catch (e) {
+        list = null;
+      }
+      if (!Array.isArray(list)) {
+        this._error("Array reference requires an argument list");
+        return "";
+      }
+      const values = valuesFor();
+      return values.arrayReference(this._runtime, list.map(values.decode));
+    }
+
+    namedReference(args) {
+      const array = arrays[String(args.NAME)];
+      if (!Array.isArray(array)) {
+        this._error("Named array does not exist: " + String(args.NAME));
+        return valuesFor().UNDEFINED;
+      }
+      return valuesFor().arrayReference(this._runtime, array);
+    }
+
+    parseLegacyValue(args) {
+      return this._arrayResult(this.parseValue(valuesFor().decode(args.VALUE)));
+    }
+
+    jsonValue(args) {
+      const values = valuesFor();
+      const stack = new Set();
+      const unwrap = (value) => {
+        value = values.decode(value);
+        const id = values.referenceId(this._runtime, value, "array");
+        if (values.isReference(value) && id === null) {
+          throw new Error(
+            "JSON text requires an array reference from this project"
+          );
+        }
+        if (id !== null) {
+          value = values.arrayValue(this._runtime, value);
+          if (!value) throw new Error("Array reference is null or expired");
+        }
+        if (value && typeof value === "object") {
+          if (stack.has(value)) {
+            throw new Error("Converting circular structure to JSON");
+          }
+          stack.add(value);
+          const result = Array.isArray(value)
+            ? value.map(unwrap)
+            : Object.fromEntries(
+                Object.entries(value).map(([key, item]) => [key, unwrap(item)])
+              );
+          stack.delete(value);
+          return result;
+        }
+        return value;
+      };
+      try {
+        return values.encode(JSON.stringify(unwrap(args.VALUE)));
+      } catch (error) {
+        this._error(error.message);
+        return values.UNDEFINED;
+      }
+    }
+
+    referenceTruthy(args) {
+      const array = this._array(args);
+      return array ? Boolean(array[Number(args.INDEX)]) : false;
+    }
+
+    referenceItem(args) {
+      const array = this._array(args);
+      return array ? this._arrayResult(array[Number(args.INDEX)]) : "";
+    }
+
+    referenceRemove(args) {
+      const array = this._array(args);
+      if (!array) return false;
+      const index = valuesFor().indexOf(array, args.VALUE);
+      if (index < 0) return false;
+      array.splice(index, 1);
+      return true;
+    }
+
+    referenceRandom(args) {
+      const array = this._array(args);
+      return array
+        ? this._arrayResult(array[Math.floor(Math.random() * array.length)])
+        : "";
+    }
+
+    referenceLength(args) {
+      const array = this._array(args);
+      return array ? array.length : 0;
+    }
+
+    referenceIndexOf(args) {
+      const array = this._array(args);
+      return array
+        ? valuesFor().indexOf(array, args.VALUE, Number(args.INDEX))
+        : -1;
+    }
+
+    referenceTake(args) {
+      const array = this._array(args);
+      if (!array) return "";
+      const index = Number(args.INDEX);
+      const op = String(args.OP);
+      if (op === "pop") return this._arrayResult(array.pop());
+      if (op === "shift") return this._arrayResult(array.shift());
+      if (op === "removeAt") {
+        return this._arrayResult(
+          index >= 0 && index < array.length
+            ? array.splice(index, 1)[0]
+            : undefined
+        );
+      }
+      this._error("Unknown array reference operation " + op);
+      return "";
+    }
+
+    mutateReference(args) {
+      const array = this._array(args);
+      if (!array) return;
+      const values = valuesFor();
+      const index = Number(args.INDEX);
+      const value = values.decode(args.VALUE);
+      switch (String(args.OP)) {
+        case "push":
+          array.push(value);
+          break;
+        case "unshift":
+          array.unshift(value);
+          break;
+        case "set":
+          array[index] = value;
+          break;
+        case "insertAt":
+          array.splice(index, 0, value);
+          break;
+        case "removeAt":
+          if (index >= 0 && index < array.length) array.splice(index, 1);
+          break;
+        case "pop":
+          array.pop();
+          break;
+        case "shift":
+          array.shift();
+          break;
+        case "removeElement": {
+          const at = values.indexOf(array, value);
+          if (at >= 0) array.splice(at, 1);
+          break;
+        }
+        case "reverse":
+          array.reverse();
+          break;
+        case "length":
+          try {
+            array.length = Number(value);
+          } catch (e) {
+            this._error(e.message);
+          }
+          break;
+        default:
+          this._error("Unknown array reference mutation " + String(args.OP));
+      }
     }
 
     // ========================================================================
