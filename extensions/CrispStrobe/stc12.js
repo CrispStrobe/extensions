@@ -906,13 +906,20 @@
     }
 
     /**
-     * Push a SEVENSEG8's frame buffer onto the circuit: for each digit whose
-     * byte changed, its segments onto the segment port, then the 74HC138
-     * address onto the three select pins — the order the ISR keeps (segments,
-     * then select). The board's sevenseg8 latches a digit when the address
-     * CHANGES and is seen on two updates, so the last select pin is written
-     * twice, and a digit equal to the current address is reached by way of
-     * its neighbour. Common anode inverts the segments, as the C does.
+     * Push a SEVENSEG8's frame buffer onto the circuit, digit by digit as the
+     * ISR does: a digit's segments onto the segment port, then the 74HC138
+     * address of that digit onto the three select pins.
+     *
+     * The board's sevenseg8 latches a digit when the address CHANGES and is
+     * seen on two updates. So the digits are visited in GRAY-CODE order
+     * (0 1 3 2 6 7 5 4, cyclic), one select bit flipped per step: there is
+     * never an intermediate address to latch. Counting the address up instead
+     * flips up to three pins, and where the select nets also carry other parts
+     * (the A2's LED bank shares P2.2-P2.4) the model runs two updates per pin
+     * write, sees an intermediate address twice and latches it with the wrong
+     * segments: `12345678` showed `52547678`. Only changed digits are visited,
+     * and the current address is reached by way of its neighbour. Common anode
+     * inverts the segments, as the C does.
      */
     _segpush(name) {
       const part = partDecls(this.runtime).find(
@@ -930,24 +937,35 @@
       }
       const fb = this._segfb(name);
       const sel = part.selPins.map(pinTerminal);
-      const put = (d) => {
-        const byte = part.commonAnode ? ~fb[d] & 0xff : fb[d];
+      const GRAY = [0, 1, 3, 2, 6, 7, 5, 4];
+      const step = (to) => {
+        const byte = part.commonAnode ? ~fb[to] & 0xff : fb[to];
         for (let i = 0; i < 8; i++)
           b.setPin(
             "P" + part.segPort + "." + i,
             "pushpull",
             !!((byte >> i) & 1)
           );
-        for (let k = 0; k < 3; k++)
-          b.setPin(sel[k], "pushpull", !!((d >> k) & 1));
-        b.setPin(sel[2], "pushpull", !!((d >> 2) & 1));
-        shown.sel = d;
-        shown.digits[d] = fb[d];
+        const k = Math.log2((shown.sel ^ to) & 7);
+        // The one select pin that differs, then again: the second sighting.
+        b.setPin(sel[k], "pushpull", !!((to >> k) & 1));
+        b.setPin(sel[k], "pushpull", !!((to >> k) & 1));
+        shown.sel = to;
+        shown.digits[to] = fb[to];
       };
-      for (let d = 0; d < 8; d++) {
-        if (shown.digits[d] === fb[d]) continue;
-        if (d === shown.sel) put((d + 1) & 7);
-        put(d);
+      const stale = (d) => shown.digits[d] !== fb[d];
+      const at = GRAY.indexOf(shown.sel);
+      if ([0, 1, 2, 3, 4, 5, 6, 7].every((d) => !stale(d) || d === shown.sel)) {
+        // At most the current digit: out to a neighbour and back.
+        if (!stale(shown.sel)) return;
+        const here = shown.sel;
+        step(GRAY[(at + 1) % 8]);
+        step(here);
+        return;
+      }
+      for (let i = 1; i <= 8; i++) {
+        if (![0, 1, 2, 3, 4, 5, 6, 7].some(stale)) break;
+        step(GRAY[(at + i) % 8]);
       }
     }
 
