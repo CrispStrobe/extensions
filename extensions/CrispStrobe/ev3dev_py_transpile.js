@@ -12,6 +12,41 @@
   "use strict";
 
   // ============================================================================
+  // YES/NO QUESTIONS
+  // ----------------------------------------------------------------------------
+  // The browser's confirm() blocks and answers true or false, but a host may
+  // replace it. In BrickWright Lite's desktop and iOS app the dialog plugin
+  // turns window.confirm into an async function, so confirm(...) returns a
+  // Promise, which is always truthy: "if (confirm(...))" went ahead without
+  // asking. A host that can ask and wait provides
+  //     Scratch.BWConfirm(message) -> Promise<boolean>
+  // (the same pattern as Scratch.BWValues); anywhere else the browser's own
+  // confirm is used. Either way the answer is awaited, and only exactly true
+  // is a yes: a Promise, a rejection or a missing dialog is a no.
+  // ============================================================================
+  const askYesNo = (message) => {
+    const text = String(message);
+    const host =
+      typeof Scratch !== "undefined" &&
+      Scratch &&
+      typeof Scratch.BWConfirm === "function"
+        ? Scratch.BWConfirm
+        : null;
+    let answer;
+    try {
+      if (host) answer = host(text);
+      else if (typeof confirm === "function") answer = confirm(text);
+      else answer = false;
+    } catch (error) {
+      answer = false;
+    }
+    return Promise.resolve(answer).then(
+      (value) => value === true,
+      () => false
+    );
+  };
+
+  // ============================================================================
   // INTERNATIONALIZATION (i18n)
   // ============================================================================
 
@@ -2204,9 +2239,12 @@
               successful: uploadResults.results.length,
             });
 
-            // Ask user if they want to continue
-            const continueAnyway = confirm(
-              `${uploadResults.errors.length} sound(s) failed to upload:\n\n${errorMsg}\n\nContinue running script anyway?`
+            // Ask user if they want to continue, and wait for the answer
+            const continueAnyway = await askYesNo(
+              uploadResults.errors.length +
+                " sound(s) failed to upload:\n\n" +
+                errorMsg +
+                "\n\nContinue running script anyway?"
             );
 
             if (!continueAnyway) {
@@ -3195,7 +3233,7 @@
             cursor: pointer;
           `;
             deleteBtn.onclick = async () => {
-              if (confirm(`Delete ${script}?`)) {
+              if (await askYesNo("Delete " + script + "?")) {
                 await this.deleteScript({ NAME: script });
                 this.refreshScriptManagerUI(container);
               }

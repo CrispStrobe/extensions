@@ -29,6 +29,41 @@
   const Cast = Scratch.Cast;
 
   // ============================================================================
+  // YES/NO QUESTIONS
+  // ----------------------------------------------------------------------------
+  // The browser's confirm() blocks and answers true or false, but a host may
+  // replace it. In BrickWright Lite's desktop and iOS app the dialog plugin
+  // turns window.confirm into an async function, so confirm(...) returns a
+  // Promise, which is always truthy: "if (confirm(...))" went ahead without
+  // asking. A host that can ask and wait provides
+  //     Scratch.BWConfirm(message) -> Promise<boolean>
+  // (the same pattern as Scratch.BWValues); anywhere else the browser's own
+  // confirm is used. Either way the answer is awaited, and only exactly true
+  // is a yes: a Promise, a rejection or a missing dialog is a no.
+  // ============================================================================
+  const askYesNo = (message) => {
+    const text = String(message);
+    const host =
+      typeof Scratch !== "undefined" &&
+      Scratch &&
+      typeof Scratch.BWConfirm === "function"
+        ? Scratch.BWConfirm
+        : null;
+    let answer;
+    try {
+      if (host) answer = host(text);
+      else if (typeof confirm === "function") answer = confirm(text);
+      else answer = false;
+    } catch (error) {
+      answer = false;
+    }
+    return Promise.resolve(answer).then(
+      (value) => value === true,
+      () => false
+    );
+  };
+
+  // ============================================================================
   // TRANSLATIONS
   // ============================================================================
   const translations = {
@@ -6267,22 +6302,26 @@ continuous_sensor_loop()
         "_"
       );
 
-      if (!confirm(`Delete ${filename} from hub?`)) {
-        return;
-      }
+      // Nothing is sent until the user has answered, and only OK deletes.
+      return askYesNo("Delete " + filename + " from hub?").then((yes) => {
+        if (!yes) {
+          return;
+        }
 
-      console.log(`🗑️ Deleting ${filename}...`);
+        console.log("🗑️ Deleting " + filename + "...");
 
-      const deleteCommand = `import uos; uos.remove("${filename}"); print("✓ Deleted")`;
+        const deleteCommand =
+          'import uos; uos.remove("' + filename + '"); print("✓ Deleted")';
 
-      return this._peripheral
-        .sendPythonCommand(deleteCommand)
-        .then(() => {
-          alert(`✓ Deleted ${filename}`);
-        })
-        .catch((error) => {
-          alert(`❌ Delete failed: ${error.message}`);
-        });
+        return this._peripheral
+          .sendPythonCommand(deleteCommand)
+          .then(() => {
+            alert("✓ Deleted " + filename);
+          })
+          .catch((error) => {
+            alert("❌ Delete failed: " + error.message);
+          });
+      });
     }
 
     listScriptsOnHub() {
