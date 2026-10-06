@@ -29,6 +29,41 @@
   const Cast = Scratch.Cast;
 
   // ============================================================================
+  // YES/NO QUESTIONS
+  // ----------------------------------------------------------------------------
+  // The browser's confirm() blocks and answers true or false, but a host may
+  // replace it. In BrickWright Lite's desktop and iOS app the dialog plugin
+  // turns window.confirm into an async function, so confirm(...) returns a
+  // Promise, which is always truthy: "if (confirm(...))" went ahead without
+  // asking. A host that can ask and wait provides
+  //     Scratch.BWConfirm(message) -> Promise<boolean>
+  // (the same pattern as Scratch.BWValues); anywhere else the browser's own
+  // confirm is used. Either way the answer is awaited, and only exactly true
+  // is a yes: a Promise, a rejection or a missing dialog is a no.
+  // ============================================================================
+  const askYesNo = (message) => {
+    const text = String(message);
+    const host =
+      typeof Scratch !== "undefined" &&
+      Scratch &&
+      typeof Scratch.BWConfirm === "function"
+        ? Scratch.BWConfirm
+        : null;
+    let answer;
+    try {
+      if (host) answer = host(text);
+      else if (typeof confirm === "function") answer = confirm(text);
+      else answer = false;
+    } catch (error) {
+      answer = false;
+    }
+    return Promise.resolve(answer).then(
+      (value) => value === true,
+      () => false
+    );
+  };
+
+  // ============================================================================
   // TRANSLATIONS
   // ============================================================================
   const translations = {
@@ -147,6 +182,7 @@
       getColor: "[PORT] color",
       getReflection: "[PORT] reflection",
       getAmbientLight: "[PORT] ambient light",
+      getColorRGB: "[PORT] raw [CHANNEL]",
       getForce: "[PORT] force",
       isForceSensorPressed: "[PORT] force sensor pressed?",
       whenColor: "when [PORT] sees [COLOR]",
@@ -204,7 +240,7 @@
       motorPairMove: "Lenkung [STEERING] mit Tempo [SPEED]% starten",
       displayShowImage: "eingebautes Bild [IMAGE] anzeigen",
       setLightMatrixPixel:
-        "3x3-Matrix [PORT] Pixel x:[X] y:[Y] Helligkeit [BRIGHTNESS]%",
+        "Setze 3x3-Matrix [PORT] Pixel x:[X] y:[Y] Helligkeit [BRIGHTNESS]%",
       getFaceUp: "Hub-Oberseite",
       getDistanceIn: "[PORT] Abstand in [UNIT]",
       extensionName: "LEGO SPIKE Prime",
@@ -293,6 +329,7 @@
       getColor: "[PORT] Farbe",
       getReflection: "[PORT] Reflexion",
       getAmbientLight: "[PORT] Umgebungslicht",
+      getColorRGB: "[PORT] Rohwert [CHANNEL]",
       getForce: "[PORT] Kraft",
       isForceSensorPressed: "[PORT] Kraftsensor gedrückt?",
       whenColor: "wenn [PORT] sieht [COLOR]",
@@ -636,15 +673,37 @@
       this._lastSendTime = 0;
       this._sendInterval = 1000 / maxRate;
     }
-    okayToSend() {
+    /**
+     * Reserves the next send slot and returns how many milliseconds to wait
+     * for it (0 = send now). Slots are handed out in call order, so commands
+     * keep their order and none is lost.
+     *
+     * The limiter used to DROP a command that came too soon after the previous
+     * one (okayToSend() returned false and the send was skipped), and said so
+     * to nobody. Two blocks that run within 25 ms of each other --
+     * which happens whenever a busy browser fires two VM steps back to back --
+     * lost the second: "start moving" vanished after "set movement speed",
+     * and the robot never moved. A command is a request the program made; it
+     * is delayed, never discarded. The caller's promise resolves when it is
+     * actually sent, so a block that sends in a loop waits for its slot
+     * instead of queueing without bound.
+     */
+    reserve() {
       const now = Date.now();
-      if (now - this._lastSendTime >= this._sendInterval) {
-        this._lastSendTime = now;
-        return true;
-      }
-      return false;
+      const slot = Math.max(now, this._lastSendTime + this._sendInterval);
+      this._lastSendTime = slot;
+      return slot - now;
     }
   }
+
+  /** Runs send() in the limiter's next slot; see RateLimiter.reserve. */
+  const whenSlot = (limiter, isConnected, send) => {
+    const wait = limiter.reserve();
+    if (wait <= 0) return send();
+    return new Promise((resolve) => setTimeout(resolve, wait)).then(() =>
+      isConnected() ? send() : undefined
+    );
+  };
 
   // ============================================================================
   // JSONRPC CLASS
@@ -1784,8 +1843,13 @@
      */
     sendRaw(text, useLimiter = false, id = null) {
       if (!this.isConnected()) return Promise.resolve();
-      if (useLimiter && !this._rateLimiter.okayToSend())
-        return Promise.resolve();
+      if (useLimiter) {
+        return whenSlot(
+          this._rateLimiter,
+          () => this.isConnected(),
+          () => this.sendRaw(text, false, id)
+        );
+      }
 
       const options = {
         message: Base64Util.uint8ArrayToBase64(new TextEncoder().encode(text)),
@@ -2396,8 +2460,13 @@ continuous_sensor_loop()
 
     _send(message, useLimiter = false) {
       if (!this.isConnected()) return Promise.resolve();
-      if (useLimiter && !this._rateLimiter.okayToSend())
-        return Promise.resolve();
+      if (useLimiter) {
+        return whenSlot(
+          this._rateLimiter,
+          () => this.isConnected(),
+          () => this._send(message, false)
+        );
+      }
       const packed = COBS.pack(message);
       return Promise.resolve(
         this._link.write(
@@ -2659,6 +2728,20 @@ continuous_sensor_loop()
               };
             }
             offset += 4;
+            break;
+          }
+
+          case SPIKE3.DEV_MATRIX_3X3: {
+            // Type, port and nine pixel bytes, as emitted by the SPIKE 3 hub.
+            if (remaining < 11) return;
+            const port = SpikePorts[data[offset + 1]];
+            if (port) {
+              this._portValues[port] = {
+                type: "matrix3",
+                pixels: Array.from(data.slice(offset + 2, offset + 11)),
+              };
+            }
+            offset += 11;
             break;
           }
 
@@ -3088,7 +3171,11 @@ continuous_sensor_loop()
       return this.active._movementMotors;
     }
     set _movementMotors(value) {
-      this.active._movementMotors = value;
+      // The pair is the project's choice, not one hub's: both hubs hold it,
+      // so a pair set before connecting survives whichever route AUTO settles
+      // on, and movementMotors reads the same pair on either firmware.
+      this._repl._movementMotors = value;
+      this._spike3._movementMotors = value;
     }
     get _timer() {
       return this.active._timer;
@@ -4557,6 +4644,18 @@ continuous_sensor_loop()
         );
         this.usedSensors.add(port);
         return `(get_sensor("${port}").get()[1] if get_sensor("${port}") else 0)`;
+      } else if (block.opcode === "spikeprime_getColorRGB") {
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
+        const channel = this.getInputValue(block, "CHANNEL", blocks).replace(
+          /"/g,
+          ""
+        );
+        const idx = { red: 3, green: 4, blue: 5 }[channel] ?? 3;
+        this.usedSensors.add(port);
+        return `(get_sensor("${port}").get()[${idx}] if get_sensor("${port}") else 0)`;
       } else if (block.opcode === "spikeprime_getForce") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
@@ -5657,6 +5756,26 @@ continuous_sensor_loop()
             },
           },
           {
+            // One raw channel of the colour sensor, 0-1024, as the hub sends
+            // it: both firmware generations carry red, green and blue in the
+            // colour record (SPIKE 3 Python's color_sensor.rgbi() items 0-2).
+            opcode: "getColorRGB",
+            text: t("getColorRGB"),
+            blockType: BlockType.REPORTER,
+            arguments: {
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "PORT",
+                defaultValue: "A",
+              },
+              CHANNEL: {
+                type: ArgumentType.STRING,
+                menu: "RGB_CHANNEL",
+                defaultValue: "red",
+              },
+            },
+          },
+          {
             opcode: "getForce",
             text: t("getForce"),
             blockType: BlockType.REPORTER,
@@ -5884,6 +6003,10 @@ continuous_sensor_loop()
           },
           AXIS: { acceptReporters: false, items: ["pitch", "roll", "yaw"] },
           AXIS_XYZ: { acceptReporters: false, items: ["x", "y", "z"] },
+          RGB_CHANNEL: {
+            acceptReporters: false,
+            items: ["red", "green", "blue"],
+          },
           DIRECTION: {
             acceptReporters: false,
             items: [
@@ -6179,22 +6302,26 @@ continuous_sensor_loop()
         "_"
       );
 
-      if (!confirm(`Delete ${filename} from hub?`)) {
-        return;
-      }
+      // Nothing is sent until the user has answered, and only OK deletes.
+      return askYesNo("Delete " + filename + " from hub?").then((yes) => {
+        if (!yes) {
+          return;
+        }
 
-      console.log(`🗑️ Deleting ${filename}...`);
+        console.log("🗑️ Deleting " + filename + "...");
 
-      const deleteCommand = `import uos; uos.remove("${filename}"); print("✓ Deleted")`;
+        const deleteCommand =
+          'import uos; uos.remove("' + filename + '"); print("✓ Deleted")';
 
-      return this._peripheral
-        .sendPythonCommand(deleteCommand)
-        .then(() => {
-          alert(`✓ Deleted ${filename}`);
-        })
-        .catch((error) => {
-          alert(`❌ Delete failed: ${error.message}`);
-        });
+        return this._peripheral
+          .sendPythonCommand(deleteCommand)
+          .then(() => {
+            alert("✓ Deleted " + filename);
+          })
+          .catch((error) => {
+            alert("❌ Delete failed: " + error.message);
+          });
+      });
     }
 
     listScriptsOnHub() {
@@ -6234,37 +6361,142 @@ continuous_sensor_loop()
       const portA = Cast.toString(args.PORT_A).trim().toUpperCase();
       const portB = Cast.toString(args.PORT_B).trim().toUpperCase();
       this._peripheral._movementMotors = [portA, portB];
+      // Tell the hub too: motors.move/start/... drive whatever the hub's own
+      // motors pair is, and recording the ports here alone left it unchanged.
+      return this._peripheral.sendPythonCommand(this._motorPairPython(false));
+    }
+
+    /**
+     * One line of hub Python that defines motors = MotorPair(A, B) for the
+     * current movement pair. With onlyIfMissing it leaves an existing motors
+     * alone, which is what lets every movement command carry it: a project
+     * that never ran "set movement motors" still has a pair on the hub. exec
+     * keeps the try/except on one REPL line; SPIKE Prime firmware names the
+     * module spike and Robot Inventor names it mindstorms.
+     */
+    _motorPairPython(onlyIfMissing) {
+      const [portA, portB] = this._peripheral.movementMotors;
+      const define =
+        "try:\\n from spike import MotorPair\\n" +
+        "except ImportError:\\n from mindstorms import MotorPair\\n" +
+        `motors = MotorPair('${portA}', '${portB}')`;
+      if (!onlyIfMissing) return `exec("${define}")`;
+      const indented = define.replace(/\\n/g, "\\n ");
+      return `exec("try:\\n motors\\nexcept NameError:\\n ${indented}")`;
+    }
+
+    /** A MotorPair command, preceded by the definition of motors if absent. */
+    _sendMotorPairCommand(code) {
+      return this._peripheral.sendPythonCommand(
+        `${this._motorPairPython(true)}; ${code}`
+      );
+    }
+
+    /**
+     * The hub's counted position for a motor port, or null when the hub has
+     * reported none. SPIKE 3 notifications land in _sensors.motorPositions;
+     * the 2.x status stream lands in portValues.
+     */
+    _countedPosition(port) {
+      const alt = this._peripheral._sensors.motorPositions[port];
+      const reading =
+        alt && alt.relativePosition !== undefined
+          ? alt.relativePosition
+          : this._peripheral.portValues[port]?.relativePosition;
+      return typeof reading === "number" && Number.isFinite(reading)
+        ? reading
+        : null;
+    }
+
+    /**
+     * Resolve once every movement motor the hub reports on has turned the
+     * commanded degrees (within a few), as a word block on a real SPIKE does.
+     * The time estimate is the fallback, so a hub that reports no positions,
+     * or a robot stalled against a wall, still lets the script go on.
+     */
+    _waitForMovement(ports, degrees, speed) {
+      const target = Math.abs(degrees);
+      const degPerSecond = Math.abs(speed) * 6;
+      const estimateMs =
+        degPerSecond > 0 ? (target / degPerSecond) * 1000 : Infinity;
+      const starts = ports
+        .map((port) => ({ port, start: this._countedPosition(port) }))
+        .filter((entry) => entry.start !== null);
+      // Without readings the estimate is the whole wait, as in motorRunFor.
+      // With them it is only a safety net, so it is looser: the estimate is
+      // a guess at the hub's speed scale and must not cut a real move short.
+      const fallbackMs = starts.length
+        ? Math.min(estimateMs * 2 + 1000, 30000)
+        : Math.min(estimateMs + 500, 10000);
+      return new Promise((resolve) => {
+        let poll = null;
+        const done = () => {
+          clearTimeout(timeout);
+          if (poll !== null) clearInterval(poll);
+          resolve();
+        };
+        const timeout = setTimeout(done, fallbackMs);
+        if (!starts.length) return;
+        const arrived = () =>
+          starts.every(({ port, start }) => {
+            const now = this._countedPosition(port);
+            return now !== null && Math.abs(now - start) >= target - 5;
+          });
+        poll = setInterval(() => {
+          if (arrived()) done();
+        }, 20);
+      });
+    }
+
+    /** The unit names MotorPair.move accepts, from either spelling. */
+    _moveUnit(unit) {
+      const text = Cast.toString(unit).trim().toLowerCase();
+      const plural = {
+        rotation: "rotations",
+        degree: "degrees",
+        second: "seconds",
+      };
+      return plural[text] || text;
     }
 
     moveForward(args) {
       const direction = Cast.toString(args.DIRECTION);
       const value = Cast.toNumber(args.VALUE);
-      const unit = Cast.toString(args.UNIT);
-      const [portA] = this._peripheral._movementMotors;
-      const speed = this._peripheral.motorSettings[portA].speed;
+      const unit = this._moveUnit(args.UNIT);
+      const ports = this._peripheral.movementMotors;
+      const speed = this._peripheral.motorSettings[ports[0]].speed;
       const dirMultiplier = direction === "forward" ? 1 : -1;
+      let amount = value;
+      let sentUnit = unit;
       if (unit === "cm") {
-        const rotations = value / 17.6;
-        return this._peripheral.sendPythonCommand(
-          `motors.move(${rotations * dirMultiplier}, 'rotations', speed=${speed})`
-        );
+        amount = value / 17.6;
+        sentUnit = "rotations";
       } else if (unit === "in") {
-        const rotations = value / 6.93;
-        return this._peripheral.sendPythonCommand(
-          `motors.move(${rotations * dirMultiplier}, 'rotations', speed=${speed})`
+        amount = value / 6.93;
+        sentUnit = "rotations";
+      }
+      const sent = this._sendMotorPairCommand(
+        `motors.move(${amount * dirMultiplier}, '${sentUnit}', speed=${speed})`
+      );
+      // Wait for the move to end, as the SPIKE word block does, so the next
+      // block does not override it mid-way.
+      let wait;
+      if (sentUnit === "seconds") {
+        wait = new Promise((resolve) =>
+          setTimeout(resolve, Math.max(0, value) * 1000)
         );
       } else {
-        return this._peripheral.sendPythonCommand(
-          `motors.move(${value * dirMultiplier}, '${unit}', speed=${speed})`
-        );
+        const degrees = sentUnit === "rotations" ? amount * 360 : amount;
+        wait = this._waitForMovement(ports, degrees, speed);
       }
+      return Promise.all([sent, wait]).then(() => {});
     }
 
     steer(args) {
       const steering = Cast.toNumber(args.STEERING);
-      const [portA] = this._peripheral._movementMotors;
+      const [portA] = this._peripheral.movementMotors;
       const speed = this._peripheral.motorSettings[portA].speed;
-      return this._peripheral.sendPythonCommand(
+      return this._sendMotorPairCommand(
         `motors.start(${steering}, speed=${speed})`
       );
     }
@@ -6272,23 +6504,21 @@ continuous_sensor_loop()
     startTank(args) {
       const leftSpeed = Cast.toNumber(args.LEFT_SPEED);
       const rightSpeed = Cast.toNumber(args.RIGHT_SPEED);
-      return this._peripheral.sendPythonCommand(
+      return this._sendMotorPairCommand(
         `motors.start_tank(${leftSpeed}, ${rightSpeed})`
       );
     }
 
     setMovementSpeed(args) {
       const speed = Cast.toNumber(args.SPEED);
-      const [portA, portB] = this._peripheral._movementMotors;
+      const [portA, portB] = this._peripheral.movementMotors;
       this._peripheral.motorSettings[portA].speed = speed;
       this._peripheral.motorSettings[portB].speed = speed;
-      return this._peripheral.sendPythonCommand(
-        `motors.set_default_speed(${speed})`
-      );
+      return this._sendMotorPairCommand(`motors.set_default_speed(${speed})`);
     }
 
     stopMovement() {
-      return this._peripheral.sendPythonCommand("motors.stop()");
+      return this._sendMotorPairCommand("motors.stop()");
     }
 
     // Motor implementations
@@ -6592,13 +6822,20 @@ continuous_sensor_loop()
       const axis = Cast.toString(args.AXIS);
       return this._peripheral.angle[axis] || 0;
     }
+    // The AXIS menu names a rotation (yaw, pitch, roll); both hubs report
+    // the gyro per sensor axis (x, y, z). Yaw is the turn about z, the axis
+    // that points up out of a flat hub; pitch is about y and roll about x.
+    // Reading gyro[axis] with the menu's word found no such key, so these
+    // blocks reported 0 whatever the hub sent.
+    _gyroAxis(axis) {
+      const name = Cast.toString(axis).toLowerCase();
+      return { yaw: "z", pitch: "y", roll: "x" }[name] || name;
+    }
     getGyroRate(args) {
-      const axis = Cast.toString(args.AXIS);
-      return this._peripheral.gyro[axis] || 0;
+      return this._peripheral.gyro[this._gyroAxis(args.AXIS)] || 0;
     }
     getFilteredGyroRate(args) {
-      const axis = Cast.toString(args.AXIS);
-      return this._peripheral.gyroFiltered[axis] || 0;
+      return this._peripheral.gyroFiltered[this._gyroAxis(args.AXIS)] || 0;
     }
     getAcceleration(args) {
       const axis = Cast.toString(args.AXIS);
@@ -6858,6 +7095,14 @@ continuous_sensor_loop()
       const port = Cast.toString(args.PORT).trim().toUpperCase();
       const portData = this._peripheral.portValues[port];
       if (portData && portData.type === "color") return portData.ambient || 0;
+      return 0;
+    }
+    getColorRGB(args) {
+      const port = Cast.toString(args.PORT).trim().toUpperCase();
+      const channel = Cast.toString(args.CHANNEL).toLowerCase();
+      if (!["red", "green", "blue"].includes(channel)) return 0;
+      const portData = this._peripheral.portValues[port];
+      if (portData && portData.type === "color") return portData[channel] || 0;
       return 0;
     }
     getForce(args) {

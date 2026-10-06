@@ -19,6 +19,8 @@
   const OLED_KINDS = /^(ssd1306|sh1106|oled)$/i;
   const TFT_KINDS = /^(ili9341|ili9341_par|ili9341_parallel|st7735|tft)$/i;
   const LCD_KINDS = /^(hd44780|char_lcd|char_lcd_i2c|lcd)$/i;
+  const SERVO_KINDS = /^servo$/i;
+  const MOTOR_KINDS = /^dc_motor$/i;
 
   // Stubs: blocks with no real C driver.  Hidden from palette, methods
   // still exist so saved projects load.  Remove from this set when a
@@ -405,6 +407,43 @@
             arguments: str("SENSOR", "sensor1"),
           },
 
+          // ---- I2C parts: a DS3231 clock, an AT24C02 memory, the bus ----
+          // `current hour` (Sensing) reads the clock; these set it, keep
+          // bytes across power-off, and ask who answers on the bus.
+          {
+            opcode: "settime",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set time of [CLOCK] to [HOUR] : [MINUTE] : [SECOND]",
+            arguments: {
+              ...str("CLOCK", "clock"),
+              ...n("HOUR", 12),
+              ...n("MINUTE", 0),
+              ...n("SECOND", 0),
+            },
+          },
+          {
+            opcode: "eepromwrite",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "store [VALUE] at [ADDRESS] in [MEMORY]",
+            arguments: {
+              ...n("VALUE", 0),
+              ...n("ADDRESS", 0),
+              ...str("MEMORY", "memory"),
+            },
+          },
+          {
+            opcode: "eepromread",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "byte [ADDRESS] of [MEMORY]",
+            arguments: { ...n("ADDRESS", 0), ...str("MEMORY", "memory") },
+          },
+          {
+            opcode: "i2cfound",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "i2c device [ADDRESS] on [BUS]",
+            arguments: { ...n("ADDRESS", 104), ...str("BUS", "bus") },
+          },
+
           // ---- Reporters: stubs (hidden) ----
           {
             opcode: "devicestate",
@@ -518,20 +557,35 @@
     }
 
     // ---- Commands (real) ----
+    // Servos and motors are addressed like displays: by exact part id, or by
+    // ordinal within their family ("servo 1" is the first servo on the
+    // bench), which is how the dialect and the C drivers number them.
     setservo(a) {
       const b = this._board();
       if (b && b.setDeviceControl)
-        b.setDeviceControl(a.SERVO, "angle", num(a.ANGLE));
+        b.setDeviceControl(
+          this._device(a.SERVO, SERVO_KINDS),
+          "angle",
+          num(a.ANGLE)
+        );
     }
     setmotor(a) {
       const b = this._board();
       if (b && b.setDeviceControl)
-        b.setDeviceControl(a.MOTOR, "speed", num(a.SPEED));
+        b.setDeviceControl(
+          this._device(a.MOTOR, MOTOR_KINDS),
+          "speed",
+          num(a.SPEED)
+        );
     }
     setdirection(a) {
       const b = this._board();
       if (b && b.setDeviceControl)
-        b.setDeviceControl(a.MOTOR, "direction", String(a.DIR));
+        b.setDeviceControl(
+          this._device(a.MOTOR, MOTOR_KINDS),
+          "direction",
+          String(a.DIR)
+        );
     }
     setrelay(a) {
       const b = this._board();
@@ -721,15 +775,15 @@
 
     // ---- Reporters (real) ----
     servoangle(a) {
-      const st = this._state(a.SERVO);
+      const st = this._state(this._device(a.SERVO, SERVO_KINDS));
       return st ? (st.targetAngle ?? 0) : 0;
     }
     motorspeed(a) {
-      const st = this._state(a.MOTOR);
+      const st = this._state(this._device(a.MOTOR, MOTOR_KINDS));
       return st ? (st.omega ?? 0) : 0;
     }
     motordirection(a) {
-      const st = this._state(a.MOTOR);
+      const st = this._state(this._device(a.MOTOR, MOTOR_KINDS));
       return st ? (st.direction ?? "stopped") : "stopped";
     }
     temperature(a) {
@@ -751,6 +805,64 @@
     force(a) {
       const st = this._state(a.SENSOR);
       return st ? (st.force ?? 0) : 0;
+    }
+
+    // ---- I2C parts ----
+    // In the VM the program runs on the host, so these do what the chip's I2C
+    // transfers would do to the part: they write and read the board's live
+    // model state (bw-board ds3231 / at24c02). A part is named by its id, by
+    // the dialect's PART name (a bench calls PART clock "RTC_clock" and PART
+    // memory "EEPROM_memory"), or by ordinal in its family.
+    _i2cPart(ref, kind, prefix) {
+      const b = this._board();
+      const s = String(ref);
+      if (!b || !Array.isArray(b.parts)) return null;
+      const exact = b.parts.find((p) => p.id === s || p.id === prefix + s);
+      if (exact) return exact.kind === kind ? exact : null;
+      const family = b.parts.filter((p) => p.kind === kind);
+      const n = parseInt(s, 10);
+      if (Number.isFinite(n) && n >= 1) return family[n - 1] || null;
+      return family.length === 1 ? family[0] : null;
+    }
+    settime(a) {
+      const part = this._i2cPart(a.CLOCK, "ds3231", "RTC_");
+      const st = part && this._state(part.id);
+      if (!st || !("hour" in st)) return;
+      const clamp = (v, hi) => Math.max(0, Math.min(hi, Math.trunc(num(v))));
+      st.hour = clamp(a.HOUR, 23);
+      st.min = clamp(a.MINUTE, 59);
+      st.sec = clamp(a.SECOND, 59);
+    }
+    eepromwrite(a) {
+      const part = this._i2cPart(a.MEMORY, "at24c02", "EEPROM_");
+      const st = part && this._state(part.id);
+      // WP high discards the write, as on the part.
+      if (!st || !Array.isArray(st.mem) || st._wp) return;
+      st.mem[num(a.ADDRESS) & 255] = num(a.VALUE) & 255;
+    }
+    eepromread(a) {
+      const part = this._i2cPart(a.MEMORY, "at24c02", "EEPROM_");
+      const st = part && this._state(part.id);
+      // No part answers: the bus floats high and every bit reads 1.
+      if (!st || !Array.isArray(st.mem)) return 255;
+      return st.mem[num(a.ADDRESS) & 255] ?? 255;
+    }
+    i2cfound(a) {
+      // The dialect has one I2C bus, so BUS names it and every I2C part on
+      // the board is on it. Addresses follow the bw-board models: DS3231 and
+      // SSD1306 answer at params.address, else 0x68 / 0x3C; an AT24C02 at
+      // 0x50 | its strapped A2..A0. Other kinds are not reported.
+      const b = this._board();
+      if (!b || !Array.isArray(b.parts)) return false;
+      const want = num(a.ADDRESS) & 127;
+      const ADDRESS = {
+        ds3231: (p) => p.params?.address ?? 0x68,
+        ssd1306: (p) => p.params?.address ?? 0x3c,
+        at24c02: (p, st) => 0x50 | ((st && st._addrPins) | 0),
+      };
+      return b.parts.some(
+        (p) => ADDRESS[p.kind] && ADDRESS[p.kind](p, this._state(p.id)) === want
+      );
     }
 
     // ---- Reporters (stubs) ----

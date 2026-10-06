@@ -14,6 +14,121 @@
 (function (Scratch) {
   "use strict";
 
+  // MakeCode's Note enum, member -> Hz (pxt-microbit 9.1.1 libs/core/music.ts).
+  // Unsuffixed members are octave 4: Note.C is C4, 262 Hz.
+  const MAKECODE_NOTES = {
+    C: 262,
+    CSharp: 277,
+    D: 294,
+    Eb: 311,
+    E: 330,
+    F: 349,
+    FSharp: 370,
+    G: 392,
+    GSharp: 415,
+    A: 440,
+    Bb: 466,
+    B: 494,
+    C3: 131,
+    CSharp3: 139,
+    D3: 147,
+    Eb3: 156,
+    E3: 165,
+    F3: 175,
+    FSharp3: 185,
+    G3: 196,
+    GSharp3: 208,
+    A3: 220,
+    Bb3: 233,
+    B3: 247,
+    C4: 262,
+    CSharp4: 277,
+    D4: 294,
+    Eb4: 311,
+    E4: 330,
+    F4: 349,
+    FSharp4: 370,
+    G4: 392,
+    GSharp4: 415,
+    A4: 440,
+    Bb4: 466,
+    B4: 494,
+    C5: 523,
+    CSharp5: 555,
+    D5: 587,
+    Eb5: 622,
+    E5: 659,
+    F5: 698,
+    FSharp5: 740,
+    G5: 784,
+    GSharp5: 831,
+    A5: 880,
+    Bb5: 932,
+    B5: 988,
+  };
+  // MakeCode's BeatFraction as a shift of one beat (music.beat).
+  const BEAT_SHIFT = {
+    whole: 0,
+    half: 1,
+    quarter: 2,
+    eighth: 3,
+    sixteenth: 4,
+    double: -1,
+    breve: -2,
+  };
+  // MakeCode's built-in Melodies (libs/core/melodies.ts).
+  const MAKECODE_MELODIES = [
+    "Dadadadum",
+    "Entertainer",
+    "Prelude",
+    "Ode",
+    "Nyan",
+    "Ringtone",
+    "Funk",
+    "Blues",
+    "Birthday",
+    "Wedding",
+    "Funeral",
+    "Punchline",
+    "Baddy",
+    "Chase",
+    "BaDing",
+    "Wawawawaa",
+    "JumpUp",
+    "JumpDown",
+    "PowerUp",
+    "PowerDown",
+  ];
+
+  // Math.clamp as pxt-core defines it: min(high, max(low, v)), NaN stays NaN.
+  // The micro:bit's default analog period is 20 ms (MakeCode and MicroPython
+  // alike), and a servo frame is 20 ms with CODAL's default range 2000 us
+  // about a 1500 us centre, i.e. 500..2500 us for 0..180 degrees.
+  const ANALOG_HZ = 50;
+  const SERVO_HZ = 50;
+  const SERVO_MIN_US = 500;
+  const SERVO_RANGE_US = 2000;
+
+  const clamp = (low, high, v) => Math.min(high, Math.max(low, v));
+  // LedSpriteProperty -> the field that holds it.
+  const SPRITE_KEYS = {
+    x: "x",
+    y: "y",
+    direction: "dir",
+    brightness: "brightness",
+    blink: "blink",
+  };
+  // game.ts move(): the step per LED for each direction; anything else is -135.
+  const SPRITE_STEPS = {
+    0: [0, -1],
+    45: [1, -1],
+    90: [1, 0],
+    135: [1, 1],
+    180: [0, 1],
+    "-45": [-1, -1],
+    "-90": [-1, 0],
+  };
+
   class MicrobitPlus {
     constructor(runtime) {
       this._runtime = runtime;
@@ -22,6 +137,7 @@
       if (runtime && typeof runtime.on === "function") {
         runtime.on("PROJECT_START", () => {
           this._gameState = null;
+          this._tempo = 120;
         });
       }
     }
@@ -86,6 +202,39 @@
               },
             },
           },
+          // MakeCode's basic.showLeds and basic.showIcon: the same picture
+          // as `show pattern`, then the pause each one makes (400 / 600 ms).
+          {
+            opcode: "showleds",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "show leds [MATRIX]",
+            arguments: {
+              MATRIX: {
+                type: Scratch.ArgumentType.MATRIX,
+                defaultValue: "0101010101100010101000100",
+              },
+            },
+          },
+          {
+            opcode: "showicon",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "show icon [MATRIX]",
+            arguments: {
+              MATRIX: {
+                type: Scratch.ArgumentType.MATRIX,
+                defaultValue: "0101010101100010101000100",
+              },
+            },
+          },
+          {
+            // MakeCode's basic.showNumber: it waits while the number is shown
+            // (a digit 5 x interval ms, a longer number while it scrolls), where
+            // `display` moves on at once.
+            opcode: "shownumber",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "show number [VALUE] delay [MS] ms",
+            arguments: { ...n("VALUE", 0), ...n("MS", 150) },
+          },
           {
             opcode: "showtext",
             blockType: Scratch.BlockType.COMMAND,
@@ -140,6 +289,64 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "stop animation",
           },
+          // MakeCode's led.plotBrightness and led.point.
+          {
+            opcode: "plotbrightness",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "plot x [X] y [Y] brightness [BRIGHTNESS]",
+            arguments: { ...n("X", 0), ...n("Y", 0), ...n("BRIGHTNESS", 255) },
+          },
+          {
+            opcode: "point",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "point x [X] y [Y]",
+            arguments: { ...n("X", 0), ...n("Y", 0) },
+          },
+
+          // ── Images (MakeCode's Image) ─────────────────────────────
+          // An image is a VALUE: kept in a variable or list, changed pixel
+          // by pixel, shown from a column offset while the program runs.
+          "---",
+          {
+            opcode: "createimage",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "create image [MATRIX]",
+            arguments: {
+              MATRIX: {
+                type: Scratch.ArgumentType.MATRIX,
+                defaultValue: "0000000000000000000000000",
+              },
+            },
+          },
+          {
+            opcode: "imagesetpixel",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set pixel x [X] y [Y] of image [IMAGE] to [VALUE]",
+            arguments: {
+              ...n("X", 0),
+              ...n("Y", 0),
+              ...n("IMAGE", 1),
+              ...n("VALUE", 1),
+            },
+          },
+          {
+            opcode: "imagepixel",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "pixel x [X] y [Y] of image [IMAGE]",
+            arguments: { ...n("X", 0), ...n("Y", 0), ...n("IMAGE", 1) },
+          },
+          {
+            opcode: "showimage",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "show image [IMAGE] offset [OFFSET]",
+            arguments: { ...n("IMAGE", 1), ...n("OFFSET", 0) },
+          },
+          {
+            opcode: "plotimage",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "plot image [IMAGE] offset [OFFSET]",
+            arguments: { ...n("IMAGE", 1), ...n("OFFSET", 0) },
+          },
 
           // ── Buttons, logo, gestures (events) ─────────────────────
           "---",
@@ -171,6 +378,38 @@
                 defaultValue: "A",
                 menu: "btn",
               },
+            },
+          },
+          {
+            opcode: "islogo",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "logo touched?",
+          },
+          // MakeCode's input.onSound and input.setSoundThreshold.
+          {
+            opcode: "whensound",
+            blockType: Scratch.BlockType.HAT,
+            isEdgeActivated: true,
+            text: "when [LEVEL] sound",
+            arguments: {
+              LEVEL: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "loud",
+                menu: "soundLevel",
+              },
+            },
+          },
+          {
+            opcode: "soundthreshold",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set [LEVEL] sound threshold to [THRESHOLD]",
+            arguments: {
+              LEVEL: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "loud",
+                menu: "soundLevel",
+              },
+              ...n("THRESHOLD", 128),
             },
           },
           {
@@ -421,6 +660,139 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "stop tone",
           },
+          // MakeCode's music timing and melodies. A beat is 60000 / tempo ms
+          // and its fractions shift it; a note's frequency is MakeCode's Note
+          // enum, by member name, so `Note.FSharp5` round-trips as itself.
+          // MakeCode's music.play(tonePlayable) with its playback mode, the V2
+          // built-in sounds and createSoundEffect. Sound itself is the
+          // simulator's (audio.SoundEffect in MicroPython V2), as for playtone.
+          {
+            opcode: "playtonemode",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "play tone [FREQ] Hz for [MS] ms [MODE]",
+            arguments: {
+              ...n("FREQ", 262),
+              ...n("MS", 500),
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "until done",
+                menu: "soundMode",
+              },
+            },
+          },
+          {
+            opcode: "playsound",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "play sound [SOUND] [MODE]",
+            arguments: {
+              SOUND: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "giggle",
+                menu: "builtinSound",
+              },
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "until done",
+                menu: "soundMode",
+              },
+            },
+          },
+          {
+            opcode: "playsoundeffect",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "play sound effect [WAVE] from [FROM] to [TO] Hz volume [VFROM] to [VTO] for [MS] ms effect [FX] curve [CURVE] [MODE]",
+            arguments: {
+              WAVE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "square",
+                menu: "waveShape",
+              },
+              ...n("FROM", 5000),
+              ...n("TO", 0),
+              ...n("VFROM", 255),
+              ...n("VTO", 0),
+              ...n("MS", 500),
+              FX: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "none",
+                menu: "soundFx",
+              },
+              CURVE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "linear",
+                menu: "soundCurve",
+              },
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "until done",
+                menu: "soundMode",
+              },
+            },
+          },
+          {
+            opcode: "rest",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "rest for [MS] ms",
+            arguments: n("MS", 500),
+          },
+          {
+            opcode: "beat",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "beat [FRACTION]",
+            arguments: {
+              FRACTION: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "whole",
+                menu: "beatFraction",
+              },
+            },
+          },
+          {
+            opcode: "notefreq",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "frequency of note [NOTE]",
+            arguments: {
+              NOTE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "C",
+                menu: "makecodeNote",
+              },
+            },
+          },
+          {
+            opcode: "settempo",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set music tempo to [BPM]",
+            arguments: n("BPM", 120),
+          },
+          {
+            opcode: "changetempo",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "change music tempo by [BPM]",
+            arguments: n("BPM", 20),
+          },
+          {
+            opcode: "tempo",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "music tempo",
+          },
+          {
+            opcode: "playmelody",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "play melody [MELODY] [MODE]",
+            arguments: {
+              MELODY: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "Dadadadum",
+                menu: "melody",
+              },
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "until done",
+                menu: "playMode",
+              },
+            },
+          },
           {
             opcode: "servo",
             blockType: Scratch.BlockType.COMMAND,
@@ -478,6 +850,156 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "game over",
           },
+          {
+            opcode: "startcountdown",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "start countdown [MS] ms",
+            arguments: n("MS", 10000),
+          },
+          {
+            opcode: "setlife",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set game life to [VALUE]",
+            arguments: n("VALUE", 3),
+          },
+          {
+            opcode: "addlife",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "add game life [LIVES]",
+            arguments: n("LIVES", 1),
+          },
+          {
+            opcode: "life",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "game life",
+          },
+          {
+            opcode: "isgameover",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "game is over",
+          },
+          {
+            opcode: "isrunning",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "game is running",
+          },
+          {
+            opcode: "ispaused",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "game is paused",
+          },
+          {
+            opcode: "pausegame",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "pause game",
+          },
+          {
+            opcode: "resumegame",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "resume game",
+          },
+
+          // ── LED sprites (MakeCode's game.LedSprite) ─────────────
+          // A sprite is a numbered handle (1, 2, 3 in creation order; 0 is
+          // none), kept in an ordinary variable or list.
+          "---",
+          {
+            opcode: "createsprite",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "create sprite at x [X] y [Y]",
+            arguments: { ...n("X", 2), ...n("Y", 2) },
+          },
+          {
+            opcode: "spriteget",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "[PROPERTY] of sprite [SPRITE]",
+            arguments: {
+              PROPERTY: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "x",
+                menu: "spriteProperty",
+              },
+              ...n("SPRITE", 1),
+            },
+          },
+          {
+            opcode: "spriteset",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set sprite [SPRITE] [PROPERTY] to [VALUE]",
+            arguments: {
+              ...n("SPRITE", 1),
+              PROPERTY: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "x",
+                menu: "spriteProperty",
+              },
+              ...n("VALUE", 0),
+            },
+          },
+          {
+            opcode: "spritechange",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "change sprite [SPRITE] [PROPERTY] by [VALUE]",
+            arguments: {
+              ...n("SPRITE", 1),
+              PROPERTY: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "x",
+                menu: "spriteProperty",
+              },
+              ...n("VALUE", 1),
+            },
+          },
+          {
+            opcode: "spritemove",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "move sprite [SPRITE] by [LEDS]",
+            arguments: { ...n("SPRITE", 1), ...n("LEDS", 1) },
+          },
+          {
+            opcode: "spriteturn",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "turn sprite [SPRITE] [DIRECTION] by [DEGREES] degrees",
+            arguments: {
+              ...n("SPRITE", 1),
+              DIRECTION: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "right",
+                menu: "turnDirection",
+              },
+              ...n("DEGREES", 45),
+            },
+          },
+          {
+            opcode: "spritebounce",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "bounce sprite [SPRITE] if on edge",
+            arguments: n("SPRITE", 1),
+          },
+          {
+            opcode: "spritedelete",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "delete sprite [SPRITE]",
+            arguments: n("SPRITE", 1),
+          },
+          {
+            opcode: "spritetouching",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "sprite [SPRITE] touching sprite [OTHER]",
+            arguments: { ...n("SPRITE", 1), ...n("OTHER", 2) },
+          },
+          {
+            opcode: "spritetouchingedge",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "sprite [SPRITE] touching edge",
+            arguments: n("SPRITE", 1),
+          },
+          {
+            opcode: "spritedeleted",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "sprite [SPRITE] deleted",
+            arguments: n("SPRITE", 1),
+          },
 
           // ── Radio ────────────────────────────────────────────────
           "---",
@@ -517,6 +1039,42 @@
             text: "last radio number",
           },
           {
+            opcode: "radiorssi",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "last radio signal strength",
+          },
+          // MakeCode's radio.setTransmitSerialNumber, the packet's
+          // RadioPacketProperty.SerialNumber and control.deviceSerialNumber.
+          {
+            opcode: "radioserial",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "radio transmit serial number [STATE]",
+            arguments: {
+              STATE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "on",
+                menu: "onoff",
+              },
+            },
+          },
+          {
+            opcode: "radiolastserial",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "last radio serial number",
+          },
+          {
+            opcode: "deviceserial",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "device serial number",
+          },
+          // MakeCode's parseFloat ("parse to number").
+          {
+            opcode: "parsenumber",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "number from text [TEXT]",
+            arguments: str("TEXT", "123"),
+          },
+          {
             opcode: "whenradiostr",
             blockType: Scratch.BlockType.HAT,
             isEdgeActivated: true,
@@ -546,7 +1104,8 @@
         ],
         menus: {
           onoff: { acceptReporters: true, items: ["on", "off"] },
-          btn: { acceptReporters: false, items: ["A", "B", "any"] },
+          // AB is MakeCode's Button.AB: both held at once.
+          btn: { acceptReporters: false, items: ["A", "B", "AB", "any"] },
           btnEvent: { acceptReporters: false, items: ["pressed", "released"] },
           logoEvent: { acceptReporters: false, items: ["touched", "released"] },
           gesture: {
@@ -592,10 +1151,72 @@
               "B5",
             ],
           },
+          beatFraction: {
+            acceptReporters: false,
+            items: [
+              "whole",
+              "half",
+              "quarter",
+              "eighth",
+              "sixteenth",
+              "double",
+              "breve",
+            ],
+          },
+          makecodeNote: {
+            acceptReporters: false,
+            items: Object.keys(MAKECODE_NOTES),
+          },
+          melody: {
+            acceptReporters: false,
+            items: MAKECODE_MELODIES,
+          },
+          playMode: {
+            acceptReporters: false,
+            items: ["until done", "in background", "looping in background"],
+          },
+          soundMode: {
+            acceptReporters: false,
+            items: ["until done", "in background"],
+          },
+          builtinSound: {
+            acceptReporters: false,
+            items: [
+              "giggle",
+              "happy",
+              "hello",
+              "mysterious",
+              "sad",
+              "slide",
+              "soaring",
+              "spring",
+              "twinkle",
+              "yawn",
+            ],
+          },
+          waveShape: {
+            acceptReporters: false,
+            items: ["sine", "sawtooth", "triangle", "square", "noise"],
+          },
+          soundFx: {
+            acceptReporters: false,
+            items: ["none", "vibrato", "tremolo", "warble"],
+          },
+          soundCurve: {
+            acceptReporters: false,
+            items: ["linear", "curve", "logarithmic"],
+          },
           connState: {
             acceptReporters: false,
             items: ["connected", "disconnected"],
           },
+          // MakeCode's LedSpriteProperty, in its order.
+          spriteProperty: {
+            acceptReporters: false,
+            items: ["x", "y", "direction", "brightness", "blink"],
+          },
+          turnDirection: { acceptReporters: false, items: ["right", "left"] },
+          soundLevel: { acceptReporters: false, items: ["loud", "quiet"] },
         },
       };
     }
@@ -606,6 +1227,9 @@
     // projects load and so the compiler's opcode table stays complete.
     // ── Display (no-op — sim renders via MicroPython) ───────────
     showmatrix() {}
+    showleds() {}
+    showicon() {}
+    shownumber() {}
     showtext() {}
     scrolltext() {}
     cleardisplay() {}
@@ -614,6 +1238,41 @@
     plotbargraph() {}
     setbrightness() {}
     stopanimation() {}
+    plotbrightness() {}
+    point() {
+      return false;
+    }
+
+    // ── Images: pixels are kept (so a program reads back what it set);
+    // showing one is the simulator's, as the other display blocks are.
+    createimage(args) {
+      if (!this._images) this._images = [];
+      const digits = String(args.MATRIX || "")
+        .replace(/[^0-9]/g, "")
+        .padEnd(25, "0")
+        .slice(0, 25);
+      this._images.push([...digits].map((d) => d !== "0"));
+      return this._images.length;
+    }
+    _image(handle) {
+      return (this._images || [])[Math.round(Number(handle)) - 1] || null;
+    }
+    imagesetpixel(args) {
+      const img = this._image(args.IMAGE);
+      const x = Math.round(Number(args.X));
+      const y = Math.round(Number(args.Y));
+      if (img && x >= 0 && x < 5 && y >= 0 && y < 5) {
+        img[y * 5 + x] = Scratch.Cast.toBoolean(args.VALUE);
+      }
+    }
+    imagepixel(args) {
+      const img = this._image(args.IMAGE);
+      const x = Math.round(Number(args.X));
+      const y = Math.round(Number(args.Y));
+      return !!img && x >= 0 && x < 5 && y >= 0 && y < 5 && img[y * 5 + x];
+    }
+    showimage() {}
+    plotimage() {}
 
     // ── Events: buttons, logo, gestures ───────────────────────
     whenbutton() {
@@ -625,6 +1284,13 @@
     whenlogo() {
       return false;
     }
+    islogo() {
+      return false;
+    }
+    whensound() {
+      return false;
+    }
+    soundthreshold() {}
     whengesture() {
       return false;
     }
@@ -702,16 +1368,21 @@
     analogwrite(args) {
       const board = this.board;
       if (!board) return;
-      // There is no PWM in the solver: a duty cycle is a time average and
-      // the board is solved per instant. So this drives high above half
-      // and low below it — right at both ends of the range and wrong in
-      // the middle, which is stated here rather than presented as dimming.
       const pct = Number(args.PCT);
-      board.setPin(
-        this._pinId(args.PIN),
-        "pushpull",
-        isFinite(pct) && pct >= 50
-      );
+      const pin = this._pinId(args.PIN);
+      // A PWM the board switches itself (bw-board setPwm): the pin really
+      // toggles at the duty's edges, so an LED on it dims and a motor slows.
+      // 50 Hz is the micro:bit's default analog period (20 ms), the same
+      // carrier the MakeCode simulator bridge uses.
+      if (typeof board.setPwm === "function" && isFinite(pct)) {
+        board.setPwm(pin, Math.max(0, Math.min(100, pct)), {
+          hz: ANALOG_HZ,
+        });
+        return;
+      }
+      // A board older than setPwm can only take a level: high above half,
+      // low below — right at both ends of the range and wrong in the middle.
+      board.setPin(pin, "pushpull", isFinite(pct) && pct >= 50);
     }
 
     setpull(args) {
@@ -747,8 +1418,66 @@
     playtone() {}
     playnote() {}
     stoptone() {}
-    servo() {}
-    servocont() {}
+    rest() {}
+    playtonemode() {}
+    playsound() {}
+    playsoundeffect() {}
+    playmelody() {}
+
+    // The timing is plain arithmetic, so it is kept here too: a beat reads
+    // the same in the editor as on the board. As MakeCode's music.ts: 120 bpm
+    // until set, a beat is Math.idiv(60000, bpm), and setTempo ignores a tempo
+    // that is not above 0 and floors it at 1.
+    _bpm() {
+      return this._tempo > 0 ? this._tempo : 120;
+    }
+    beat(args) {
+      const beat = Math.trunc(60000 / this._bpm());
+      const shift = BEAT_SHIFT[String(args.FRACTION).toLowerCase()] || 0;
+      return shift >= 0 ? beat >> shift : beat << -shift;
+    }
+    notefreq(args) {
+      const want = String(args.NOTE).toLowerCase();
+      const key = Object.keys(MAKECODE_NOTES).find(
+        (k) => k.toLowerCase() === want
+      );
+      return key ? MAKECODE_NOTES[key] : 0;
+    }
+    settempo(args) {
+      const bpm = Number(args.BPM);
+      if (bpm > 0) this._tempo = Math.max(1, bpm);
+    }
+    changetempo(args) {
+      const bpm = Number(args.BPM);
+      if (!isNaN(bpm)) this.settempo({ BPM: this._bpm() + bpm });
+    }
+    tempo() {
+      return this._bpm();
+    }
+    // A servo is driven the way the micro:bit drives one: CODAL's
+    // setServoValue(angle) is a 50 Hz frame whose pulse is
+    // 500 + angle * 2000 / 180 us (range 2000, centre 1500). The board's
+    // servo decodes that pulse from the pin, so the horn and the angle
+    // reporter follow the program. A board without setPwm cannot carry a
+    // pulse train and is left alone rather than given a guessed level.
+    _servoPulse(pin, degrees) {
+      const board = this.board;
+      if (!board || typeof board.setPwm !== "function") return;
+      const deg = Math.max(0, Math.min(180, Number(degrees) || 0));
+      board.setPwm(this._pinId(pin), 0, {
+        hz: SERVO_HZ,
+        pulseUs: SERVO_MIN_US + (deg * SERVO_RANGE_US) / 180,
+      });
+    }
+    servo(args) {
+      this._servoPulse(args.PIN, args.DEG);
+    }
+    // MakeCode's servos.ContinuousServo.run(speed): -100..100 % mapped onto
+    // 0..180 degrees (stop at 90), then the same pulse.
+    servocont(args) {
+      const spd = Math.max(-100, Math.min(100, Number(args.SPD) || 0));
+      this._servoPulse(args.PIN, ((spd + 100) * 180) / 200);
+    }
 
     // ── Game ─────────────────────────────────────────────────
     // The score and lives are plain numbers, so they are kept here too and a
@@ -756,7 +1485,8 @@
     // MakeCode's do (0 points, 3 lives) and clamp where its setScore/setLife
     // do. Game over itself is a display sequence, which the simulator draws.
     _game() {
-      if (!this._gameState) this._gameState = { score: 0, life: 3 };
+      if (!this._gameState)
+        this._gameState = { score: 0, life: 3, paused: false, sprites: [] };
       return this._gameState;
     }
     addscore(args) {
@@ -774,6 +1504,151 @@
       g.life = Math.max(0, g.life - (Number(args.LIFE) || 0));
     }
     gameover() {}
+    startcountdown() {}
+    setlife(args) {
+      this._game().life = Math.max(0, Number(args.VALUE) || 0);
+    }
+    addlife(args) {
+      const g = this._game();
+      g.life = Math.max(0, g.life + (Number(args.LIVES) || 0));
+    }
+    life() {
+      return this._game().life;
+    }
+    isgameover() {
+      return false;
+    }
+    isrunning() {
+      const g = this._game();
+      return !g.paused && g.sprites.length > 0;
+    }
+    ispaused() {
+      return this._game().paused;
+    }
+    pausegame() {
+      this._game().paused = true;
+    }
+    resumegame() {
+      this._game().paused = false;
+    }
+
+    // ── LED sprites ──────────────────────────────────────────
+    // The sprites' STATE, as pxt-microbit 9.1.1 libs/core/game.ts keeps it, so
+    // a sprite program's numbers can be watched in the editor; the picture is
+    // the MicroPython simulator's, like the rest of the display group. A handle
+    // that names no sprite does nothing and reads 0.
+    _sprite(handle) {
+      const h = Math.floor(Number(handle));
+      const list = this._game().sprites;
+      return h >= 1 && h <= list.length ? list[h - 1] : null;
+    }
+    _setDirection(s, degrees) {
+      // (Math.floor(d / 45) % 8) * 45, JavaScript's remainder, folded into -135..180
+      let d = (Math.floor(degrees / 45) % 8) * 45;
+      if (d <= -180) d += 360;
+      else if (d > 180) d -= 360;
+      s.dir = d;
+    }
+    createsprite(args) {
+      const list = this._game().sprites;
+      list.push({
+        x: clamp(0, 4, Number(args.X) || 0),
+        y: clamp(0, 4, Number(args.Y) || 0),
+        dir: 90,
+        brightness: 255,
+        // MakeCode never initialises a sprite's blink: changing it gives NaN.
+        blink: NaN,
+        alive: true,
+      });
+      return list.length;
+    }
+    spriteget(args) {
+      const s = this._sprite(args.SPRITE);
+      if (!s) return 0;
+      const key = SPRITE_KEYS[String(args.PROPERTY).toLowerCase()] || "x";
+      return s[key];
+    }
+    _spriteSet(s, property, value) {
+      switch (String(property).toLowerCase()) {
+        case "y":
+          s.y = clamp(0, 4, value);
+          break;
+        case "direction":
+          this._setDirection(s, value);
+          break;
+        case "brightness":
+          s.brightness = clamp(0, 255, value);
+          break;
+        case "blink":
+          s.blink = clamp(0, 10000, value);
+          break;
+        default:
+          s.x = clamp(0, 4, value);
+      }
+    }
+    spriteset(args) {
+      const s = this._sprite(args.SPRITE);
+      if (s) this._spriteSet(s, args.PROPERTY, Number(args.VALUE) || 0);
+    }
+    spritechange(args) {
+      const s = this._sprite(args.SPRITE);
+      if (!s) return;
+      const key = SPRITE_KEYS[String(args.PROPERTY).toLowerCase()] || "x";
+      this._spriteSet(s, args.PROPERTY, s[key] + (Number(args.VALUE) || 0));
+    }
+    spritemove(args) {
+      const s = this._sprite(args.SPRITE);
+      if (!s) return;
+      const n = Number(args.LEDS) || 0;
+      const step = SPRITE_STEPS[s.dir] || [-1, 1];
+      s.x = clamp(0, 4, s.x + step[0] * n);
+      s.y = clamp(0, 4, s.y + step[1] * n);
+    }
+    spriteturn(args) {
+      const s = this._sprite(args.SPRITE);
+      if (!s) return;
+      const deg = Number(args.DEGREES) || 0;
+      const left = String(args.DIRECTION).toLowerCase() === "left";
+      this._setDirection(s, left ? s.dir - deg : s.dir + deg);
+    }
+    spritebounce(args) {
+      const s = this._sprite(args.SPRITE);
+      if (!s) return;
+      const { x, y, dir } = s;
+      if (dir === 0 && y === 0) s.dir = 180;
+      else if (dir === 45 && (x === 4 || y === 0))
+        s.dir = x === 0 && y === 0 ? -135 : y === 0 ? 135 : -45;
+      else if (dir === 90 && x === 4) s.dir = -90;
+      else if (dir === 135 && (x === 4 || y === 4))
+        s.dir = x === 4 && y === 4 ? -45 : y === 4 ? 45 : -135;
+      else if (dir === 180 && y === 4) s.dir = 0;
+      else if (dir === -45 && (x === 0 || y === 0))
+        s.dir = x === 0 && y === 0 ? 135 : y === 0 ? -135 : 45;
+      else if (dir === -90 && x === 0) s.dir = 90;
+      else if (dir === -135 && (x === 0 || y === 4))
+        s.dir = x === 0 && y === 4 ? 45 : y === 4 ? -45 : 135;
+    }
+    spritedelete(args) {
+      const s = this._sprite(args.SPRITE);
+      if (s) s.alive = false;
+    }
+    spritetouching(args) {
+      const s = this._sprite(args.SPRITE);
+      const t = this._sprite(args.OTHER);
+      return !!(s && t && s.alive && t.alive && s.x === t.x && s.y === t.y);
+    }
+    spritetouchingedge(args) {
+      const s = this._sprite(args.SPRITE);
+      return !!(
+        s &&
+        s.alive &&
+        (s.x === 0 || s.x === 4 || s.y === 0 || s.y === 4)
+      );
+    }
+    spritedeleted(args) {
+      const s = this._sprite(args.SPRITE);
+      return !!(s && !s.alive);
+    }
 
     // ── Radio ────────────────────────────────────────────────
     radioon() {}
@@ -791,6 +1666,20 @@
     }
     radiolaststr() {
       return "";
+    }
+    radiorssi() {
+      return 0;
+    }
+    radioserial() {}
+    radiolastserial() {
+      return 0;
+    }
+    deviceserial() {
+      return 0;
+    }
+    // JavaScript's own parseFloat, as MakeCode's is.
+    parsenumber(args) {
+      return parseFloat(String(args.TEXT));
     }
 
     // ── Connection ───────────────────────────────────────────

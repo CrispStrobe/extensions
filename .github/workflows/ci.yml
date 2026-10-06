@@ -32,6 +32,14 @@ jobs:
       - name: Prettier (--check) on CrispStrobe extensions
         run: npx prettier --check 'extensions/CrispStrobe/**/*.js'
 
+      # Movement blocks of the unified SPIKE extension, against a stub hub.
+      - name: SPIKE movement tests
+        run: node development/test-spikeprime-movement.js
+
+      # Every confirm() in our extensions waits for the answer and goes ahead
+      # only on OK — through the host's Scratch.BWConfirm when it has one.
+      - name: Confirm sites wait for the answer
+        run: node development/test-confirm-sites.js
       # Pure protocol encoders that can be checked without hardware.
       - name: Circuit Cubes protocol tests
         run: node development/test-circuitcubes.js
