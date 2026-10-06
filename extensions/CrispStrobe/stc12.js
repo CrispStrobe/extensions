@@ -225,6 +225,14 @@
               PIN: { type: Scratch.ArgumentType.STRING, menu: "pins" },
             },
           },
+          {
+            // The chip's own on-die sensor (sb3-creator `chip temperature`):
+            // whole degrees C. The chip sits on the bench, so in the VM it
+            // reads the bench temperature (bw-board board.temperatureC).
+            opcode: "chiptemp",
+            blockType: Scratch.BlockType.REPORTER,
+            text: Scratch.translate("chip temperature"),
+          },
           "---",
           {
             opcode: "setpwm",
@@ -622,6 +630,12 @@
           : 0;
       }
       return this._level(args.PIN);
+    }
+
+    chiptemp() {
+      const b = circuitBoard(this.runtime);
+      const t = b ? Number(b.temperatureC) : NaN;
+      return Math.round(isFinite(t) ? t : 25);
     }
 
     setpwm(args) {
