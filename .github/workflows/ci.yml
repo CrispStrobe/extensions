@@ -35,6 +35,8 @@ jobs:
       # Movement blocks of the unified SPIKE extension, against a stub hub.
       - name: SPIKE movement tests
         run: node development/test-spikeprime-movement.js
+      - name: Native array reference kinds
+        run: node --test development/test-array-value-kinds.js
 
       # Every confirm() in our extensions waits for the answer and goes ahead
       # only on OK — through the host's Scratch.BWConfirm when it has one.

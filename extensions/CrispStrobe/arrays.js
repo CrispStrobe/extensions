@@ -324,9 +324,14 @@
       "array",
       "image",
       "tile",
+      "legacy-tile",
       "animation",
       "scene",
       "physics-engine",
+      "player",
+      "music",
+      "sevenseg",
+      "buffer",
     ];
     const scopes = new WeakMap();
     const session =
