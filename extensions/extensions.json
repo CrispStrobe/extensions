@@ -25,6 +25,7 @@
   // ─────────────────────────────────────────────────────────────────────────
   "CrispStrobe/ev3_universal",
   "CrispStrobe/ev3_direct",
+  "CrispStrobe/circuitcubes",
 
   "CrispStrobe/arrays",
   "CrispStrobe/circuit",
