@@ -99,14 +99,14 @@
   const unpackB = (c) => c & 0xff;
 
   function hsv(hue, sat = 255, val = 255) {
-    let h = (hue % 255) >> 0;
+    let h = hue % 255 >> 0;
     if (h < 0) h += 255;
     h = ((h * 192) / 255) >> 0;
     const invsat = 255 - sat;
     const floor = ((val * invsat) / 255) >> 0;
     const amplitude = val - floor;
     const section = (h / 0x40) >> 0;
-    const offset = (h % 0x40) >> 0;
+    const offset = h % 0x40 >> 0;
     const up = (((offset * amplitude) / (255 / 4)) >> 0) + floor;
     const down = (((0x40 - 1 - offset) * amplitude) / (255 / 4)) >> 0;
     const downF = down + floor;
