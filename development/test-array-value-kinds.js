@@ -34,6 +34,7 @@ test("native references preserve kind, identity and scope in Arrays fallback", (
     "music",
     "sevenseg",
     "buffer",
+    "object",
   ]) {
     const ref = values.reference(runtime, kind, "one");
     assert.equal(values.isReference(ref), true, kind);
