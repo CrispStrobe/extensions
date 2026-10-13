@@ -74,6 +74,8 @@
       "arrays.createReference": "new array reference from [VALUES]",
       "arrays.specialValue": "[KIND] value",
       "arrays.valueBinary": "value [LEFT] [OP] [RIGHT]",
+      "arrays.stringFromCharCode": "text from char code [CODE]",
+      "arrays.stringConcat": "concatenate text [TEXT] with [OTHER]",
       "arrays.valueUnary": "[OP] value [VALUE]",
       "arrays.valueTruthy": "truthiness of value [VALUE]",
       "arrays.valueCompare": "compare value [LEFT] [OP] with [RIGHT]",
@@ -1221,6 +1223,23 @@
             },
           },
           {
+            opcode: "stringFromCharCode",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.stringFromCharCode"),
+            arguments: {
+              CODE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 65 },
+            },
+          },
+          {
+            opcode: "stringConcat",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.stringConcat"),
+            arguments: {
+              TEXT: { type: Scratch.ArgumentType.STRING, defaultValue: "hello" },
+              OTHER: { type: Scratch.ArgumentType.STRING, defaultValue: " world" },
+            },
+          },
+          {
             opcode: "valueUnary",
             blockType: Scratch.BlockType.REPORTER,
             text: t("arrays.valueUnary"),
@@ -1771,6 +1790,36 @@
 
     valueBinary(args) {
       return valuesFor().binary(args.LEFT, String(args.OP), args.RIGHT);
+    }
+
+    // PXT String_::fromCharCode takes one numeric argument and uses the
+    // simulator's UTF-16 code-unit conversion, including fractional/wrapped
+    // numbers and NaN. Reference tokens are never converted to their handle
+    // spelling; they have no primitive String conversion in this adapter.
+    stringFromCharCode(args) {
+      const value = valuesFor().decode(args.CODE);
+      if (value !== null && (typeof value === "object" || typeof value === "function")) {
+        this._error("Character code cannot be an opaque reference or object");
+        return valuesFor().encode(undefined);
+      }
+      return String.fromCharCode(value);
+    }
+
+    // The original String_::concat checks the receiver for null, then adds
+    // the other primitive. In particular a null/undefined argument is text,
+    // whereas a null/undefined receiver is an error.
+    stringConcat(args) {
+      const text = valuesFor().decode(args.TEXT);
+      const other = valuesFor().decode(args.OTHER);
+      if (typeof text !== "string") {
+        this._error("String concatenation needs a non-null string receiver");
+        return valuesFor().encode(undefined);
+      }
+      if (other !== null && (typeof other === "object" || typeof other === "function")) {
+        this._error("String concatenation cannot convert an opaque reference or object");
+        return valuesFor().encode(undefined);
+      }
+      return text + other;
     }
 
     valueUnary(args) {
