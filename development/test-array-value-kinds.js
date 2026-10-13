@@ -48,3 +48,26 @@ test("native references preserve kind, identity and scope in Arrays fallback", (
     assert.equal(values.referenceId(runtime, ref, kind), null);
   }
 });
+
+test("numeric exponentiation preserves special numbers in the standalone fallback", () => {
+  const source = readFileSync(
+    new URL("../extensions/CrispStrobe/arrays.js", import.meta.url),
+    "utf8"
+  );
+  const start = source.indexOf("  const makeValues = () => {");
+  const end = source.indexOf("\n  };\n", start);
+  const values = new Function(
+    source.slice(start, end + 5) + "\nreturn makeValues();"
+  )();
+  for (const [left, right] of [
+    [2, 3],
+    [-2, 0.5],
+    [NaN, 0],
+    [NaN, 2],
+    [Infinity, 0],
+    [-0, 3],
+    [-0, -3],
+  ]) {
+    assert.ok(Object.is(values.binary(left, "**", right), left ** right));
+  }
+});

@@ -473,6 +473,8 @@
           return a / b;
         case "%":
           return a % b;
+        case "**":
+          return a ** b;
         default:
           throw new Error("Unknown value arithmetic " + op);
       }
@@ -1343,7 +1345,7 @@
           },
           valueOperations: {
             acceptReporters: false,
-            items: ["+", "-", "*", "/", "%"],
+            items: ["+", "-", "*", "/", "%", "**"],
           },
           valueUnaryOperations: { acceptReporters: false, items: ["+", "-"] },
           valueComparisons: {
