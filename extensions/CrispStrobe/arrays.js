@@ -464,6 +464,10 @@
     const binary = (left, op, right) => {
       const a = decode(left);
       const b = decode(right);
+      if (["&", "|", "^", "<<", ">>", ">>>"].includes(op) &&
+          [a, b].some(value => value !== null && !["number", "string", "boolean", "undefined"].includes(typeof value))) {
+        throw new Error("Bitwise conversion requires primitive values, not opaque references or objects");
+      }
       switch (op) {
         case "+":
           return a + b;
@@ -477,6 +481,18 @@
           return a % b;
         case "**":
           return a ** b;
+        case "&":
+          return a & b;
+        case "|":
+          return a | b;
+        case "^":
+          return a ^ b;
+        case "<<":
+          return a << b;
+        case ">>":
+          return a >> b;
+        case ">>>":
+          return a >>> b;
         default:
           throw new Error("Unknown value arithmetic " + op);
       }
@@ -485,6 +501,12 @@
       const a = decode(value);
       if (op === "+") return +a;
       if (op === "-") return -a;
+      if (op === "~") {
+        if (a !== null && !["number", "string", "boolean", "undefined"].includes(typeof a)) {
+          throw new Error("Bitwise conversion requires primitive values, not opaque references or objects");
+        }
+        return ~a;
+      }
       throw new Error("Unknown unary value arithmetic " + op);
     };
     const compare = (left, op, right) => {
@@ -1370,9 +1392,9 @@
           },
           valueOperations: {
             acceptReporters: false,
-            items: ["+", "-", "*", "/", "%", "**"],
+            items: ["+", "-", "*", "/", "%", "**", "&", "|", "^", "<<", ">>", ">>>"],
           },
-          valueUnaryOperations: { acceptReporters: false, items: ["+", "-"] },
+          valueUnaryOperations: { acceptReporters: false, items: ["+", "-", "~"] },
           valueComparisons: {
             acceptReporters: false,
             items: ["==", "!=", "===", "!==", "<", ">", "<=", ">="],
@@ -1795,7 +1817,12 @@
     }
 
     valueBinary(args) {
-      return valuesFor().binary(args.LEFT, String(args.OP), args.RIGHT);
+      const values = valuesFor(), op = String(args.OP);
+      if (["&", "|", "^", "<<", ">>", ">>>"].includes(op)) {
+        try { return values.binary(args.LEFT, op, args.RIGHT); }
+        catch (error) { this._error(error.message); return values.encode(undefined); }
+      }
+      return values.binary(args.LEFT, op, args.RIGHT);
     }
 
     // PXT String_::fromCharCode takes one numeric argument and uses the
@@ -1837,7 +1864,12 @@
     }
 
     valueUnary(args) {
-      return valuesFor().unary(String(args.OP), args.VALUE);
+      const values = valuesFor(), op = String(args.OP);
+      if (op === "~") {
+        try { return values.unary(op, args.VALUE); }
+        catch (error) { this._error(error.message); return values.encode(undefined); }
+      }
+      return values.unary(op, args.VALUE);
     }
 
     valueTruthy(args) {
