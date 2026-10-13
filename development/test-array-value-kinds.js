@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 
 test("native references preserve kind, identity and scope in Arrays fallback", () => {
   const source = readFileSync(
@@ -12,10 +13,9 @@ test("native references preserve kind, identity and scope in Arrays fallback", (
   const end = source.indexOf("\n  };\n", start);
   assert.ok(start >= 0 && end > start);
   // Exercise the actual fallback, without changing the extension host.
-  // eslint-disable-next-line no-new-func
-  const values = new Function(
-    source.slice(start, end + 5) + "\nreturn makeValues();"
-  )();
+  const values = runInNewContext(
+    source.slice(start, end + 5) + "\nmakeValues();"
+  );
   const handlers = {};
   const runtime = {
     on(event, callback) {
@@ -56,9 +56,9 @@ test("numeric exponentiation preserves special numbers in the standalone fallbac
   );
   const start = source.indexOf("  const makeValues = () => {");
   const end = source.indexOf("\n  };\n", start);
-  const values = new Function(
-    source.slice(start, end + 5) + "\nreturn makeValues();"
-  )();
+  const values = runInNewContext(
+    source.slice(start, end + 5) + "\nmakeValues();"
+  );
   for (const [left, right] of [
     [2, 3],
     [-2, 0.5],
