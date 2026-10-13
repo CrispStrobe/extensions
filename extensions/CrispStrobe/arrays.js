@@ -464,9 +464,17 @@
     const binary = (left, op, right) => {
       const a = decode(left);
       const b = decode(right);
-      if (["&", "|", "^", "<<", ">>", ">>>"].includes(op) &&
-          [a, b].some(value => value !== null && !["number", "string", "boolean", "undefined"].includes(typeof value))) {
-        throw new Error("Bitwise conversion requires primitive values, not opaque references or objects");
+      if (
+        ["&", "|", "^", "<<", ">>", ">>>"].includes(op) &&
+        [a, b].some(
+          (value) =>
+            value !== null &&
+            !["number", "string", "boolean", "undefined"].includes(typeof value)
+        )
+      ) {
+        throw new Error(
+          "Bitwise conversion requires primitive values, not opaque references or objects"
+        );
       }
       switch (op) {
         case "+":
@@ -502,8 +510,13 @@
       if (op === "+") return +a;
       if (op === "-") return -a;
       if (op === "~") {
-        if (a !== null && !["number", "string", "boolean", "undefined"].includes(typeof a)) {
-          throw new Error("Bitwise conversion requires primitive values, not opaque references or objects");
+        if (
+          a !== null &&
+          !["number", "string", "boolean", "undefined"].includes(typeof a)
+        ) {
+          throw new Error(
+            "Bitwise conversion requires primitive values, not opaque references or objects"
+          );
         }
         return ~a;
       }
@@ -1392,9 +1405,25 @@
           },
           valueOperations: {
             acceptReporters: false,
-            items: ["+", "-", "*", "/", "%", "**", "&", "|", "^", "<<", ">>", ">>>"],
+            items: [
+              "+",
+              "-",
+              "*",
+              "/",
+              "%",
+              "**",
+              "&",
+              "|",
+              "^",
+              "<<",
+              ">>",
+              ">>>",
+            ],
           },
-          valueUnaryOperations: { acceptReporters: false, items: ["+", "-", "~"] },
+          valueUnaryOperations: {
+            acceptReporters: false,
+            items: ["+", "-", "~"],
+          },
           valueComparisons: {
             acceptReporters: false,
             items: ["==", "!=", "===", "!==", "<", ">", "<=", ">="],
@@ -1817,10 +1846,15 @@
     }
 
     valueBinary(args) {
-      const values = valuesFor(), op = String(args.OP);
+      const values = valuesFor(),
+        op = String(args.OP);
       if (["&", "|", "^", "<<", ">>", ">>>"].includes(op)) {
-        try { return values.binary(args.LEFT, op, args.RIGHT); }
-        catch (error) { this._error(error.message); return values.encode(undefined); }
+        try {
+          return values.binary(args.LEFT, op, args.RIGHT);
+        } catch (error) {
+          this._error(error.message);
+          return values.encode(undefined);
+        }
       }
       return values.binary(args.LEFT, op, args.RIGHT);
     }
@@ -1864,10 +1898,15 @@
     }
 
     valueUnary(args) {
-      const values = valuesFor(), op = String(args.OP);
+      const values = valuesFor(),
+        op = String(args.OP);
       if (op === "~") {
-        try { return values.unary(op, args.VALUE); }
-        catch (error) { this._error(error.message); return values.encode(undefined); }
+        try {
+          return values.unary(op, args.VALUE);
+        } catch (error) {
+          this._error(error.message);
+          return values.encode(undefined);
+        }
       }
       return values.unary(op, args.VALUE);
     }
