@@ -579,6 +579,22 @@
               ...n("PCT", 50),
             },
           },
+          // The Calliope mini's on-board motor driver (MakeCode
+          // motors.dualMotorPower). The micro:bit has no motor, so the
+          // block names the board it is for.
+          {
+            opcode: "motorpower",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "calliope motor [MOTOR] power [POWER] %",
+            arguments: {
+              MOTOR: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "A",
+                menu: "motorAB",
+              },
+              ...n("POWER", 50),
+            },
+          },
           {
             opcode: "setpull",
             blockType: Scratch.BlockType.COMMAND,
@@ -1107,6 +1123,7 @@
           // AB is MakeCode's Button.AB: both held at once.
           btn: { acceptReporters: false, items: ["A", "B", "AB", "any"] },
           btnEvent: { acceptReporters: false, items: ["pressed", "released"] },
+          motorAB: { acceptReporters: false, items: ["A", "B"] },
           logoEvent: { acceptReporters: false, items: ["touched", "released"] },
           gesture: {
             acceptReporters: false,
@@ -1385,6 +1402,19 @@
       board.setPin(pin, "pushpull", isFinite(pct) && pct >= 50);
     }
 
+    // Calliope mini motor driver. The block set runs on the MicroPython
+    // simulator, which has no motor; the last power per motor is kept so a
+    // host with a board that can show it (board.setMotor) is told.
+    motorpower(args) {
+      const motor = String(args.MOTOR).toUpperCase() === "B" ? "B" : "A";
+      const power = Math.max(-100, Math.min(100, Number(args.POWER) || 0));
+      if (!this.motorPower) this.motorPower = { A: 0, B: 0 };
+      this.motorPower[motor] = power;
+      const board = this.board;
+      if (board && typeof board.setMotor === "function") {
+        board.setMotor(motor, power);
+      }
+    }
     setpull(args) {
       const board = this.board;
       if (!board) return;
