@@ -20,7 +20,10 @@
   const TFT_KINDS = /^(ili9341|ili9341_par|ili9341_parallel|st7735|tft)$/i;
   const LCD_KINDS = /^(hd44780|char_lcd|char_lcd_i2c|lcd)$/i;
   const SERVO_KINDS = /^servo$/i;
-  const MOTOR_KINDS = /^dc_motor$/i;
+  // Every two-lead DC-motor model bw-board drives by speed and direction
+  // (gearmotor and dc_motor_encoder joined in Lite task B14), so "motor 1"
+  // finds a bench's gearmotor too.
+  const MOTOR_KINDS = /^(dc_motor|gearmotor|dc_motor_encoder)$/i;
 
   // Stubs: blocks with no real C driver.  Hidden from palette, methods
   // still exist so saved projects load.  Remove from this set when a
