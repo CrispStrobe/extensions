@@ -1235,8 +1235,14 @@
             blockType: Scratch.BlockType.REPORTER,
             text: t("arrays.stringConcat"),
             arguments: {
-              TEXT: { type: Scratch.ArgumentType.STRING, defaultValue: "hello" },
-              OTHER: { type: Scratch.ArgumentType.STRING, defaultValue: " world" },
+              TEXT: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "hello",
+              },
+              OTHER: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: " world",
+              },
             },
           },
           {
@@ -1798,7 +1804,10 @@
     // spelling; they have no primitive String conversion in this adapter.
     stringFromCharCode(args) {
       const value = valuesFor().decode(args.CODE);
-      if (value !== null && (typeof value === "object" || typeof value === "function")) {
+      if (
+        value !== null &&
+        (typeof value === "object" || typeof value === "function")
+      ) {
         this._error("Character code cannot be an opaque reference or object");
         return valuesFor().encode(undefined);
       }
@@ -1815,8 +1824,13 @@
         this._error("String concatenation needs a non-null string receiver");
         return valuesFor().encode(undefined);
       }
-      if (other !== null && (typeof other === "object" || typeof other === "function")) {
-        this._error("String concatenation cannot convert an opaque reference or object");
+      if (
+        other !== null &&
+        (typeof other === "object" || typeof other === "function")
+      ) {
+        this._error(
+          "String concatenation cannot convert an opaque reference or object"
+        );
         return valuesFor().encode(undefined);
       }
       return text + other;
