@@ -1033,15 +1033,18 @@
       fb.fill(0);
       let n = Number(args.NUM) | 0;
       const neg = n < 0;
+      // Right-aligned from digit 7; `i` ends on the first free digit, which
+      // is where the minus goes -- directly before the most significant
+      // digit (it went one further left, to fb[i - 1], until 2026-10). No
+      // free digit, no sign: the low eight digits show, as the C does.
       let u = Math.abs(n),
         i = 7;
       do {
         fb[i] = FONT[u % 10];
         u = Math.floor(u / 10);
-        if (i === 0) break;
         i--;
-      } while (u);
-      if (neg && i > 0) fb[i - 1] = 0x40;
+      } while (u && i >= 0);
+      if (neg && i >= 0) fb[i] = 0x40;
       this._segpush(args.PART);
     }
 
