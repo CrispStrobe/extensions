@@ -43,6 +43,7 @@
   "CrispStrobe/bitops",
   "CrispStrobe/devices",
   "CrispStrobe/microbitplus",
+  "CrispStrobe/circuitplayground",
   "CrispStrobe/brickwright_tts",
   "lab/text",
   "lab/face-sensing",
