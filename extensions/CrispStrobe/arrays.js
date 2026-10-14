@@ -1556,17 +1556,32 @@
     }
 
     // Get/Set operations
+    _legacyItemResult(value, aggregateJSON = false) {
+      const values = valuesFor();
+      value = values.decode(value);
+      // JSON remains the legacy aggregate transport. Scalar text is already
+      // its value, including when it resembles JSON or a reference token.
+      if (
+        value !== null &&
+        typeof value === "object" &&
+        !values.isReference(value)
+      ) {
+        return aggregateJSON ? JSON.stringify(value) : value;
+      }
+      return values.encode(value);
+    }
+
     get(args) {
       const arr = arrays[args.NAME];
       if (!arr) return "";
       const idx = Number(args.INDEX);
-      return JSON.stringify(arr[idx]);
+      return this._legacyItemResult(arr[idx], true);
     }
 
     get2D(args) {
       const arr = arrays[args.NAME];
       if (!arr || !arr[args.ROW]) return "";
-      return arr[args.ROW][args.COL];
+      return this._legacyItemResult(arr[args.ROW][args.COL]);
     }
 
     getMulti(args) {
@@ -1578,7 +1593,7 @@
         for (const idx of indices) {
           result = result[idx];
         }
-        return typeof result === "object" ? JSON.stringify(result) : result;
+        return this._legacyItemResult(result, true);
       } catch (e) {
         return "";
       }
@@ -1623,7 +1638,7 @@
     pop(args) {
       const arr = arrays[args.NAME];
       if (!arr || arr.length === 0) return "";
-      return arr.pop();
+      return this._legacyItemResult(arr.pop());
     }
 
     insert(args) {
@@ -1733,7 +1748,7 @@
         // eslint-disable-next-line no-new-func
         const func = new Function(`return (${args.FUNC});`)();
         const init = this.parseValue(args.INIT);
-        return arr.reduce(func, init);
+        return this._legacyItemResult(arr.reduce(func, init));
       } catch (e) {
         return "";
       }
