@@ -73,24 +73,29 @@
   // octave token, so the sound is a 500 ms tone at frequency 0 — silence, as
   // in MakeCode 1.6.8 itself.
   const SOUNDS = {
-    "power up": "g4:1 c5 e g:2 e:1 g:3",
-    "power down": "g5:1 d# c g4:2 b:1 c5:3",
-    "jump up": "c5:1 d e f g",
-    "jump down": "g5:1 f e d c",
-    "ba ding": "b5:1 e6:3",
+    powerUp: "g4:1 c5 e g:2 e:1 g:3",
+    powerDown: "g5:1 d# c g4:2 b:1 c5:3",
+    jumpUp: "c5:1 d e f g",
+    jumpDown: "g5:1 f e d c",
+    baDing: "b5:1 e6:3",
     wawawawaa: "e3:3 r:1 d#:3 r:1 d:4 r:1 c#:8",
-    "magic wand": "F#6:1-300 G# A# B C7# D# F F# G# A# B:6",
+    magicWand: "F#6:1-300 G# A# B C7# D# F F# G# A# B:6",
     siren: "a4 d5 a4 d5 a4 d5",
-    "pew pew": "!1200,200^50",
+    pewPew: "!1200,200^50",
   };
   const FREQ_TABLE = [31, 33, 35, 37, 39, 41, 44, 46, 49, 52, 55, 58, 62, 65, 69, 73, 78, 82, 87, 92, 98, 104, 110, 117, 123, 131, 139, 147, 156, 165, 175, 185, 196, 208, 220, 233, 247, 262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494, 523, 554, 587, 622, 659, 698, 740, 784, 831, 880, 932, 988, 1047, 1109, 1175, 1245, 1319, 1397, 1480, 1568, 1661, 1760, 1865, 1976, 2093, 2217, 2349, 2489, 2637, 2794, 2960, 3136, 3322, 3520, 3729, 3951, 4186, 4435, 4699, 4978, 5274, 5588, 5920, 6272, 6645, 7040, 7459, 7902]; // prettier-ignore
 
   const BEATS = { whole: 1, half: 2, quarter: 4, eighth: 8, sixteenth: 16, double: 32, breve: 64 }; // prettier-ignore
-  const GESTURES = ["shake", "tilt up", "tilt down", "tilt left", "tilt right", "face up", "face down", "free fall", "2g", "3g", "6g", "8g"]; // prettier-ignore
+  // Menu VALUES are MakeCode's own identifiers (Gesture.TiltLeft is
+  // "tiltLeft"): one token each, so a program can spell them, and the same
+  // names an imported MakeCode program uses. The TEXT is what the block shows.
+  const GESTURES = { shake: "shake", tiltUp: "tilt up", tiltDown: "tilt down", tiltLeft: "tilt left", tiltRight: "tilt right", faceUp: "face up", faceDown: "face down", freeFall: "free fall", twoG: "2g", threeG: "3g", sixG: "6g", eightG: "8g" }; // prettier-ignore
+  const SOUND_NAMES = { powerUp: "power up", powerDown: "power down", jumpUp: "jump up", jumpDown: "jump down", baDing: "ba ding", wawawawaa: "wawawawaa", magicWand: "magic wand", siren: "siren", pewPew: "pew pew" }; // prettier-ignore
   const BUTTONS = ["A", "B", "A+B"];
   const TOUCH_PADS = ["A1", "A2", "A3", "A4", "A5", "A6", "A7"];
-  const BUTTON_EVENTS = ["click", "long click", "up", "down"];
-  const ANIMATIONS = ["rainbow", "running lights", "comet", "sparkle", "theater chase", "color wipe"]; // prettier-ignore
+  const BUTTON_EVENTS = { click: "click", longClick: "long click", up: "up", down: "down" }; // prettier-ignore
+  const ANIMATIONS = { rainbow: "rainbow", runningLights: "running lights", comet: "comet", sparkle: "sparkle", theaterChase: "theater chase", colorWipe: "color wipe" }; // prettier-ignore
+  const UNITS = { C: "°C", F: "°F" };
 
   // ---- colour (libs/color/colors.ts) ----------------------------------
   const rgb = (r, g, b) => ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
@@ -417,7 +422,7 @@
           return true;
         };
       }
-      case "running lights": {
+      case "runningLights": {
         const [red, green, blue] = [0xff, 0, 0];
         let iteration = 0;
         let step = 0;
@@ -485,7 +490,7 @@
           return true;
         };
       }
-      case "color wipe": {
+      case "colorWipe": {
         const color = 0x0000ff;
         let i = 0;
         let reveal = true;
@@ -501,7 +506,7 @@
           return true;
         };
       }
-      case "theater chase": {
+      case "theaterChase": {
         const color = rgb(0xff, 0, 0);
         let j = 0;
         let q = 0;
@@ -694,7 +699,7 @@
         const held = Date.now() - b.pressedAt;
         this._hats(hat, {
           [key]: name,
-          EVENT: held >= LONG_CLICK_MS ? "long click" : "click",
+          EVENT: held >= LONG_CLICK_MS ? "longClick" : "click",
         });
       }
       this._publish();
@@ -710,7 +715,8 @@
       this._publish();
     }
     gesture(name) {
-      if (GESTURES.includes(name)) this._hats("whengesture", { GESTURE: name });
+      if (Object.prototype.hasOwnProperty.call(GESTURES, name))
+        this._hats("whengesture", { GESTURE: name });
     }
     setLightLevel(v) {
       const crossed = this.light.setLevel(v);
@@ -841,10 +847,12 @@
     }
 
     getInfo() {
-      const menu = (items, acceptReporters) => ({
+      const menu = (list, acceptReporters) => ({
         acceptReporters: !!acceptReporters,
-        items,
+        items: list,
       });
+      const items = (map) =>
+        Object.entries(map).map(([value, text]) => ({ text, value }));
       const num = (d) => ({
         type: Scratch.ArgumentType.NUMBER,
         defaultValue: d,
@@ -902,8 +910,8 @@
           { opcode: "lightlevel", blockType: B.REPORTER, text: "light level" },
           { opcode: "whenlight", blockType: B.HAT, isEdgeActivated: false, text: "when light [CONDITION]", arguments: { CONDITION: field("lightConditions", "dark") } },
           { opcode: "setlightthreshold", blockType: B.COMMAND, text: "set [CONDITION] light threshold to [VALUE]", arguments: { CONDITION: field("lightConditions", "dark"), VALUE: num(64) } },
-          { opcode: "temperature", blockType: B.REPORTER, text: "temperature in [UNIT]", arguments: { UNIT: field("units", "°C") } },
-          { opcode: "whentemperature", blockType: B.HAT, isEdgeActivated: false, text: "when temperature [CONDITION] at [TEMPERATURE] [UNIT]", arguments: { CONDITION: field("temperatureConditions", "hot"), TEMPERATURE: num(30), UNIT: field("units", "°C") } },
+          { opcode: "temperature", blockType: B.REPORTER, text: "temperature in [UNIT]", arguments: { UNIT: field("units", "C") } },
+          { opcode: "whentemperature", blockType: B.HAT, isEdgeActivated: false, text: "when temperature [CONDITION] at [TEMPERATURE] [UNIT]", arguments: { CONDITION: field("temperatureConditions", "hot"), TEMPERATURE: num(30), UNIT: field("units", "C") } },
           { opcode: "soundlevel", blockType: B.REPORTER, text: "sound level" },
           { opcode: "whenloudsound", blockType: B.HAT, isEdgeActivated: false, text: "when loud sound" },
           { opcode: "setloudthreshold", blockType: B.COMMAND, text: "set loud sound threshold [VALUE]", arguments: { VALUE: num(192) } },
@@ -916,28 +924,28 @@
           { opcode: "tempo", blockType: B.REPORTER, text: "tempo (bpm)" },
           { opcode: "settempo", blockType: B.COMMAND, text: "set tempo to [BPM] bpm", arguments: { BPM: num(120) } },
           { opcode: "changetempo", blockType: B.COMMAND, text: "change tempo by [BPM] bpm", arguments: { BPM: num(20) } },
-          { opcode: "playsound", blockType: B.COMMAND, text: "play sound [SOUND]", arguments: { SOUND: field("sounds", "power up") } },
-          { opcode: "playsounduntildone", blockType: B.COMMAND, text: "play sound [SOUND] until done", arguments: { SOUND: field("sounds", "power up") } },
+          { opcode: "playsound", blockType: B.COMMAND, text: "play sound [SOUND]", arguments: { SOUND: field("sounds", "powerUp") } },
+          { opcode: "playsounduntildone", blockType: B.COMMAND, text: "play sound [SOUND] until done", arguments: { SOUND: field("sounds", "powerUp") } },
           { opcode: "stopsounds", blockType: B.COMMAND, text: "stop all sounds" },
           { opcode: "setvolume", blockType: B.COMMAND, text: "set volume [VOLUME]", arguments: { VOLUME: num(128) } },
         ],
         menus: {
           colors: menu(Object.keys(COLORS), true),
           colorNames: menu(Object.keys(COLORS)),
-          animations: menu(ANIMATIONS),
+          animations: menu(items(ANIMATIONS)),
           buttons: menu(BUTTONS),
-          buttonEvents: menu(BUTTON_EVENTS),
+          buttonEvents: menu(items(BUTTON_EVENTS)),
           touchPads: menu(TOUCH_PADS),
           directions: menu(["left", "right"]),
-          gestures: menu(GESTURES),
+          gestures: menu(items(GESTURES)),
           dimensions: menu(["x", "y", "z", "strength"]),
           rotations: menu(["pitch", "roll"]),
           lightConditions: menu(["dark", "bright"]),
           temperatureConditions: menu(["hot", "cold"]),
-          units: menu(["°C", "°F"]),
+          units: menu(items(UNITS)),
           notes: menu(Object.keys(NOTES)),
           beats: menu(Object.keys(BEATS)),
-          sounds: menu(Object.keys(SOUNDS)),
+          sounds: menu(items(SOUND_NAMES)),
         },
       }; // prettier-ignore
     }
@@ -1049,11 +1057,11 @@
     }
     temperature({ UNIT }) {
       const c = this.thermometer.level;
-      return UNIT === "°F" ? ((c * 18) / 10 + 32) >> 0 : c;
+      return UNIT === "F" ? ((c * 18) / 10 + 32) >> 0 : c;
     }
     whentemperature({ CONDITION, TEMPERATURE, UNIT }) {
       const t = Number(TEMPERATURE) || 0;
-      const c = UNIT === "°F" ? (((t - 32) * 10) / 18) >> 0 : t;
+      const c = UNIT === "F" ? (((t - 32) * 10) / 18) >> 0 : t;
       if (CONDITION === "hot") this.thermometer.setHigh(c);
       else this.thermometer.setLow(c);
       return true;
