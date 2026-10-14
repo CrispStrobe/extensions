@@ -10,6 +10,7 @@ import { imageSize } from "image-size";
 import ExtendedJSON from "@turbowarp/json";
 import compatibilityAliases from "./compatibility-aliases.js";
 import parseMetadata from "./parse-extension-metadata.js";
+import { isAuthorProfile } from "./author-profile.js";
 import parseTranslations from "./parse-extension-translations.js";
 import renderTemplate from "./render-template.js";
 import renderDocs from "./render-docs.js";
@@ -279,12 +280,9 @@ class ExtensionFile extends BuildFile {
       if (!person.name) {
         throw new Error("Person is missing name");
       }
-      if (
-        person.link &&
-        !person.link.startsWith("https://scratch.mit.edu/users/")
-      ) {
+      if (person.link && !isAuthorProfile(person.link)) {
         throw new Error(
-          `Link for ${person.name} does not point to a Scratch user`
+          `Link for ${person.name} does not point to a supported author profile`
         );
       }
     }
