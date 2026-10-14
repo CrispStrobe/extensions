@@ -40,6 +40,8 @@ jobs:
         run: node development/test-spikeprime-movement.js
       - name: Native array reference kinds
         run: node --test development/test-array-value-kinds.js
+      - name: Named array item, copy and numeric contracts
+        run: node --test development/test-array-item-values.js development/test-array-copy-values.js development/test-array-bitwise.js
 
       # Every confirm() in our extensions waits for the answer and goes ahead
       # only on OK — through the host's Scratch.BWConfirm when it has one.
