@@ -227,7 +227,11 @@
       this.onShow = onShow;
     }
     // What the LEDs emit: each channel scaled by brightness, as show() sends.
+    // At full brightness show() sends the buffer as it is, unscaled; only
+    // below it is each channel scaled by brightness >> 8 (so 255 stays 255,
+    // not 254). Found by holding the ring against pxt-adafruit's simulator.
     shown() {
+      if (this.brightness === 0xff) return this.buf.slice();
       return this.buf.map((c) =>
         rgb(
           (unpackR(c) * this.brightness) >> 8,
@@ -599,7 +603,9 @@
           pressedAt: -1,
         };
       }
-      this.switchRight = false;
+      // The switch starts on the right, as in pxt-adafruit's simulator
+      // (SlideSwitchState.left = false, so switchRight() is true).
+      this.switchRight = true;
       this.accel = { x: 0, y: 0, z: -1023 };
       this._bpm = 120;
       this.volume = 128;
