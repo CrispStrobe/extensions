@@ -340,6 +340,7 @@
       "sevenseg",
       "buffer",
       "object",
+      "callable",
     ];
     const scopes = new WeakMap();
     const session =
