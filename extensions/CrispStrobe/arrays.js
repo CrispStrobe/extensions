@@ -74,6 +74,9 @@
       "arrays.createReference": "new array reference from [VALUES]",
       "arrays.specialValue": "[KIND] value",
       "arrays.valueBinary": "value [LEFT] [OP] [RIGHT]",
+      "arrays.stringFromCharCode": "text from char code [CODE]",
+      "arrays.stringConcat": "concatenate text [TEXT] with [OTHER]",
+      "arrays.stringCharCodeAt": "char code of text [TEXT] at [INDEX]",
       "arrays.valueUnary": "[OP] value [VALUE]",
       "arrays.valueTruthy": "truthiness of value [VALUE]",
       "arrays.valueCompare": "compare value [LEFT] [OP] with [RIGHT]",
@@ -84,6 +87,10 @@
         "remove value [VALUE] from array reference [ARRAY]",
       "arrays.referenceRandom": "random item of array reference [ARRAY]",
       "arrays.referenceLength": "length of array reference [ARRAY]",
+      "arrays.referenceSlice":
+        "slice array reference [ARRAY] from [START] to [END]",
+      "arrays.referenceConcat":
+        "concatenate array reference [ARRAY] with [OTHER]",
       "arrays.referenceTake": "[OP] from array reference [ARRAY] index [INDEX]",
       "arrays.referenceIndexOf":
         "index of [VALUE] in array reference [ARRAY] from [INDEX]",
@@ -324,9 +331,15 @@
       "array",
       "image",
       "tile",
+      "legacy-tile",
       "animation",
       "scene",
       "physics-engine",
+      "player",
+      "music",
+      "sevenseg",
+      "buffer",
+      "object",
     ];
     const scopes = new WeakMap();
     const session =
@@ -457,6 +470,18 @@
     const binary = (left, op, right) => {
       const a = decode(left);
       const b = decode(right);
+      if (
+        ["&", "|", "^", "<<", ">>", ">>>"].includes(op) &&
+        [a, b].some(
+          (value) =>
+            value !== null &&
+            !["number", "string", "boolean", "undefined"].includes(typeof value)
+        )
+      ) {
+        throw new Error(
+          "Bitwise conversion requires primitive values, not opaque references or objects"
+        );
+      }
       switch (op) {
         case "+":
           return a + b;
@@ -468,6 +493,20 @@
           return a / b;
         case "%":
           return a % b;
+        case "**":
+          return a ** b;
+        case "&":
+          return a & b;
+        case "|":
+          return a | b;
+        case "^":
+          return a ^ b;
+        case "<<":
+          return a << b;
+        case ">>":
+          return a >> b;
+        case ">>>":
+          return a >>> b;
         default:
           throw new Error("Unknown value arithmetic " + op);
       }
@@ -476,6 +515,17 @@
       const a = decode(value);
       if (op === "+") return +a;
       if (op === "-") return -a;
+      if (op === "~") {
+        if (
+          a !== null &&
+          !["number", "string", "boolean", "undefined"].includes(typeof a)
+        ) {
+          throw new Error(
+            "Bitwise conversion requires primitive values, not opaque references or objects"
+          );
+        }
+        return ~a;
+      }
       throw new Error("Unknown unary value arithmetic " + op);
     };
     const compare = (left, op, right) => {
@@ -1214,6 +1264,38 @@
             },
           },
           {
+            opcode: "stringFromCharCode",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.stringFromCharCode"),
+            arguments: {
+              CODE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 65 },
+            },
+          },
+          {
+            opcode: "stringCharCodeAt",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.stringCharCodeAt"),
+            arguments: {
+              TEXT: { type: Scratch.ArgumentType.STRING },
+              INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "stringConcat",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.stringConcat"),
+            arguments: {
+              TEXT: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "hello",
+              },
+              OTHER: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: " world",
+              },
+            },
+          },
+          {
             opcode: "valueUnary",
             blockType: Scratch.BlockType.REPORTER,
             text: t("arrays.valueUnary"),
@@ -1292,6 +1374,25 @@
             },
           },
           {
+            opcode: "referenceSlice",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.referenceSlice"),
+            arguments: {
+              ARRAY: { type: Scratch.ArgumentType.STRING },
+              START: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              END: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "referenceConcat",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("arrays.referenceConcat"),
+            arguments: {
+              ARRAY: { type: Scratch.ArgumentType.STRING },
+              OTHER: { type: Scratch.ArgumentType.STRING },
+            },
+          },
+          {
             opcode: "referenceTake",
             blockType: Scratch.BlockType.REPORTER,
             text: t("arrays.referenceTake"),
@@ -1338,9 +1439,25 @@
           },
           valueOperations: {
             acceptReporters: false,
-            items: ["+", "-", "*", "/", "%"],
+            items: [
+              "+",
+              "-",
+              "*",
+              "/",
+              "%",
+              "**",
+              "&",
+              "|",
+              "^",
+              "<<",
+              ">>",
+              ">>>",
+            ],
           },
-          valueUnaryOperations: { acceptReporters: false, items: ["+", "-"] },
+          valueUnaryOperations: {
+            acceptReporters: false,
+            items: ["+", "-", "~"],
+          },
           valueComparisons: {
             acceptReporters: false,
             items: ["==", "!=", "===", "!==", "<", ">", "<=", ">="],
@@ -1763,11 +1880,90 @@
     }
 
     valueBinary(args) {
-      return valuesFor().binary(args.LEFT, String(args.OP), args.RIGHT);
+      const values = valuesFor(),
+        op = String(args.OP);
+      if (["&", "|", "^", "<<", ">>", ">>>"].includes(op)) {
+        try {
+          return values.binary(args.LEFT, op, args.RIGHT);
+        } catch (error) {
+          this._error(error.message);
+          return values.encode(undefined);
+        }
+      }
+      return values.binary(args.LEFT, op, args.RIGHT);
+    }
+
+    // PXT String_::fromCharCode takes one numeric argument and uses the
+    // simulator's UTF-16 code-unit conversion, including fractional/wrapped
+    // numbers and NaN. Reference tokens are never converted to their handle
+    // spelling; they have no primitive String conversion in this adapter.
+    stringFromCharCode(args) {
+      const value = valuesFor().decode(args.CODE);
+      if (
+        value !== null &&
+        (typeof value === "object" || typeof value === "function")
+      ) {
+        this._error("Character code cannot be an opaque reference or object");
+        return valuesFor().encode(undefined);
+      }
+      return String.fromCharCode(value);
+    }
+
+    // Selected PXT String_::charCodeAt checks its original index range before
+    // UTF-16 conversion. Out-of-range, NaN and undefined therefore return 0;
+    // -0.5 is outside even though JS charCodeAt alone would truncate it to 0.
+    stringCharCodeAt(args) {
+      const values = valuesFor();
+      const text = values.decode(args.TEXT);
+      const index = values.decode(args.INDEX);
+      if (typeof text !== "string") {
+        this._error("Character code needs a non-null string receiver");
+        return values.encode(undefined);
+      }
+      if (
+        index !== null &&
+        (typeof index === "object" || typeof index === "function")
+      ) {
+        this._error("Character index cannot be an opaque reference or object");
+        return values.encode(undefined);
+      }
+      return 0 <= index && index < text.length ? text.charCodeAt(index) : 0;
+    }
+
+    // The original String_::concat checks the receiver for null, then adds
+    // the other primitive. In particular a null/undefined argument is text,
+    // whereas a null/undefined receiver is an error.
+    stringConcat(args) {
+      const text = valuesFor().decode(args.TEXT);
+      const other = valuesFor().decode(args.OTHER);
+      if (typeof text !== "string") {
+        this._error("String concatenation needs a non-null string receiver");
+        return valuesFor().encode(undefined);
+      }
+      if (
+        other !== null &&
+        (typeof other === "object" || typeof other === "function")
+      ) {
+        this._error(
+          "String concatenation cannot convert an opaque reference or object"
+        );
+        return valuesFor().encode(undefined);
+      }
+      return text + other;
     }
 
     valueUnary(args) {
-      return valuesFor().unary(String(args.OP), args.VALUE);
+      const values = valuesFor(),
+        op = String(args.OP);
+      if (op === "~") {
+        try {
+          return values.unary(op, args.VALUE);
+        } catch (error) {
+          this._error(error.message);
+          return values.encode(undefined);
+        }
+      }
+      return values.unary(op, args.VALUE);
     }
 
     valueTruthy(args) {
@@ -1887,6 +2083,66 @@
     referenceLength(args) {
       const array = this._array(args);
       return array ? array.length : 0;
+    }
+
+    // Preserve PXT helpers.arraySlice/arrayConcat, not native JS slice/concat.
+    // Source: Microsoft PXT common-packages, libs/base/pxt-helpers.ts, as
+    // bundled by MakeCode Arcade 4.2.1. The helper loops preserve fractional
+    // property reads, NaN bounds and shallow nested references.
+    //
+    // Copyright (c) Microsoft Corporation.
+    // Permission is hereby granted, free of charge, to any person obtaining a
+    // copy of this software and associated documentation files (the "Software"),
+    // to deal in the Software without restriction, including without limitation
+    // the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    // and/or sell copies of the Software, and to permit persons to whom the
+    // Software is furnished to do so, subject to the following conditions:
+    // The above copyright notice and this permission notice shall be included
+    // in all copies or substantial portions of the Software.
+    // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    // OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+    // THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    // DEALINGS IN THE SOFTWARE.
+    referenceSlice(args) {
+      const array = this._array(args);
+      if (!array) return "";
+      const values = valuesFor();
+      let start = values.decode(args.START);
+      let end = values.decode(args.END);
+      if (
+        [start, end].some(
+          (value) =>
+            value !== null &&
+            (typeof value === "object" || typeof value === "function")
+        )
+      ) {
+        this._error("Array bounds cannot be opaque references or objects");
+        return values.encode(undefined);
+      }
+      const length = array.length;
+      const result = [];
+      if (start === undefined) start = 0;
+      else if (start < 0) start = Math.max(length + start, 0);
+      if (start > length) return this._arrayResult(result);
+      if (end === undefined) end = length;
+      else if (end < 0) end = length + end;
+      if (end > length) end = length;
+      for (let index = start; index < end; ++index) result.push(array[index]);
+      return this._arrayResult(result);
+    }
+
+    referenceConcat(args) {
+      const array = this._array(args);
+      if (!array) return "";
+      const other = this._array({ ARRAY: args.OTHER });
+      if (!other) return "";
+      const result = [];
+      for (const value of array) result.push(value);
+      for (const value of other) result.push(value);
+      return this._arrayResult(result);
     }
 
     referenceIndexOf(args) {
