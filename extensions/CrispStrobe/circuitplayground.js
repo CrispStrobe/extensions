@@ -227,7 +227,11 @@
       this.onShow = onShow;
     }
     // What the LEDs emit: each channel scaled by brightness, as show() sends.
+    // At full brightness show() sends the buffer as it is, unscaled; only
+    // below it is each channel scaled by brightness >> 8 (so 255 stays 255,
+    // not 254). Found by holding the ring against pxt-adafruit's simulator.
     shown() {
+      if (this.brightness === 0xff) return this.buf.slice();
       return this.buf.map((c) =>
         rgb(
           (unpackR(c) * this.brightness) >> 8,
