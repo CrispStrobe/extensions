@@ -116,11 +116,14 @@ test("reference item random and take paths retain text scalar and nested array i
   );
 });
 
-test("unqualified callable descriptors remain ordinary data and cannot acquire reference authority", () => {
+test("unknown descriptors remain ordinary data and cannot acquire reference authority", () => {
   const { extension: a, values, runtime } = host();
-  const candidate = values.reference(runtime, "callable", "site");
+  const candidate = values.reference(runtime, "unadmitted-function", "site");
   assert.equal(values.isReference(candidate), false);
-  assert.equal(values.referenceId(runtime, candidate, "callable"), null);
+  assert.equal(
+    values.referenceId(runtime, candidate, "unadmitted-function"),
+    null
+  );
   a.create1D({ NAME: "opaque", JSON: "[]" });
   a.set({ NAME: "opaque", INDEX: 0, VALUE: candidate });
   const result = a.get({ NAME: "opaque", INDEX: 0 });
@@ -130,10 +133,14 @@ test("unqualified callable descriptors remain ordinary data and cannot acquire r
     "unsupported descriptor stays legacy aggregate JSON"
   );
   const descriptor = JSON.parse(result);
-  assert.equal(descriptor.bwReference.kind, "callable");
+  assert.equal(descriptor.bwReference.kind, "unadmitted-function");
   assert.equal(values.isReference(descriptor), false);
   assert.equal(
-    values.referenceId(runtime, values.decode(descriptor), "callable"),
+    values.referenceId(
+      runtime,
+      values.decode(descriptor),
+      "unadmitted-function"
+    ),
     null
   );
 });
@@ -221,4 +228,36 @@ test("scalar item reference reads preserve scope refusal across stop restart and
   assert.notEqual(next, read);
   runtime.emit("PROJECT_LOADED");
   assert.equal(values.referenceId(runtime, next, "image"), null);
+});
+
+test("scoped callable carriers survive scalar item paths without acquiring invocation authority", () => {
+  const { extension: a, values, runtime, errors } = host();
+  const ref = values.reference(runtime, "callable", "site");
+  assert.equal(values.referenceId(runtime, ref, "callable"), "site");
+  a.create1D({ NAME: "one", JSON: "[]" });
+  a.set({ NAME: "one", INDEX: 0, VALUE: ref });
+  a.create2D({ NAME: "grid", JSON: "[[]]" });
+  a.set2D({ NAME: "grid", ROW: 0, COL: 0, VALUE: ref });
+  for (const result of [
+    a.get({ NAME: "one", INDEX: 0 }),
+    a.getMulti({ NAME: "grid", INDICES: "[0,0]" }),
+    a.get2D({ NAME: "grid", ROW: 0, COL: 0 }),
+    a.reduce({ NAME: "one", FUNC: "(acc)=>acc", INIT: ref }),
+    a.pop({ NAME: "one" }),
+  ]) {
+    assert.equal(result, ref);
+    assert.equal(values.referenceId(runtime, result, "callable"), "site");
+    assert.equal(values.referenceId({}, result, "callable"), null);
+  }
+  runtime.emit("PROJECT_START");
+  assert.equal(values.referenceId(runtime, ref, "callable"), null);
+  assert.equal(
+    values.referenceId(
+      runtime,
+      values.decode(JSON.parse(JSON.stringify(ref))),
+      "callable"
+    ),
+    null
+  );
+  assert.deepEqual(errors, []);
 });
