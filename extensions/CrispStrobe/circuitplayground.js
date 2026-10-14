@@ -603,7 +603,9 @@
           pressedAt: -1,
         };
       }
-      this.switchRight = false;
+      // The switch starts on the right, as in pxt-adafruit's simulator
+      // (SlideSwitchState.left = false, so switchRight() is true).
+      this.switchRight = true;
       this.accel = { x: 0, y: 0, z: -1023 };
       this._bpm = 120;
       this.volume = 128;
