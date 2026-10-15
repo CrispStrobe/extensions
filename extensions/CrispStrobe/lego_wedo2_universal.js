@@ -1227,22 +1227,17 @@
     }
 
     async playTone(frequency, duration) {
-      logger.debug(`Playing tone: ${frequency}Hz for ${duration}ms`);
-
-      const freqBytes = new Uint16Array([frequency]);
-      const durBytes = new Uint16Array([duration]);
-
+      // The piezo supports at most 1500 Hz and uint16 milliseconds.
+      // Clamp before encoding; Uint16Array silently wrapped long durations.
+      const hz = Math.round(Math.max(0, Math.min(1500, frequency)));
+      const ms = Math.round(Math.max(0, Math.min(65535, duration)));
       const cmd = new Uint8Array([
-        Port.PIEZO,
-        2,
-        4,
-        freqBytes[0] & 0xff,
-        (freqBytes[0] >> 8) & 0xff,
-        durBytes[0] & 0xff,
-        (durBytes[0] >> 8) & 0xff,
+        Port.PIEZO, 2, 4,
+        hz & 0xff, (hz >> 8) & 0xff,
+        ms & 0xff, (ms >> 8) & 0xff,
       ]);
-
-      await this.send(WeDo2BLE.outputCommand, cmd);
+      // Notes are discrete commands: dropping one changes the melody.
+      await this.send(WeDo2BLE.outputCommand, cmd, false);
     }
 
     async stopAll() {
@@ -1980,20 +1975,17 @@
       });
     }
 
-    playNote(args) {
+    async playNote(args) {
       if (!this._ensureConnected()) return;
-
-      const note = Cast.toNumber(args.NOTE);
-      const duration = Cast.toNumber(args.DURATION) * 1000; // Convert to ms
-
-      // Convert MIDI note to frequency
+      const note = Math.max(0, Math.min(127, Cast.toNumber(args.NOTE)));
+      const duration = Math.round(
+        Math.max(0, Math.min(65535, Cast.toNumber(args.DURATION) * 1000))
+      );
+      if (!duration) return;
       const frequency = Math.round(440 * Math.pow(2, (note - 69) / 12));
-
-      this._hub.playTone(frequency, duration);
-
-      return new Promise((resolve) => {
-        setTimeout(() => resolve(), duration + WeDo2BLE.sendInterval);
-      });
+      // Surface transport failures and begin the wait only after the write.
+      await this._hub.playTone(frequency, duration);
+      await this._hub._delay(duration + WeDo2BLE.sendInterval);
     }
 
     // ========================================================================

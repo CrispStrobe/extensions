@@ -80,3 +80,24 @@ test('disconnected and invalid port commands send nothing', async () => {
   await extension.lightOff({PORT: 'ALL'});
   assert.deepEqual(writes, []);
 });
+
+test('note A4 reaches the piezo at 440 Hz for 500 ms despite exhausted limiter', async () => {
+  const {extension, hub, writes} = await setup();
+  hub._rateLimiter.okayToSend = () => false;
+  await extension.playNote({NOTE: 69, DURATION: 0.5});
+  assert.deepEqual(packets(writes), [[5, 2, 4, 0xb8, 1, 0xf4, 1]]);
+});
+
+test('long and high notes clamp instead of wrapping; nonpositive durations send nothing', async () => {
+  const {extension, writes} = await setup();
+  await extension.playNote({NOTE: 127, DURATION: 100});
+  await extension.playNote({NOTE: 69, DURATION: -1});
+  await extension.playNote({NOTE: 69, DURATION: 'invalid'});
+  assert.deepEqual(packets(writes), [[5, 2, 4, 0xdc, 5, 0xff, 0xff]]);
+});
+
+test('note block exposes Bluetooth write failure instead of silently waiting', async () => {
+  const {extension, hub} = await setup();
+  hub._connection.send = async () => { throw new Error('write failed'); };
+  await assert.rejects(extension.playNote({NOTE: 69, DURATION: 1}), /write failed/);
+});
