@@ -32,8 +32,10 @@
       "wedo2.whenTilted": "when tilted [DIRECTION]",
       "wedo2.isTilted": "tilted [DIRECTION]?",
       "wedo2.lightColor": "set light color to [HUE]",
-      "wedo2.lightBrightness": "set lights [PORT] brightness to [BRIGHTNESS]%",
+      "wedo2.lightBrightness": "set lights [PORT] brightness to [BRIGHTNESS]% polarity [POLARITY]",
       "wedo2.lightOff": "turn lights [PORT] off",
+      "wedo2.lightNormal": "normal",
+      "wedo2.lightReversed": "reversed",
       "wedo2.playNote": "play note [NOTE] for [DURATION] seconds",
       "wedo2.whenButton": "when button pressed",
       "wedo2.buttonPressed": "button pressed?",
@@ -55,8 +57,10 @@
       "wedo2.whenTilted": "wenn geneigt [DIRECTION]",
       "wedo2.isTilted": "geneigt [DIRECTION]?",
       "wedo2.lightColor": "Lichtfarbe auf [HUE] setzen",
-      "wedo2.lightBrightness": "Helligkeit der Lichter [PORT] auf [BRIGHTNESS]% setzen",
+      "wedo2.lightBrightness": "Lichter [PORT] auf [BRIGHTNESS]% mit Polung [POLARITY] setzen",
       "wedo2.lightOff": "Lichter [PORT] ausschalten",
+      "wedo2.lightNormal": "normal",
+      "wedo2.lightReversed": "umgekehrt",
       "wedo2.playNote": "Note [NOTE] für [DURATION] Sekunden spielen",
       "wedo2.whenButton": "wenn Knopf gedrückt",
       "wedo2.buttonPressed": "Knopf gedrückt?",
@@ -78,8 +82,10 @@
       "wedo2.whenTilted": "quand incliné [DIRECTION]",
       "wedo2.isTilted": "incliné [DIRECTION] ?",
       "wedo2.lightColor": "définir couleur lumière sur [HUE]",
-      "wedo2.lightBrightness": "régler la luminosité des lumières [PORT] à [BRIGHTNESS]%",
+      "wedo2.lightBrightness": "régler les lumières [PORT] à [BRIGHTNESS]% polarité [POLARITY]",
       "wedo2.lightOff": "éteindre les lumières [PORT]",
+      "wedo2.lightNormal": "normale",
+      "wedo2.lightReversed": "inversée",
       "wedo2.playNote": "jouer note [NOTE] pendant [DURATION] secondes",
       "wedo2.whenButton": "quand bouton appuyé",
       "wedo2.buttonPressed": "bouton appuyé ?",
@@ -392,18 +398,20 @@
   }
 
   class WeDo2Light extends WeDo2Device {
-    setBrightness(value) {
+    setBrightness(value, polarity = "normal") {
       const number = Cast.toNumber(value);
       const brightness = Number.isNaN(number)
         ? 0
         : Math.round(Math.max(0, Math.min(100, number)));
       // 88005 uses raw 0–100 brightness, with no motor minimum or brake.
-      // Node-PoweredUp's Device.writeDirect uses this WeDo-specific header:
-      // https://github.com/LEGO-Robotics/Node-PoweredUp/blob/master/src/devices/device.ts
+      // Header = port, power command, payload length (one signed byte).
+      // A clone tested over CoreBluetooth needs negative power for its 88005;
+      // polarity is explicit because its identity does not distinguish wiring.
+      const power = polarity === "reversed" ? -brightness : brightness;
       // Bypass the lossy limiter so BOTH and OFF always reach every light.
       return this._parent.send(
         WeDo2BLE.outputCommand,
-        new Uint8Array([this._portId, 1, 2, brightness]),
+        new Uint8Array([this._portId, 1, 1, power & 0xff]),
         false
       );
     }
@@ -1152,8 +1160,9 @@
 
     getMotor(portId) {
       const device = this._devices[portId];
-      if (device) {
-        return device instanceof WeDo2Motor ? device : null;
+      if (device instanceof WeDo2Motor) return device;
+      if (device && Object.prototype.hasOwnProperty.call(this._ports, portId)) {
+        return null;
       }
       // Not announced. A motor is addressed by PORT NUMBER -- the output
       // command carries the port and the hub routes it -- so an attachedIO
@@ -1184,9 +1193,11 @@
     getLight(portId) {
       if (portId !== Port.A && portId !== Port.B) return null;
       const device = this._devices[portId];
-      if (device) return device instanceof WeDo2Light ? device : null;
-      // Like motors, explicitly selected lights may be on hubs which never
-      // announce external ports. Known motors/sensors are never overwritten.
+      if (device instanceof WeDo2Light) return device;
+      if (device && Object.prototype.hasOwnProperty.call(this._ports, portId)) return null;
+      // An inferred motor is not an attachment announcement. Explicit light
+      // commands may replace that guess; actual motors/sensors stay protected.
+      if (device instanceof WeDo2Motor) device._clearBrake();
       const light = new WeDo2Light(this, portId, DeviceType.LIGHT);
       this._devices[portId] = light;
       return light;
@@ -1649,6 +1660,7 @@
             arguments: {
               PORT: { type: ArgumentType.STRING, menu: "motorPort", defaultValue: "A" },
               BRIGHTNESS: { type: ArgumentType.NUMBER, defaultValue: 100 },
+              POLARITY: { type: ArgumentType.STRING, menu: "lightPolarity", defaultValue: "normal" },
             },
           },
           {
@@ -1725,6 +1737,13 @@
               { text: "A", value: "A" },
               { text: "B", value: "B" },
               { text: "Both", value: "ALL" },
+            ],
+          },
+          lightPolarity: {
+            acceptReporters: false,
+            items: [
+              { text: t("wedo2.lightNormal"), value: "normal" },
+              { text: t("wedo2.lightReversed"), value: "reversed" },
             ],
           },
           direction: {
@@ -1910,7 +1929,7 @@
       // Sequential writes also respect Web Bluetooth's single GATT operation.
       for (const port of ports) {
         const light = this._hub.getLight(port);
-        if (light) await light.setBrightness(args.BRIGHTNESS);
+        if (light) await light.setBrightness(args.BRIGHTNESS, args.POLARITY);
       }
       if (ports.length) await this._hub._delay(WeDo2BLE.sendInterval);
     }
