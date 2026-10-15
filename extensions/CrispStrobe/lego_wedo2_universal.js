@@ -32,6 +32,8 @@
       "wedo2.whenTilted": "when tilted [DIRECTION]",
       "wedo2.isTilted": "tilted [DIRECTION]?",
       "wedo2.lightColor": "set light color to [HUE]",
+      "wedo2.lightBrightness": "set lights [PORT] brightness to [BRIGHTNESS]%",
+      "wedo2.lightOff": "turn lights [PORT] off",
       "wedo2.playNote": "play note [NOTE] for [DURATION] seconds",
       "wedo2.whenButton": "when button pressed",
       "wedo2.buttonPressed": "button pressed?",
@@ -53,6 +55,8 @@
       "wedo2.whenTilted": "wenn geneigt [DIRECTION]",
       "wedo2.isTilted": "geneigt [DIRECTION]?",
       "wedo2.lightColor": "Lichtfarbe auf [HUE] setzen",
+      "wedo2.lightBrightness": "Helligkeit der Lichter [PORT] auf [BRIGHTNESS]% setzen",
+      "wedo2.lightOff": "Lichter [PORT] ausschalten",
       "wedo2.playNote": "Note [NOTE] für [DURATION] Sekunden spielen",
       "wedo2.whenButton": "wenn Knopf gedrückt",
       "wedo2.buttonPressed": "Knopf gedrückt?",
@@ -74,6 +78,8 @@
       "wedo2.whenTilted": "quand incliné [DIRECTION]",
       "wedo2.isTilted": "incliné [DIRECTION] ?",
       "wedo2.lightColor": "définir couleur lumière sur [HUE]",
+      "wedo2.lightBrightness": "régler la luminosité des lumières [PORT] à [BRIGHTNESS]%",
+      "wedo2.lightOff": "éteindre les lumières [PORT]",
       "wedo2.playNote": "jouer note [NOTE] pendant [DURATION] secondes",
       "wedo2.whenButton": "quand bouton appuyé",
       "wedo2.buttonPressed": "bouton appuyé ?",
@@ -317,6 +323,7 @@
 
   const DeviceType = {
     MOTOR: 1,
+    LIGHT: 8,
     VOLTAGE_SENSOR: 20,
     CURRENT_SENSOR: 21,
     PIEZO: 22,
@@ -327,6 +334,7 @@
 
   const DeviceTypeName = {
     [DeviceType.MOTOR]: "WeDo 2.0 Motor",
+    [DeviceType.LIGHT]: "Powered Up Lights (88005)",
     [DeviceType.VOLTAGE_SENSOR]: "Voltage Sensor",
     [DeviceType.CURRENT_SENSOR]: "Current Sensor",
     [DeviceType.PIEZO]: "Piezo Buzzer",
@@ -380,6 +388,24 @@
 
     setValue(key, value) {
       this._values[key] = value;
+    }
+  }
+
+  class WeDo2Light extends WeDo2Device {
+    setBrightness(value) {
+      const number = Cast.toNumber(value);
+      const brightness = Number.isNaN(number)
+        ? 0
+        : Math.round(Math.max(0, Math.min(100, number)));
+      // 88005 uses raw 0–100 brightness, with no motor minimum or brake.
+      // Node-PoweredUp's Device.writeDirect uses this WeDo-specific header:
+      // https://github.com/LEGO-Robotics/Node-PoweredUp/blob/master/src/devices/device.ts
+      // Bypass the lossy limiter so BOTH and OFF always reach every light.
+      return this._parent.send(
+        WeDo2BLE.outputCommand,
+        new Uint8Array([this._portId, 1, 2, brightness]),
+        false
+      );
     }
   }
 
@@ -1155,6 +1181,17 @@
       return motor;
     }
 
+    getLight(portId) {
+      if (portId !== Port.A && portId !== Port.B) return null;
+      const device = this._devices[portId];
+      if (device) return device instanceof WeDo2Light ? device : null;
+      // Like motors, explicitly selected lights may be on hubs which never
+      // announce external ports. Known motors/sensors are never overwritten.
+      const light = new WeDo2Light(this, portId, DeviceType.LIGHT);
+      this._devices[portId] = light;
+      return light;
+    }
+
     getSensor(portId) {
       const device = this._devices[portId];
       return device instanceof WeDo2Sensor ? device : null;
@@ -1208,15 +1245,17 @@
       await this.send(WeDo2BLE.outputCommand, cmd);
     }
 
-    stopAll() {
+    async stopAll() {
       if (!this.isConnected()) return;
       logger.info("Stopping all motors");
 
-      Object.values(this._devices).forEach((device) => {
+      for (const device of Object.values(this._devices)) {
         if (device instanceof WeDo2Motor) {
           device.turnOff();
+        } else if (device instanceof WeDo2Light) {
+          await device.setBrightness(0);
         }
-      });
+      }
     }
 
     getPeripheralIsConnected() {
@@ -1309,6 +1348,8 @@
         if (deviceType === DeviceType.MOTOR) {
           logger.info(`Motor attached on port ${portId}`);
           this._devices[portId] = new WeDo2Motor(this, portId, deviceType);
+        } else if (deviceType === DeviceType.LIGHT) {
+          this._devices[portId] = new WeDo2Light(this, portId, deviceType);
         } else if (deviceType === DeviceType.TILT_SENSOR) {
           logger.info(`Tilt sensor attached on port ${portId}`);
           this._devices[portId] = new WeDo2Sensor(this, portId, deviceType);
@@ -1605,6 +1646,25 @@
 
           "---",
 
+          // External Powered Up 88005 lights (separate from the hub RGB LED).
+          {
+            opcode: "setLightBrightness",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.lightBrightness"),
+            arguments: {
+              PORT: { type: ArgumentType.STRING, menu: "motorPort", defaultValue: "A" },
+              BRIGHTNESS: { type: ArgumentType.NUMBER, defaultValue: 100 },
+            },
+          },
+          {
+            opcode: "lightOff",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.lightOff"),
+            arguments: {
+              PORT: { type: ArgumentType.STRING, menu: "motorPort", defaultValue: "A" },
+            },
+          },
+
           // LED and Sound blocks
           {
             opcode: "setLED",
@@ -1847,6 +1907,22 @@
     // ========================================================================
     // LED AND SOUND BLOCKS
     // ========================================================================
+
+    async setLightBrightness(args) {
+      if (!this._ensureConnected()) return;
+      const ports = args.PORT === "ALL" ? [Port.A, Port.B]
+        : args.PORT === "A" ? [Port.A] : args.PORT === "B" ? [Port.B] : [];
+      // Sequential writes also respect Web Bluetooth's single GATT operation.
+      for (const port of ports) {
+        const light = this._hub.getLight(port);
+        if (light) await light.setBrightness(args.BRIGHTNESS);
+      }
+      if (ports.length) await this._hub._delay(WeDo2BLE.sendInterval);
+    }
+
+    lightOff(args) {
+      return this.setLightBrightness({ PORT: args.PORT, BRIGHTNESS: 0 });
+    }
 
     setLED(args) {
       if (!this._ensureConnected()) return;
