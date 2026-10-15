@@ -762,6 +762,16 @@
       : arrays[args.NAME];
   };
 
+  // The host may preserve a physical Number input before Scratch's string
+  // socket flattens it. It owns that decision; standalone hosts keep their
+  // existing value semantics. Pass the original args and utility unchanged.
+  const valueInput = (args, util, opcode, name) => {
+    const hostInput = Scratch.BWNumberInput;
+    return typeof hostInput === "function"
+      ? hostInput(args, util, opcode, name)
+      : args[name];
+  };
+
   class ArrayExtension {
     constructor() {
       this._runtime = (Scratch.vm && Scratch.vm.runtime) || null;
@@ -2093,19 +2103,21 @@
       return String(args.KIND) === "null" ? null : valuesFor().UNDEFINED;
     }
 
-    valueBinary(args) {
+    valueBinary(args, util) {
       const values = valuesFor(),
-        op = String(args.OP);
+        op = String(args.OP),
+        left = valueInput(args, util, "arrays_valueBinary", "LEFT"),
+        right = valueInput(args, util, "arrays_valueBinary", "RIGHT");
       if (["&", "|", "^", "<<", ">>", ">>>"].includes(op)) {
         try {
-          return values.binary(args.LEFT, op, args.RIGHT);
+          return values.binary(left, op, right);
         } catch (error) {
           rethrowAccess(this, error);
           this._error(error.message);
           return values.encode(undefined);
         }
       }
-      return values.binary(args.LEFT, op, args.RIGHT);
+      return values.binary(left, op, right);
     }
 
     // PXT String_::fromCharCode takes one numeric argument and uses the
@@ -2167,27 +2179,34 @@
       return text + other;
     }
 
-    valueUnary(args) {
+    valueUnary(args, util) {
       const values = valuesFor(),
-        op = String(args.OP);
+        op = String(args.OP),
+        value = valueInput(args, util, "arrays_valueUnary", "VALUE");
       if (op === "~") {
         try {
-          return values.unary(op, args.VALUE);
+          return values.unary(op, value);
         } catch (error) {
           rethrowAccess(this, error);
           this._error(error.message);
           return values.encode(undefined);
         }
       }
-      return values.unary(op, args.VALUE);
+      return values.unary(op, value);
     }
 
-    valueTruthy(args) {
-      return valuesFor().truth(args.VALUE);
+    valueTruthy(args, util) {
+      return valuesFor().truth(
+        valueInput(args, util, "arrays_valueTruthy", "VALUE")
+      );
     }
 
-    valueCompare(args) {
-      return valuesFor().compare(args.LEFT, String(args.OP), args.RIGHT);
+    valueCompare(args, util) {
+      return valuesFor().compare(
+        valueInput(args, util, "arrays_valueCompare", "LEFT"),
+        String(args.OP),
+        valueInput(args, util, "arrays_valueCompare", "RIGHT")
+      );
     }
 
     referenceValues(args) {
