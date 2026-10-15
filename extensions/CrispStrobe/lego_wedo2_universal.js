@@ -32,7 +32,8 @@
       "wedo2.whenTilted": "when tilted [DIRECTION]",
       "wedo2.isTilted": "tilted [DIRECTION]?",
       "wedo2.lightColor": "set light color to [HUE]",
-      "wedo2.lightBrightness": "set lights [PORT] brightness to [BRIGHTNESS]% polarity [POLARITY]",
+      "wedo2.lightBrightness":
+        "set lights [PORT] brightness to [BRIGHTNESS]% polarity [POLARITY]",
       "wedo2.lightOff": "turn lights [PORT] off",
       "wedo2.lightNormal": "normal",
       "wedo2.lightReversed": "reversed",
@@ -57,7 +58,8 @@
       "wedo2.whenTilted": "wenn geneigt [DIRECTION]",
       "wedo2.isTilted": "geneigt [DIRECTION]?",
       "wedo2.lightColor": "Lichtfarbe auf [HUE] setzen",
-      "wedo2.lightBrightness": "Lichter [PORT] auf [BRIGHTNESS]% mit Polung [POLARITY] setzen",
+      "wedo2.lightBrightness":
+        "Lichter [PORT] auf [BRIGHTNESS]% mit Polung [POLARITY] setzen",
       "wedo2.lightOff": "Lichter [PORT] ausschalten",
       "wedo2.lightNormal": "normal",
       "wedo2.lightReversed": "umgekehrt",
@@ -82,7 +84,8 @@
       "wedo2.whenTilted": "quand incliné [DIRECTION]",
       "wedo2.isTilted": "incliné [DIRECTION] ?",
       "wedo2.lightColor": "définir couleur lumière sur [HUE]",
-      "wedo2.lightBrightness": "régler les lumières [PORT] à [BRIGHTNESS]% polarité [POLARITY]",
+      "wedo2.lightBrightness":
+        "régler les lumières [PORT] à [BRIGHTNESS]% polarité [POLARITY]",
       "wedo2.lightOff": "éteindre les lumières [PORT]",
       "wedo2.lightNormal": "normale",
       "wedo2.lightReversed": "inversée",
@@ -1194,7 +1197,8 @@
       if (portId !== Port.A && portId !== Port.B) return null;
       const device = this._devices[portId];
       if (device instanceof WeDo2Light) return device;
-      if (device && Object.prototype.hasOwnProperty.call(this._ports, portId)) return null;
+      if (device && Object.prototype.hasOwnProperty.call(this._ports, portId))
+        return null;
       // An inferred motor is not an attachment announcement. Explicit light
       // commands may replace that guess; actual motors/sensors stay protected.
       if (device instanceof WeDo2Motor) device._clearBrake();
@@ -1243,9 +1247,13 @@
       const hz = Math.round(Math.max(0, Math.min(1500, frequency)));
       const ms = Math.round(Math.max(0, Math.min(65535, duration)));
       const cmd = new Uint8Array([
-        Port.PIEZO, 2, 4,
-        hz & 0xff, (hz >> 8) & 0xff,
-        ms & 0xff, (ms >> 8) & 0xff,
+        Port.PIEZO,
+        2,
+        4,
+        hz & 0xff,
+        (hz >> 8) & 0xff,
+        ms & 0xff,
+        (ms >> 8) & 0xff,
       ]);
       // Notes are discrete commands: dropping one changes the melody.
       await this.send(WeDo2BLE.outputCommand, cmd, false);
@@ -1658,9 +1666,17 @@
             blockType: BlockType.COMMAND,
             text: t("wedo2.lightBrightness"),
             arguments: {
-              PORT: { type: ArgumentType.STRING, menu: "motorPort", defaultValue: "A" },
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "motorPort",
+                defaultValue: "A",
+              },
               BRIGHTNESS: { type: ArgumentType.NUMBER, defaultValue: 100 },
-              POLARITY: { type: ArgumentType.STRING, menu: "lightPolarity", defaultValue: "normal" },
+              POLARITY: {
+                type: ArgumentType.STRING,
+                menu: "lightPolarity",
+                defaultValue: "normal",
+              },
             },
           },
           {
@@ -1668,7 +1684,11 @@
             blockType: BlockType.COMMAND,
             text: t("wedo2.lightOff"),
             arguments: {
-              PORT: { type: ArgumentType.STRING, menu: "motorPort", defaultValue: "A" },
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "motorPort",
+                defaultValue: "A",
+              },
             },
           },
 
@@ -1924,8 +1944,14 @@
 
     async setLightBrightness(args) {
       if (!this._ensureConnected()) return;
-      const ports = args.PORT === "ALL" ? [Port.A, Port.B]
-        : args.PORT === "A" ? [Port.A] : args.PORT === "B" ? [Port.B] : [];
+      const ports =
+        args.PORT === "ALL"
+          ? [Port.A, Port.B]
+          : args.PORT === "A"
+            ? [Port.A]
+            : args.PORT === "B"
+              ? [Port.B]
+              : [];
       // Sequential writes also respect Web Bluetooth's single GATT operation.
       for (const port of ports) {
         const light = this._hub.getLight(port);
