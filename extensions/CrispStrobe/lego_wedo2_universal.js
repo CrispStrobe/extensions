@@ -32,6 +32,11 @@
       "wedo2.whenTilted": "when tilted [DIRECTION]",
       "wedo2.isTilted": "tilted [DIRECTION]?",
       "wedo2.lightColor": "set light color to [HUE]",
+      "wedo2.lightBrightness":
+        "set lights [PORT] brightness to [BRIGHTNESS]% polarity [POLARITY]",
+      "wedo2.lightOff": "turn lights [PORT] off",
+      "wedo2.lightNormal": "normal",
+      "wedo2.lightReversed": "reversed",
       "wedo2.playNote": "play note [NOTE] for [DURATION] seconds",
       "wedo2.whenButton": "when button pressed",
       "wedo2.buttonPressed": "button pressed?",
@@ -53,6 +58,11 @@
       "wedo2.whenTilted": "wenn geneigt [DIRECTION]",
       "wedo2.isTilted": "geneigt [DIRECTION]?",
       "wedo2.lightColor": "Lichtfarbe auf [HUE] setzen",
+      "wedo2.lightBrightness":
+        "Lichter [PORT] auf [BRIGHTNESS]% mit Polung [POLARITY] setzen",
+      "wedo2.lightOff": "Lichter [PORT] ausschalten",
+      "wedo2.lightNormal": "normal",
+      "wedo2.lightReversed": "umgekehrt",
       "wedo2.playNote": "Note [NOTE] für [DURATION] Sekunden spielen",
       "wedo2.whenButton": "wenn Knopf gedrückt",
       "wedo2.buttonPressed": "Knopf gedrückt?",
@@ -74,6 +84,11 @@
       "wedo2.whenTilted": "quand incliné [DIRECTION]",
       "wedo2.isTilted": "incliné [DIRECTION] ?",
       "wedo2.lightColor": "définir couleur lumière sur [HUE]",
+      "wedo2.lightBrightness":
+        "régler les lumières [PORT] à [BRIGHTNESS]% polarité [POLARITY]",
+      "wedo2.lightOff": "éteindre les lumières [PORT]",
+      "wedo2.lightNormal": "normale",
+      "wedo2.lightReversed": "inversée",
       "wedo2.playNote": "jouer note [NOTE] pendant [DURATION] secondes",
       "wedo2.whenButton": "quand bouton appuyé",
       "wedo2.buttonPressed": "bouton appuyé ?",
@@ -317,6 +332,7 @@
 
   const DeviceType = {
     MOTOR: 1,
+    LIGHT: 8,
     VOLTAGE_SENSOR: 20,
     CURRENT_SENSOR: 21,
     PIEZO: 22,
@@ -327,6 +343,7 @@
 
   const DeviceTypeName = {
     [DeviceType.MOTOR]: "WeDo 2.0 Motor",
+    [DeviceType.LIGHT]: "Powered Up Lights (88005)",
     [DeviceType.VOLTAGE_SENSOR]: "Voltage Sensor",
     [DeviceType.CURRENT_SENSOR]: "Current Sensor",
     [DeviceType.PIEZO]: "Piezo Buzzer",
@@ -380,6 +397,26 @@
 
     setValue(key, value) {
       this._values[key] = value;
+    }
+  }
+
+  class WeDo2Light extends WeDo2Device {
+    setBrightness(value, polarity = "normal") {
+      const number = Cast.toNumber(value);
+      const brightness = Number.isNaN(number)
+        ? 0
+        : Math.round(Math.max(0, Math.min(100, number)));
+      // 88005 uses raw 0–100 brightness, with no motor minimum or brake.
+      // Header = port, power command, payload length (one signed byte).
+      // A clone tested over CoreBluetooth needs negative power for its 88005;
+      // polarity is explicit because its identity does not distinguish wiring.
+      const power = polarity === "reversed" ? -brightness : brightness;
+      // Bypass the lossy limiter so BOTH and OFF always reach every light.
+      return this._parent.send(
+        WeDo2BLE.outputCommand,
+        new Uint8Array([this._portId, 1, 1, power & 0xff]),
+        false
+      );
     }
   }
 
@@ -1126,8 +1163,9 @@
 
     getMotor(portId) {
       const device = this._devices[portId];
-      if (device) {
-        return device instanceof WeDo2Motor ? device : null;
+      if (device instanceof WeDo2Motor) return device;
+      if (device && Object.prototype.hasOwnProperty.call(this._ports, portId)) {
+        return null;
       }
       // Not announced. A motor is addressed by PORT NUMBER -- the output
       // command carries the port and the hub routes it -- so an attachedIO
@@ -1153,6 +1191,20 @@
       const motor = new WeDo2Motor(this, portId, DeviceType.MOTOR);
       this._devices[portId] = motor;
       return motor;
+    }
+
+    getLight(portId) {
+      if (portId !== Port.A && portId !== Port.B) return null;
+      const device = this._devices[portId];
+      if (device instanceof WeDo2Light) return device;
+      if (device && Object.prototype.hasOwnProperty.call(this._ports, portId))
+        return null;
+      // An inferred motor is not an attachment announcement. Explicit light
+      // commands may replace that guess; actual motors/sensors stay protected.
+      if (device instanceof WeDo2Motor) device._clearBrake();
+      const light = new WeDo2Light(this, portId, DeviceType.LIGHT);
+      this._devices[portId] = light;
+      return light;
     }
 
     getSensor(portId) {
@@ -1190,33 +1242,34 @@
     }
 
     async playTone(frequency, duration) {
-      logger.debug(`Playing tone: ${frequency}Hz for ${duration}ms`);
-
-      const freqBytes = new Uint16Array([frequency]);
-      const durBytes = new Uint16Array([duration]);
-
+      // The piezo supports at most 1500 Hz and uint16 milliseconds.
+      // Clamp before encoding; Uint16Array silently wrapped long durations.
+      const hz = Math.round(Math.max(0, Math.min(1500, frequency)));
+      const ms = Math.round(Math.max(0, Math.min(65535, duration)));
       const cmd = new Uint8Array([
         Port.PIEZO,
         2,
         4,
-        freqBytes[0] & 0xff,
-        (freqBytes[0] >> 8) & 0xff,
-        durBytes[0] & 0xff,
-        (durBytes[0] >> 8) & 0xff,
+        hz & 0xff,
+        (hz >> 8) & 0xff,
+        ms & 0xff,
+        (ms >> 8) & 0xff,
       ]);
-
-      await this.send(WeDo2BLE.outputCommand, cmd);
+      // Notes are discrete commands: dropping one changes the melody.
+      await this.send(WeDo2BLE.outputCommand, cmd, false);
     }
 
-    stopAll() {
+    async stopAll() {
       if (!this.isConnected()) return;
       logger.info("Stopping all motors");
 
-      Object.values(this._devices).forEach((device) => {
+      for (const device of Object.values(this._devices)) {
         if (device instanceof WeDo2Motor) {
           device.turnOff();
+        } else if (device instanceof WeDo2Light) {
+          await device.setBrightness(0);
         }
-      });
+      }
     }
 
     getPeripheralIsConnected() {
@@ -1309,6 +1362,8 @@
         if (deviceType === DeviceType.MOTOR) {
           logger.info(`Motor attached on port ${portId}`);
           this._devices[portId] = new WeDo2Motor(this, portId, deviceType);
+        } else if (deviceType === DeviceType.LIGHT) {
+          this._devices[portId] = new WeDo2Light(this, portId, deviceType);
         } else if (deviceType === DeviceType.TILT_SENSOR) {
           logger.info(`Tilt sensor attached on port ${portId}`);
           this._devices[portId] = new WeDo2Sensor(this, portId, deviceType);
@@ -1605,6 +1660,38 @@
 
           "---",
 
+          // External Powered Up 88005 lights (separate from the hub RGB LED).
+          {
+            opcode: "setLightBrightness",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.lightBrightness"),
+            arguments: {
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "motorPort",
+                defaultValue: "A",
+              },
+              BRIGHTNESS: { type: ArgumentType.NUMBER, defaultValue: 100 },
+              POLARITY: {
+                type: ArgumentType.STRING,
+                menu: "lightPolarity",
+                defaultValue: "normal",
+              },
+            },
+          },
+          {
+            opcode: "lightOff",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.lightOff"),
+            arguments: {
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "motorPort",
+                defaultValue: "A",
+              },
+            },
+          },
+
           // LED and Sound blocks
           {
             opcode: "setLED",
@@ -1670,6 +1757,13 @@
               { text: "A", value: "A" },
               { text: "B", value: "B" },
               { text: "Both", value: "ALL" },
+            ],
+          },
+          lightPolarity: {
+            acceptReporters: false,
+            items: [
+              { text: t("wedo2.lightNormal"), value: "normal" },
+              { text: t("wedo2.lightReversed"), value: "reversed" },
             ],
           },
           direction: {
@@ -1848,6 +1942,28 @@
     // LED AND SOUND BLOCKS
     // ========================================================================
 
+    async setLightBrightness(args) {
+      if (!this._ensureConnected()) return;
+      const ports =
+        args.PORT === "ALL"
+          ? [Port.A, Port.B]
+          : args.PORT === "A"
+            ? [Port.A]
+            : args.PORT === "B"
+              ? [Port.B]
+              : [];
+      // Sequential writes also respect Web Bluetooth's single GATT operation.
+      for (const port of ports) {
+        const light = this._hub.getLight(port);
+        if (light) await light.setBrightness(args.BRIGHTNESS, args.POLARITY);
+      }
+      if (ports.length) await this._hub._delay(WeDo2BLE.sendInterval);
+    }
+
+    lightOff(args) {
+      return this.setLightBrightness({ PORT: args.PORT, BRIGHTNESS: 0 });
+    }
+
     setLED(args) {
       if (!this._ensureConnected()) return;
 
@@ -1904,20 +2020,17 @@
       });
     }
 
-    playNote(args) {
+    async playNote(args) {
       if (!this._ensureConnected()) return;
-
-      const note = Cast.toNumber(args.NOTE);
-      const duration = Cast.toNumber(args.DURATION) * 1000; // Convert to ms
-
-      // Convert MIDI note to frequency
+      const note = Math.max(0, Math.min(127, Cast.toNumber(args.NOTE)));
+      const duration = Math.round(
+        Math.max(0, Math.min(65535, Cast.toNumber(args.DURATION) * 1000))
+      );
+      if (!duration) return;
       const frequency = Math.round(440 * Math.pow(2, (note - 69) / 12));
-
-      this._hub.playTone(frequency, duration);
-
-      return new Promise((resolve) => {
-        setTimeout(() => resolve(), duration + WeDo2BLE.sendInterval);
-      });
+      // Surface transport failures and begin the wait only after the write.
+      await this._hub.playTone(frequency, duration);
+      await this._hub._delay(duration + WeDo2BLE.sendInterval);
     }
 
     // ========================================================================
