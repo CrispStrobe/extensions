@@ -584,6 +584,241 @@
     builtinValues ||
     (builtinValues = makeValues());
 
+  // Optional embedding API. This catalogue describes operations, never element
+  // types or producer authority. No host means a direct call to the old method.
+  const operationSpecs = Object.freeze({
+    create1D: ["named", "bind"],
+    create2D: ["named", "bind"],
+    createEmpty: ["named", "bind"],
+    createZeros: ["named", "bind"],
+    createRange: ["named", "bind"],
+    delete: ["named", "unbind"],
+    get: ["named", "read"],
+    get2D: ["named", "read", true],
+    getMulti: ["named", "read", true],
+    set: ["named", "write"],
+    set2D: ["named", "write", true],
+    setMulti: ["named", "write", true],
+    push: ["named", "write"],
+    pop: ["named", "write"],
+    insert: ["named", "write"],
+    remove: ["named", "write"],
+    length: ["named", "read"],
+    shape: ["named", "read", true],
+    contains: ["named", "read"],
+    indexOf: ["named", "read"],
+    slice: ["named", "read", true],
+    getRow: ["named", "read", true],
+    getColumn: ["named", "read", true],
+    map: ["named", "escape", true],
+    filter: ["named", "escape", true],
+    reduce: ["named", "escape", true],
+    sort: ["named", "read", true],
+    reverse: ["named", "read", true],
+    sum: ["named", "read", true],
+    mean: ["named", "read", true],
+    min: ["named", "read", true],
+    max: ["named", "read", true],
+    transpose: ["named", "read", true],
+    flatten: ["named", "read", true],
+    reshape: ["named", "read", true],
+    toJSON: ["named", "read", true],
+    toString: ["named", "read", true],
+    listAll: ["registry", "read"],
+    namedReference: ["namedString", "alias"],
+    referenceValues: ["transport", "transport"],
+    createReference: ["transport", "allocate"],
+    parseLegacyValue: ["transport", "transport"],
+    jsonValue: ["transport", "read"],
+    referenceTruthy: ["reference", "read"],
+    referenceItem: ["reference", "read"],
+    referenceRemove: ["reference", "write"],
+    referenceRandom: ["reference", "read"],
+    referenceLength: ["reference", "read"],
+    referenceSlice: ["reference", "read"],
+    referenceConcat: ["reference", "read"],
+    referenceIndexOf: ["reference", "read"],
+    referenceTake: ["reference", "write"],
+    mutateReference: ["reference", "write"],
+    showTable: ["namedString", "read", true],
+    hideTable: ["namedString", "read"],
+    setTableTitle: ["namedString", "read", true],
+    setTableStyle: ["namedString", "read", true],
+    markCell: ["namedString", "read", true],
+    unmarkCell: ["namedString", "read", true],
+    clearMarks: ["namedString", "read", true],
+    isMarked: ["namedString", "read"],
+    markedCount: ["namedString", "read"],
+  });
+  for (const spec of Object.values(operationSpecs)) Object.freeze(spec);
+  const operations = new WeakMap();
+  const currentOperation = (extension) => operations.get(extension);
+  const access = (extension, facts) => {
+    const operation = currentOperation(extension);
+    if (!operation) return;
+    try {
+      operation.host.access.call(
+        operation.service,
+        operation.ticket,
+        Object.freeze({
+          opcode: operation.opcode,
+          runtime: extension._runtime,
+          kind: operation.spec[1],
+          slot: null,
+          raw: undefined,
+          body: undefined,
+          name: undefined,
+          parent: undefined,
+          key: undefined,
+          ...facts,
+        })
+      );
+    } catch (error) {
+      operation.rejections.push(error);
+      throw error;
+    }
+  };
+  const rejectAccess = (extension, message) => {
+    const error = new Error(message);
+    const operation = currentOperation(extension);
+    if (operation) operation.rejections.push(error);
+    throw error;
+  };
+  const rethrowAccess = (extension, error) => {
+    const operation = currentOperation(extension);
+    if (
+      operation &&
+      operation.rejections.some((item) => Object.is(item, error))
+    ) {
+      throw error;
+    }
+  };
+  const bodyAccess = (
+    extension,
+    body,
+    facts,
+    deep = false,
+    seen = new Set()
+  ) => {
+    access(extension, { ...facts, body });
+    if (!body || typeof body !== "object" || seen.has(body)) return;
+    seen.add(body);
+    // Do not execute getters merely to discover a hidden enrolled descendant.
+    // Hosts can use ordinary JSON/data arrays; accessor aggregates are refused.
+    for (const key of Reflect.ownKeys(body)) {
+      const descriptor = Object.getOwnPropertyDescriptor(body, key);
+      if (!descriptor || !("value" in descriptor)) {
+        rejectAccess(
+          extension,
+          "Array host guards require data-only aggregate properties"
+        );
+      }
+      const child = descriptor.value;
+      if (deep && child && typeof child === "object") {
+        bodyAccess(
+          extension,
+          child,
+          { ...facts, parent: body, key },
+          true,
+          seen
+        );
+      }
+    }
+    if (deep && valuesFor().isReference(body)) {
+      access(extension, { ...facts, kind: "transport", raw: body });
+      const linked = valuesFor().arrayValue(extension._runtime, body);
+      if (linked)
+        bodyAccess(extension, linked, { ...facts, raw: body }, true, seen);
+    }
+  };
+  const bindingValue = (extension, value) => {
+    if (currentOperation(extension)) {
+      bodyAccess(extension, value, {
+        kind: "bind",
+        slot: "NAME",
+        name: currentOperation(extension).name,
+      });
+    }
+    return value;
+  };
+  const selectedValue = (extension, value) => {
+    if (currentOperation(extension)) {
+      access(extension, { kind: "select", slot: "VALUE", raw: value });
+      if (Array.isArray(value))
+        bodyAccess(extension, value, { kind: "select", slot: "VALUE" });
+    }
+    return value;
+  };
+  // Recheck the live operation after argument coercion, immediately before
+  // committing an effect. The value and original args are never replaced.
+  const effectValue = (extension, value, body, kind = "write") => {
+    const operation = currentOperation(extension);
+    if (operation && kind === "write")
+      bodyAccess(
+        extension,
+        value,
+        { kind: "transport", slot: "VALUE", raw: operation.args.VALUE },
+        true
+      );
+    if (operation)
+      bodyAccess(
+        extension,
+        body === undefined ? operation.body : body,
+        { kind, slot: null, raw: operation.args },
+        true
+      );
+    return value;
+  };
+  const nativeMutators = Object.freeze(
+    Object.fromEntries(
+      ["push", "pop", "unshift", "shift", "splice", "reverse"].map((name) => [
+        name,
+        Array.prototype[name],
+      ])
+    )
+  );
+  const mutateArray = (extension, body, name, callee, args) => {
+    bodyAccess(
+      extension,
+      args,
+      { kind: "transport", slot: null, raw: currentOperation(extension).args },
+      true
+    );
+    effectValue(extension, undefined, body);
+    // A user-replaced method is executable code, just like legacy map FUNC.
+    // Hosts may deny that escape for an owned body without changing unowned use.
+    if (callee !== nativeMutators[name])
+      bodyAccess(
+        extension,
+        body,
+        { kind: "escape", slot: null, raw: currentOperation(extension).args },
+        true
+      );
+    return Reflect.apply(callee, body, args);
+  };
+  const propertyKey = (value) => Reflect.ownKeys({ [value]: null })[0];
+  const namedKey = (extension, args, stringOnly = false) => {
+    const operation = currentOperation(extension);
+    if (operation && operation.args === args) return operation.name;
+    return stringOnly ? String(args.NAME) : args.NAME;
+  };
+  const namedArray = (extension, args) => {
+    const operation = currentOperation(extension);
+    return operation && operation.args === args
+      ? operation.body
+      : arrays[args.NAME];
+  };
+
+  // The host may preserve a physical Number input before Scratch's string
+  // socket flattens it. It owns that decision; standalone hosts keep their
+  // existing value semantics. Pass the original args and utility unchanged.
+  const valueInput = (args, util, opcode, name) => {
+    const hostInput = Scratch.BWNumberInput;
+    return typeof hostInput === "function"
+      ? hostInput(args, util, opcode, name)
+      : args[name];
+  };
+
   class ArrayExtension {
     constructor() {
       this._runtime = (Scratch.vm && Scratch.vm.runtime) || null;
@@ -1511,27 +1746,36 @@
     // Create arrays
     create1D(args) {
       try {
-        arrays[args.NAME] = JSON.parse(args.JSON);
+        arrays[namedKey(this, args)] = bindingValue(
+          this,
+          JSON.parse(args.JSON)
+        );
       } catch (e) {
-        arrays[args.NAME] = [];
+        rethrowAccess(this, e);
+        arrays[namedKey(this, args)] = bindingValue(this, []);
       }
     }
 
     create2D(args) {
       try {
-        arrays[args.NAME] = JSON.parse(args.JSON);
+        arrays[namedKey(this, args)] = bindingValue(
+          this,
+          JSON.parse(args.JSON)
+        );
       } catch (e) {
-        arrays[args.NAME] = [[]];
+        rethrowAccess(this, e);
+        arrays[namedKey(this, args)] = bindingValue(this, [[]]);
       }
     }
 
     createEmpty(args) {
-      arrays[args.NAME] = [];
+      arrays[namedKey(this, args)] = bindingValue(this, []);
     }
 
     createZeros(args) {
       try {
         const shape = JSON.parse(args.SHAPE);
+        effectValue(this, undefined, undefined, "bind");
         const createNDArray = (dims, index = 0) => {
           if (index === dims.length - 1) {
             return new Array(dims[index]).fill(0);
@@ -1540,9 +1784,10 @@
             .fill(null)
             .map(() => createNDArray(dims, index + 1));
         };
-        arrays[args.NAME] = createNDArray(shape);
+        arrays[namedKey(this, args)] = bindingValue(this, createNDArray(shape));
       } catch (e) {
-        arrays[args.NAME] = [];
+        rethrowAccess(this, e);
+        arrays[namedKey(this, args)] = bindingValue(this, []);
       }
     }
 
@@ -1550,10 +1795,11 @@
       const start = Number(args.START);
       const end = Number(args.END);
       const arr = [];
+      effectValue(this, undefined, undefined, "bind");
       for (let i = start; i <= end; i++) {
         arr.push(i);
       }
-      arrays[args.NAME] = arr;
+      arrays[namedKey(this, args)] = bindingValue(this, arr);
     }
 
     // Get/Set operations
@@ -1573,20 +1819,20 @@
     }
 
     get(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return "";
       const idx = Number(args.INDEX);
       return this._legacyItemResult(arr[idx], true);
     }
 
     get2D(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr || !arr[args.ROW]) return "";
       return this._legacyItemResult(arr[args.ROW][args.COL]);
     }
 
     getMulti(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return "";
       try {
         const indices = JSON.parse(args.INDICES);
@@ -1596,26 +1842,50 @@
         }
         return this._legacyItemResult(result, true);
       } catch (e) {
+        rethrowAccess(this, e);
         return "";
       }
     }
 
     set(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return;
       const idx = Number(args.INDEX);
-      arr[idx] = this.parseValue(args.VALUE);
+      if (currentOperation(this)) {
+        const value = this.parseValue(args.VALUE);
+        arr[idx] = effectValue(this, value, arr);
+      } else arr[idx] = this.parseValue(args.VALUE);
     }
 
     set2D(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return;
-      if (!arr[args.ROW]) arr[args.ROW] = [];
-      arr[args.ROW][args.COL] = this.parseValue(args.VALUE);
+      if (currentOperation(this)) {
+        // Preserve every ROW conversion, including the conditional write. JS
+        // assignment converts its final property key AFTER evaluating the RHS.
+        if (!arr[args.ROW]) {
+          const rawRow = args.ROW,
+            row = [],
+            key = propertyKey(rawRow);
+          arr[key] = effectValue(this, row, arr);
+        }
+        const target = arr[args.ROW],
+          rawColumn = args.COL;
+        const value = this.parseValue(args.VALUE);
+        if (target === null || target === undefined) {
+          effectValue(this, value, arr);
+          target[rawColumn] = value; // Retain original nullish-base TypeError without key coercion.
+        }
+        const column = propertyKey(rawColumn);
+        target[column] = effectValue(this, value, arr);
+      } else {
+        if (!arr[args.ROW]) arr[args.ROW] = [];
+        arr[args.ROW][args.COL] = this.parseValue(args.VALUE);
+      }
     }
 
     setMulti(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return;
       try {
         const indices = JSON.parse(args.INDICES);
@@ -1623,45 +1893,74 @@
         for (let i = 0; i < indices.length - 1; i++) {
           target = target[indices[i]];
         }
-        target[indices[indices.length - 1]] = this.parseValue(args.VALUE);
+        if (currentOperation(this)) {
+          const rawKey = indices[indices.length - 1],
+            value = this.parseValue(args.VALUE);
+          if (target === null || target === undefined) {
+            effectValue(this, value, arr);
+            target[rawKey] = value;
+          }
+          const key = propertyKey(rawKey);
+          target[key] = effectValue(this, value, arr);
+        } else
+          target[indices[indices.length - 1]] = this.parseValue(args.VALUE);
       } catch (e) {
+        rethrowAccess(this, e);
         // ignore
       }
     }
 
     // Array operations
     push(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return;
-      arr.push(this.parseValue(args.VALUE));
+      if (currentOperation(this)) {
+        const callee = arr.push,
+          value = this.parseValue(args.VALUE);
+        mutateArray(this, arr, "push", callee, [value]);
+      } else arr.push(this.parseValue(args.VALUE));
     }
 
     pop(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr || arr.length === 0) return "";
-      return this._legacyItemResult(arr.pop());
+      if (currentOperation(this)) selectedValue(this, arr[arr.length - 1]);
+      return this._legacyItemResult(
+        currentOperation(this)
+          ? mutateArray(this, arr, "pop", arr.pop, [])
+          : arr.pop()
+      );
     }
 
     insert(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return;
-      arr.splice(Number(args.INDEX), 0, this.parseValue(args.VALUE));
+      if (currentOperation(this)) {
+        const callee = arr.splice,
+          index = Number(args.INDEX),
+          value = this.parseValue(args.VALUE);
+        mutateArray(this, arr, "splice", callee, [index, 0, value]);
+      } else arr.splice(Number(args.INDEX), 0, this.parseValue(args.VALUE));
     }
 
     remove(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return;
-      arr.splice(Number(args.INDEX), 1);
+      if (currentOperation(this)) {
+        const callee = arr.splice,
+          index = Number(args.INDEX);
+        mutateArray(this, arr, "splice", callee, [index, 1]);
+      } else arr.splice(Number(args.INDEX), 1);
     }
 
     // Info operations
     length(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       return arr ? arr.length : 0;
     }
 
     shape(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return "[]";
 
       const getShape = (a) => {
@@ -1677,14 +1976,14 @@
     }
 
     contains(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return false;
       const val = this.parseValue(args.VALUE);
       return arr.includes(val);
     }
 
     indexOf(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return -1;
       const val = this.parseValue(args.VALUE);
       return arr.indexOf(val);
@@ -1692,20 +1991,20 @@
 
     // Slicing and selection
     slice(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return "[]";
       const result = arr.slice(Number(args.START), Number(args.END));
       return JSON.stringify(result);
     }
 
     getRow(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr || !arr[args.ROW]) return "[]";
       return JSON.stringify(arr[args.ROW]);
     }
 
     getColumn(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return "[]";
       const col = Number(args.COL);
       const result = arr.map((row) => row[col]);
@@ -1714,7 +2013,7 @@
 
     // Functional operations
     map(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return "[]";
       try {
         // new Function instead of eval: still compiles user JS (this is the
@@ -1725,12 +2024,13 @@
         const result = arr.map(func);
         return JSON.stringify(result);
       } catch (e) {
+        rethrowAccess(this, e);
         return "[]";
       }
     }
 
     filter(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return "[]";
       try {
         // eslint-disable-next-line no-new-func
@@ -1738,12 +2038,13 @@
         const result = arr.filter(func);
         return JSON.stringify(result);
       } catch (e) {
+        rethrowAccess(this, e);
         return "[]";
       }
     }
 
     reduce(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return "";
       try {
         // eslint-disable-next-line no-new-func
@@ -1751,12 +2052,13 @@
         const init = this.parseValue(args.INIT);
         return this._legacyItemResult(arr.reduce(func, init));
       } catch (e) {
+        rethrowAccess(this, e);
         return "";
       }
     }
 
     sort(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return "[]";
       const sorted = [...arr].sort((a, b) => {
         if (args.ORDER === "ascending") return a - b;
@@ -1766,21 +2068,21 @@
     }
 
     reverse(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return "[]";
       return JSON.stringify([...arr].reverse());
     }
 
     // Math operations
     sum(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return 0;
       const flatten = (a) => (Array.isArray(a) ? a.flatMap(flatten) : [a]);
       return flatten(arr).reduce((sum, x) => sum + Number(x || 0), 0);
     }
 
     mean(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr || arr.length === 0) return 0;
       const flatten = (a) => (Array.isArray(a) ? a.flatMap(flatten) : [a]);
       const flat = flatten(arr);
@@ -1788,14 +2090,14 @@
     }
 
     min(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return 0;
       const flatten = (a) => (Array.isArray(a) ? a.flatMap(flatten) : [a]);
       return Math.min(...flatten(arr).map(Number));
     }
 
     max(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return 0;
       const flatten = (a) => (Array.isArray(a) ? a.flatMap(flatten) : [a]);
       return Math.max(...flatten(arr).map(Number));
@@ -1803,21 +2105,21 @@
 
     // Advanced operations
     transpose(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr || !arr[0]) return "[]";
       const result = arr[0].map((_, i) => arr.map((row) => row[i]));
       return JSON.stringify(result);
     }
 
     flatten(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return "[]";
       const flatten = (a) => (Array.isArray(a) ? a.flatMap(flatten) : [a]);
       return JSON.stringify(flatten(arr));
     }
 
     reshape(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       if (!arr) return "[]";
       try {
         const shape = JSON.parse(args.SHAPE);
@@ -1837,23 +2139,25 @@
 
         return JSON.stringify(reshape([...flat], shape));
       } catch (e) {
+        rethrowAccess(this, e);
         return "[]";
       }
     }
 
     // Utility
     toJSON(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       return arr ? JSON.stringify(arr) : "[]";
     }
 
     toString(args) {
-      const arr = arrays[args.NAME];
+      const arr = namedArray(this, args);
       return arr ? arr.toString() : "";
     }
 
     delete(args) {
-      delete arrays[args.NAME];
+      effectValue(this, undefined, undefined, "unbind");
+      delete arrays[namedKey(this, args)];
     }
 
     listAll() {
@@ -1879,7 +2183,11 @@
     }
 
     _array(args) {
-      const array = valuesFor().arrayValue(this._runtime, args.ARRAY);
+      const operation = currentOperation(this);
+      const array =
+        operation && operation.args === args
+          ? operation.body
+          : valuesFor().arrayValue(this._runtime, args.ARRAY);
       if (!array) this._error("Array reference is null or expired");
       return array;
     }
@@ -1895,18 +2203,21 @@
       return String(args.KIND) === "null" ? null : valuesFor().UNDEFINED;
     }
 
-    valueBinary(args) {
+    valueBinary(args, util) {
       const values = valuesFor(),
-        op = String(args.OP);
+        op = String(args.OP),
+        left = valueInput(args, util, "arrays_valueBinary", "LEFT"),
+        right = valueInput(args, util, "arrays_valueBinary", "RIGHT");
       if (["&", "|", "^", "<<", ">>", ">>>"].includes(op)) {
         try {
-          return values.binary(args.LEFT, op, args.RIGHT);
+          return values.binary(left, op, right);
         } catch (error) {
+          rethrowAccess(this, error);
           this._error(error.message);
           return values.encode(undefined);
         }
       }
-      return values.binary(args.LEFT, op, args.RIGHT);
+      return values.binary(left, op, right);
     }
 
     // PXT String_::fromCharCode takes one numeric argument and uses the
@@ -1968,49 +2279,80 @@
       return text + other;
     }
 
-    valueUnary(args) {
+    valueUnary(args, util) {
       const values = valuesFor(),
-        op = String(args.OP);
+        op = String(args.OP),
+        value = valueInput(args, util, "arrays_valueUnary", "VALUE");
       if (op === "~") {
         try {
-          return values.unary(op, args.VALUE);
+          return values.unary(op, value);
         } catch (error) {
+          rethrowAccess(this, error);
           this._error(error.message);
           return values.encode(undefined);
         }
       }
-      return values.unary(op, args.VALUE);
+      return values.unary(op, value);
     }
 
-    valueTruthy(args) {
-      return valuesFor().truth(args.VALUE);
+    valueTruthy(args, util) {
+      return valuesFor().truth(
+        valueInput(args, util, "arrays_valueTruthy", "VALUE")
+      );
     }
 
-    valueCompare(args) {
-      return valuesFor().compare(args.LEFT, String(args.OP), args.RIGHT);
+    valueCompare(args, util) {
+      return valuesFor().compare(
+        valueInput(args, util, "arrays_valueCompare", "LEFT"),
+        String(args.OP),
+        valueInput(args, util, "arrays_valueCompare", "RIGHT")
+      );
     }
 
-    referenceValues(args) {
+    referenceValues(args, util) {
+      const operation = currentOperation(this);
+      const raw = operation ? args.REST : undefined;
       let rest;
       try {
-        rest = JSON.parse(String(args.REST));
+        rest = JSON.parse(String(operation ? raw : args.REST));
       } catch (e) {
+        rethrowAccess(this, e);
         rest = null;
       }
+      if (operation)
+        access(this, {
+          kind: "transport",
+          slot: "REST",
+          raw,
+          body: rest,
+        });
       if (!Array.isArray(rest)) {
         this._error("Array value chain requires an array tail");
         return "[]";
       }
-      return JSON.stringify([args.VALUE, ...rest], valuesFor().jsonReplacer);
+      return JSON.stringify(
+        [valueInput(args, util, "arrays_referenceValues", "VALUE"), ...rest],
+        valuesFor().jsonReplacer
+      );
     }
 
     createReference(args) {
+      const operation = currentOperation(this);
+      const raw = operation ? args.VALUES : undefined;
       let list;
       try {
-        list = JSON.parse(String(args.VALUES));
+        list = JSON.parse(String(operation ? raw : args.VALUES));
       } catch (e) {
+        rethrowAccess(this, e);
         list = null;
       }
+      if (operation)
+        access(this, {
+          kind: "transport",
+          slot: "VALUES",
+          raw,
+          body: list,
+        });
       if (!Array.isArray(list)) {
         this._error("Array reference requires an argument list");
         return "";
@@ -2020,9 +2362,13 @@
     }
 
     namedReference(args) {
-      const array = arrays[String(args.NAME)];
+      const array = currentOperation(this)
+        ? currentOperation(this).body
+        : arrays[namedKey(this, args, true)];
       if (!Array.isArray(array)) {
-        this._error("Named array does not exist: " + String(args.NAME));
+        this._error(
+          "Named array does not exist: " + namedKey(this, args, true)
+        );
         return valuesFor().UNDEFINED;
       }
       return valuesFor().arrayReference(this._runtime, array);
@@ -2036,6 +2382,7 @@
       const values = valuesFor();
       const stack = new Set();
       const unwrap = (value) => {
+        access(this, { kind: "transport", slot: "VALUE", raw: value });
         value = values.decode(value);
         const id = values.referenceId(this._runtime, value, "array");
         if (values.isReference(value) && id === null) {
@@ -2048,6 +2395,8 @@
           if (!value) throw new Error("Array reference is null or expired");
         }
         if (value && typeof value === "object") {
+          if (currentOperation(this))
+            bodyAccess(this, value, { kind: "read", slot: "VALUE" });
           if (stack.has(value)) {
             throw new Error("Converting circular structure to JSON");
           }
@@ -2065,6 +2414,7 @@
       try {
         return values.encode(JSON.stringify(unwrap(args.VALUE)));
       } catch (error) {
+        rethrowAccess(this, error);
         this._error(error.message);
         return values.UNDEFINED;
       }
@@ -2080,12 +2430,17 @@
       return array ? this._arrayResult(array[Number(args.INDEX)]) : "";
     }
 
-    referenceRemove(args) {
+    referenceRemove(args, util) {
       const array = this._array(args);
       if (!array) return false;
-      const index = valuesFor().indexOf(array, args.VALUE);
+      const index = valuesFor().indexOf(
+        array,
+        valueInput(args, util, "arrays_referenceRemove", "VALUE")
+      );
       if (index < 0) return false;
-      array.splice(index, 1);
+      if (currentOperation(this))
+        mutateArray(this, array, "splice", array.splice, [index, 1]);
+      else array.splice(index, 1);
       return true;
     }
 
@@ -2153,7 +2508,12 @@
     referenceConcat(args) {
       const array = this._array(args);
       if (!array) return "";
-      const other = this._array({ ARRAY: args.OTHER });
+      const operation = currentOperation(this);
+      const other = operation
+        ? operation.other
+        : this._array({ ARRAY: args.OTHER });
+      if (operation && !other)
+        this._error("Array reference is null or expired");
       if (!other) return "";
       const result = [];
       for (const value of array) result.push(value);
@@ -2161,10 +2521,14 @@
       return this._arrayResult(result);
     }
 
-    referenceIndexOf(args) {
+    referenceIndexOf(args, util) {
       const array = this._array(args);
       return array
-        ? valuesFor().indexOf(array, args.VALUE, Number(args.INDEX))
+        ? valuesFor().indexOf(
+            array,
+            valueInput(args, util, "arrays_referenceIndexOf", "VALUE"),
+            Number(args.INDEX)
+          )
         : -1;
     }
 
@@ -2173,12 +2537,34 @@
       if (!array) return "";
       const index = Number(args.INDEX);
       const op = String(args.OP);
-      if (op === "pop") return this._arrayResult(array.pop());
-      if (op === "shift") return this._arrayResult(array.shift());
+      if (op === "pop") {
+        if (currentOperation(this))
+          selectedValue(this, array[array.length - 1]);
+        return this._arrayResult(
+          currentOperation(this)
+            ? mutateArray(this, array, "pop", array.pop, [])
+            : array.pop()
+        );
+      }
+      if (op === "shift") {
+        if (currentOperation(this)) selectedValue(this, array[0]);
+        return this._arrayResult(
+          currentOperation(this)
+            ? mutateArray(this, array, "shift", array.shift, [])
+            : array.shift()
+        );
+      }
       if (op === "removeAt") {
+        if (currentOperation(this))
+          selectedValue(
+            this,
+            index >= 0 && index < array.length ? array[index] : undefined
+          );
         return this._arrayResult(
           index >= 0 && index < array.length
-            ? array.splice(index, 1)[0]
+            ? (currentOperation(this)
+                ? mutateArray(this, array, "splice", array.splice, [index, 1])
+                : array.splice(index, 1))[0]
             : undefined
         );
       }
@@ -2186,46 +2572,71 @@
       return "";
     }
 
-    mutateReference(args) {
+    mutateReference(args, util) {
       const array = this._array(args);
       if (!array) return;
       const values = valuesFor();
       const index = Number(args.INDEX);
-      const value = values.decode(args.VALUE);
+      const value = values.decode(
+        valueInput(args, util, "arrays_mutateReference", "VALUE")
+      );
       switch (String(args.OP)) {
         case "push":
-          array.push(value);
+          currentOperation(this)
+            ? mutateArray(this, array, "push", array.push, [value])
+            : array.push(value);
           break;
         case "unshift":
-          array.unshift(value);
+          currentOperation(this)
+            ? mutateArray(this, array, "unshift", array.unshift, [value])
+            : array.unshift(value);
           break;
         case "set":
-          array[index] = value;
+          array[index] = effectValue(this, value, array);
           break;
         case "insertAt":
-          array.splice(index, 0, value);
+          currentOperation(this)
+            ? mutateArray(this, array, "splice", array.splice, [
+                index,
+                0,
+                value,
+              ])
+            : array.splice(index, 0, value);
           break;
         case "removeAt":
-          if (index >= 0 && index < array.length) array.splice(index, 1);
+          if (index >= 0 && index < array.length)
+            currentOperation(this)
+              ? mutateArray(this, array, "splice", array.splice, [index, 1])
+              : array.splice(index, 1);
           break;
         case "pop":
-          array.pop();
+          currentOperation(this)
+            ? mutateArray(this, array, "pop", array.pop, [])
+            : array.pop();
           break;
         case "shift":
-          array.shift();
+          currentOperation(this)
+            ? mutateArray(this, array, "shift", array.shift, [])
+            : array.shift();
           break;
         case "removeElement": {
           const at = values.indexOf(array, value);
-          if (at >= 0) array.splice(at, 1);
+          if (at >= 0)
+            currentOperation(this)
+              ? mutateArray(this, array, "splice", array.splice, [at, 1])
+              : array.splice(at, 1);
           break;
         }
         case "reverse":
-          array.reverse();
+          currentOperation(this)
+            ? mutateArray(this, array, "reverse", array.reverse, [])
+            : array.reverse();
           break;
         case "length":
           try {
-            array.length = Number(value);
+            array.length = effectValue(this, Number(value), array);
           } catch (e) {
+            rethrowAccess(this, e);
             this._error(e.message);
           }
           break;
@@ -2246,25 +2657,66 @@
 
     _tableState(name) {
       if (!tables[name]) {
-        tables[name] = {
-          x: 0,
-          y: 0,
-          cellW: 44,
-          cellH: 30,
-          fontSize: 16,
-          title: "",
-          marks: {},
-          skinId: null,
-          drawableId: null,
-          visible: false,
-        };
+        tables[name] = effectValue(
+          this,
+          {
+            x: 0,
+            y: 0,
+            cellW: 44,
+            cellH: 30,
+            fontSize: 16,
+            title: "",
+            marks: {},
+            skinId: null,
+            drawableId: null,
+            visible: false,
+          },
+          undefined,
+          "read"
+        );
       }
       return tables[name];
     }
 
     // A stored array as rows. A 1D array is one row; anything else is empty.
     _tableRows(name) {
-      const value = arrays[name];
+      const operation = currentOperation(this);
+      const value =
+        operation && operation.name === name ? operation.body : arrays[name];
+      if (!operation && Scratch.BWArrayOperations) {
+        const service = Scratch.BWArrayOperations;
+        if (typeof service.access !== "function")
+          throw new Error("Invalid Array host guards");
+        const seen = new Set();
+        const inspect = (body, parent, key) => {
+          service.access(
+            undefined,
+            Object.freeze({
+              opcode: null,
+              runtime: this._runtime,
+              kind: "read",
+              slot: "NAME",
+              raw: name,
+              name,
+              body,
+              parent,
+              key,
+            })
+          );
+          if (!body || typeof body !== "object" || seen.has(body)) return;
+          seen.add(body);
+          for (const key of Reflect.ownKeys(body)) {
+            const descriptor = Object.getOwnPropertyDescriptor(body, key);
+            if (!descriptor || !("value" in descriptor))
+              throw new Error(
+                "Array host guards require data-only aggregate properties"
+              );
+            if (descriptor.value && typeof descriptor.value === "object")
+              inspect(descriptor.value, body, key);
+          }
+        };
+        inspect(value);
+      }
       if (!Array.isArray(value)) return [];
       if (value.length === 0) return [];
       return Array.isArray(value[0]) ? value.filter(Array.isArray) : [value];
@@ -2372,6 +2824,7 @@
           null
         );
       } catch (e) {
+        rethrowAccess(this, e);
         return null;
       }
     }
@@ -2385,80 +2838,111 @@
       const svg = this._tableSVG(this._tableRows(name), st);
       if (svg === null) return;
       try {
+        effectValue(this, undefined, undefined, "read");
         if (st.skinId === null) {
-          st.skinId = renderer.createSVGSkin(svg);
-          st.drawableId = renderer.createDrawable("pen");
+          st.skinId = effectValue(
+            this,
+            renderer.createSVGSkin(svg),
+            undefined,
+            "read"
+          );
+          effectValue(this, undefined, undefined, "read");
+          st.drawableId = effectValue(
+            this,
+            renderer.createDrawable("pen"),
+            undefined,
+            "read"
+          );
+          effectValue(this, undefined, undefined, "read");
           renderer.updateDrawableSkinId(st.drawableId, st.skinId);
         } else {
+          effectValue(this, undefined, undefined, "read");
           renderer.updateSVGSkin(st.skinId, svg);
         }
+        effectValue(this, undefined, undefined, "read");
         renderer.updateDrawablePosition(st.drawableId, [st.x, st.y]);
+        effectValue(this, undefined, undefined, "read");
         renderer.updateDrawableVisible(st.drawableId, true);
       } catch (e) {
+        rethrowAccess(this, e);
         // A renderer that refuses a skin must not take the project down with
         // it: the table stays in STATE, so marks and reporters keep working.
       }
     }
 
     showTable(args) {
-      const name = String(args.NAME);
+      const name = namedKey(this, args, true);
       const st = this._tableState(name);
-      st.x = Number(args.X) || 0;
-      st.y = Number(args.Y) || 0;
-      st.visible = true;
+      st.x = effectValue(this, Number(args.X) || 0, undefined, "read");
+      st.y = effectValue(this, Number(args.Y) || 0, undefined, "read");
+      st.visible = effectValue(this, true, undefined, "read");
       this._redrawTable(name);
     }
 
     hideTable(args) {
-      const st = tables[String(args.NAME)];
+      const st = tables[namedKey(this, args, true)];
       if (!st) return;
-      st.visible = false;
+      st.visible = effectValue(this, false, undefined, "read");
       const renderer = this._renderer();
       if (!renderer || st.drawableId === null) return;
       try {
+        effectValue(this, undefined, undefined, "read");
         renderer.updateDrawableVisible(st.drawableId, false);
       } catch (e) {
+        rethrowAccess(this, e);
         // Already gone (project reload destroyed it); nothing to hide.
       }
     }
 
     setTableTitle(args) {
-      this._tableState(String(args.NAME)).title = String(args.TITLE);
-      this._redrawTable(String(args.NAME));
+      this._tableState(namedKey(this, args, true)).title = effectValue(
+        this,
+        String(args.TITLE),
+        undefined,
+        "read"
+      );
+      this._redrawTable(namedKey(this, args, true));
     }
 
     setTableStyle(args) {
-      const st = this._tableState(String(args.NAME));
-      st.cellW = Number(args.W) || 44;
-      st.cellH = Number(args.H) || 30;
-      st.fontSize = Number(args.SIZE) || 16;
-      this._redrawTable(String(args.NAME));
+      const st = this._tableState(namedKey(this, args, true));
+      st.cellW = effectValue(this, Number(args.W) || 44, undefined, "read");
+      st.cellH = effectValue(this, Number(args.H) || 30, undefined, "read");
+      st.fontSize = effectValue(
+        this,
+        Number(args.SIZE) || 16,
+        undefined,
+        "read"
+      );
+      this._redrawTable(namedKey(this, args, true));
     }
 
     markCell(args) {
-      const name = String(args.NAME);
+      const name = namedKey(this, args, true);
       this._tableState(name).marks[
         Math.round(Number(args.ROW)) + "," + Math.round(Number(args.COL))
-      ] = true;
+      ] = effectValue(this, true, undefined, "read");
       this._redrawTable(name);
     }
 
     unmarkCell(args) {
-      const name = String(args.NAME);
-      delete this._tableState(name).marks[
-        Math.round(Number(args.ROW)) + "," + Math.round(Number(args.COL))
-      ];
+      const name = namedKey(this, args, true);
+      const marks = this._tableState(name).marks;
+      const key =
+        Math.round(Number(args.ROW)) + "," + Math.round(Number(args.COL));
+      effectValue(this, undefined, undefined, "read");
+      delete marks[key];
       this._redrawTable(name);
     }
 
     clearMarks(args) {
-      const name = String(args.NAME);
-      this._tableState(name).marks = {};
+      const name = namedKey(this, args, true);
+      this._tableState(name).marks = effectValue(this, {}, undefined, "read");
       this._redrawTable(name);
     }
 
     isMarked(args) {
-      const st = tables[String(args.NAME)];
+      const st = tables[namedKey(this, args, true)];
       if (!st) return false;
       return (
         st.marks[
@@ -2468,9 +2952,106 @@
     }
 
     markedCount(args) {
-      const st = tables[String(args.NAME)];
+      const st = tables[namedKey(this, args, true)];
       return st ? Object.keys(st.marks).length : 0;
     }
+  }
+
+  for (const [opcode, spec] of Object.entries(operationSpecs)) {
+    const original = ArrayExtension.prototype[opcode];
+    ArrayExtension.prototype[opcode] = function (args, util) {
+      const service = Scratch.BWArrayOperations;
+      if (service === undefined || service === null) {
+        return original.call(this, args, util);
+      }
+      const host = {
+        begin: service.begin,
+        access: service.access,
+        finish: service.finish,
+      };
+      if (Object.values(host).some((fn) => typeof fn !== "function")) {
+        throw new Error("Invalid Array host guards");
+      }
+      const previous = currentOperation(this);
+      const operation = { service, host, args, opcode, spec, rejections: [] };
+      operation.ticket = host.begin.call(service, opcode, args, util);
+      operations.set(this, operation);
+      let result,
+        failure,
+        failed = true;
+      try {
+        if (
+          args &&
+          Object.values(Object.getOwnPropertyDescriptors(args)).some(
+            (descriptor) => !("value" in descriptor)
+          )
+        ) {
+          rejectAccess(
+            this,
+            "Array host guards require data-only operation arguments"
+          );
+        }
+        // Raw transports are checked before resolution can normalize wrappers.
+        access(this, { kind: "transport", slot: null, raw: args });
+        if (spec[0] === "named" || spec[0] === "namedString") {
+          const rawName = args.NAME;
+          operation.name =
+            spec[0] === "namedString" ? String(rawName) : propertyKey(rawName);
+          operation.body = arrays[operation.name];
+          bodyAccess(
+            this,
+            operation.body,
+            { slot: "NAME", raw: rawName, name: operation.name },
+            spec[2]
+          );
+        } else if (spec[0] === "reference") {
+          access(this, { kind: "transport", slot: "ARRAY", raw: args.ARRAY });
+          operation.body = valuesFor().arrayValue(this._runtime, args.ARRAY);
+          bodyAccess(this, operation.body, { slot: "ARRAY", raw: args.ARRAY });
+          if (opcode === "referenceConcat") {
+            access(this, { kind: "transport", slot: "OTHER", raw: args.OTHER });
+            operation.other = valuesFor().arrayValue(this._runtime, args.OTHER);
+            bodyAccess(this, operation.other, {
+              slot: "OTHER",
+              raw: args.OTHER,
+            });
+          }
+        } else if (spec[0] === "registry") {
+          for (const name of Object.keys(arrays)) {
+            access(this, { slot: "NAME", name, body: arrays[name] });
+          }
+        }
+        result = original.call(this, args, util);
+        failed = false;
+        return result;
+      } catch (error) {
+        failure = error;
+        throw error;
+      } finally {
+        try {
+          // Finish is cleanup/verification only: its return value is ignored.
+          host.finish.call(
+            service,
+            operation.ticket,
+            result,
+            Object.freeze({
+              opcode,
+              runtime: this._runtime,
+              status: failed ? "throw" : "return",
+              error: failure,
+              body: failed
+                ? undefined
+                : spec[0] === "named" || spec[0] === "namedString"
+                  ? arrays[operation.name]
+                  : valuesFor().arrayValue(this._runtime, result),
+            })
+          );
+        } finally {
+          if (previous) operations.set(this, previous);
+          else operations.delete(this);
+        }
+      }
+    };
   }
 
   Scratch.extensions.register(new ArrayExtension());
