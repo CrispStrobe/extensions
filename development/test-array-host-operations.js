@@ -74,7 +74,14 @@ test("host sees original args/util and raw VALUE before decoding, same backing n
     args = { ARRAY: ref, OP: "push", INDEX: 0, VALUE: raw };
   guard.events.length = 0;
   guard.access = (ticket, facts) => {
-    assert.equal(decodes, 0);
+    if (
+      facts.slot === "ARRAY" ||
+      (facts.kind === "transport" &&
+        facts.raw === args &&
+        facts.body === undefined)
+    )
+      assert.equal(decodes, 0);
+    if (facts.kind === "write" && facts.slot === null) assert.equal(decodes, 1);
     assert.equal(ticket, guard.ticket);
     if (facts.raw === args) assert.equal(facts.raw.VALUE, raw);
     if (facts.slot === "ARRAY" && facts.kind === "write")
@@ -554,4 +561,389 @@ test("data-only guard errors inside JSON cannot fall through as a successful Und
   assert.equal(reads, 0);
   assert.deepEqual(errors, []);
   assert.equal(guard.events.at(-1).facts.status, "throw");
+});
+
+test("post-normalization guards prevent body writes after index, value, key or operation coercions", () => {
+  const guard = recorder(),
+    { a, values, runtime, Scratch } = load(guard);
+  const failure = new Error("current graph changed");
+  let invalid = false;
+  const changingNumber = (value) => ({
+    valueOf() {
+      invalid = true;
+      return value;
+    },
+  });
+  const changingText = (value) => ({
+    toString() {
+      invalid = true;
+      return value;
+    },
+  });
+  const cases = [
+    ["set", { INDEX: changingNumber(0), VALUE: 9 }],
+    ["set", { INDEX: 0, VALUE: changingNumber(9) }],
+    ["set2D", { ROW: changingText("0"), COL: 0, VALUE: 9 }],
+    ["set2D", { ROW: 0, COL: changingText("0"), VALUE: 9 }],
+    ["set2D", { ROW: 0, COL: 0, VALUE: changingNumber(9) }],
+    ["setMulti", { INDICES: changingText("[0,0]"), VALUE: 9 }],
+    ["push", { VALUE: changingNumber(9) }],
+    ["insert", { INDEX: changingNumber(0), VALUE: 9 }],
+    ["insert", { INDEX: 0, VALUE: changingNumber(9) }],
+    ["remove", { INDEX: changingNumber(0) }],
+    ["mutateReference", { INDEX: changingNumber(0), OP: "set", VALUE: 9 }],
+    ["mutateReference", { INDEX: 0, OP: changingText("set"), VALUE: 9 }],
+    ["mutateReference", { INDEX: 0, OP: "length", VALUE: changingNumber(0) }],
+    ["referenceTake", { INDEX: changingNumber(0), OP: "removeAt" }],
+    ["referenceTake", { INDEX: 0, OP: changingText("shift") }],
+  ];
+  for (const [method, args] of cases) {
+    guard.access = () => {};
+    invalid = false;
+    a.create1D({ NAME: "n", JSON: "[[1],[2]]" });
+    const ref = a.namedReference({ NAME: "n" }),
+      body = values.arrayValue(runtime, ref);
+    guard.access = (_ticket, facts) => {
+      if (invalid && (facts.body === body || facts.kind === "select"))
+        throw failure;
+    };
+    assert.throws(
+      () => a[method]({ NAME: "n", ARRAY: ref, ...args }),
+      (error) => error === failure,
+      method
+    );
+    assert.equal(JSON.stringify(body), "[[1],[2]]", method);
+  }
+  guard.access = () => {};
+  invalid = false;
+  a.create1D({ NAME: "n", JSON: "[1,2]" });
+  const ref = a.namedReference({ NAME: "n" }),
+    body = values.arrayValue(runtime, ref);
+  Scratch.BWNumberInput = (args) => {
+    invalid = true;
+    return args.VALUE;
+  };
+  guard.access = (_ticket, facts) => {
+    if (invalid && facts.body === body) throw failure;
+  };
+  assert.throws(
+    () => a.referenceRemove({ ARRAY: ref, VALUE: 1 }),
+    (error) => error === failure
+  );
+  assert.equal(JSON.stringify(body), "[1,2]");
+});
+
+test("creation coercion cannot publish a replacement registry body or enter a fallback", () => {
+  const guard = recorder(),
+    { a, values, runtime } = load(guard),
+    failure = new Error("publish denied");
+  let invalid = false;
+  for (const [method, slot, text] of [
+    ["create1D", "JSON", "[9]"],
+    ["create2D", "JSON", "[[9]]"],
+    ["createZeros", "SHAPE", "[2,2]"],
+    ["createRange", "START", 0],
+  ]) {
+    guard.access = () => {};
+    invalid = false;
+    a.create1D({ NAME: "n", JSON: "[1,2]" });
+    const ref = a.namedReference({ NAME: "n" }),
+      body = values.arrayValue(runtime, ref);
+    const value = {
+      [slot === "START" ? "valueOf" : "toString"]() {
+        invalid = true;
+        return text;
+      },
+    };
+    guard.access = () => {
+      if (invalid) throw failure;
+    };
+    assert.throws(
+      () => a[method]({ NAME: "n", END: 1, [slot]: value }),
+      (error) => error === failure
+    );
+    guard.access = () => {};
+    assert.equal(
+      values.arrayValue(runtime, a.namedReference({ NAME: "n" })),
+      body
+    );
+    assert.equal(JSON.stringify(body), "[1,2]");
+  }
+});
+
+test("host path preserves repeated property-key and RHS coercion order without guards replacing values", () => {
+  const run = (guard) => {
+    const { a, values, runtime } = load(guard),
+      trace = [];
+    a.create1D({ NAME: "n", JSON: "[[1]]" });
+    const row = {
+        toString() {
+          trace.push("row");
+          return "0";
+        },
+      },
+      col = {
+        toString() {
+          trace.push("col");
+          return "0";
+        },
+      },
+      value = {
+        valueOf() {
+          trace.push("value");
+          return 9;
+        },
+      };
+    a.set2D({ NAME: "n", ROW: row, COL: col, VALUE: value });
+    const first = JSON.stringify(
+      values.arrayValue(runtime, a.namedReference({ NAME: "n" }))
+    );
+    a.set2D({
+      NAME: "n",
+      ROW: {
+        toString() {
+          trace.push("newrow");
+          return "1";
+        },
+      },
+      COL: col,
+      VALUE: value,
+    });
+    return {
+      trace,
+      first,
+      last: JSON.stringify(
+        values.arrayValue(runtime, a.namedReference({ NAME: "n" }))
+      ),
+    };
+  };
+  const ordinary = run(undefined),
+    guarded = run(recorder());
+  assert.deepEqual(guarded, ordinary);
+  assert.deepEqual(ordinary, {
+    trace: [
+      "row",
+      "row",
+      "value",
+      "col",
+      "newrow",
+      "newrow",
+      "newrow",
+      "value",
+      "col",
+    ],
+    first: "[[9]]",
+    last: "[[9],[9]]",
+  });
+});
+
+test("a replaced mutator is an explicit escape before callback execution, while unowned hosts retain its original call", () => {
+  const guard = recorder(),
+    { a, values, runtime } = load(guard),
+    failure = new Error("escape denied");
+  a.create1D({ NAME: "n", JSON: "[1]" });
+  const ref = a.namedReference({ NAME: "n" }),
+    body = values.arrayValue(runtime, ref);
+  let calls = 0;
+  body.push = function (value) {
+    calls++;
+    assert.equal(this, body);
+    this[1] = value;
+    return 2;
+  };
+  guard.access = (_ticket, facts) => {
+    if (facts.kind === "escape" && facts.body === body) throw failure;
+  };
+  assert.throws(
+    () => a.push({ NAME: "n", VALUE: 9 }),
+    (error) => error === failure
+  );
+  assert.equal(calls, 0);
+  assert.equal(body.length, 1);
+  guard.access = () => {};
+  a.push({ NAME: "n", VALUE: 9 });
+  assert.equal(calls, 1);
+  assert.equal(body[1], 9);
+});
+
+test("normalized legacy JSON references are checked before insertion, not after body mutation", () => {
+  const guard = recorder(),
+    { a, values, runtime } = load(guard),
+    failure = new Error("foreign decoded transport");
+  a.create1D({ NAME: "n", JSON: "[1,2]" });
+  const body = values.arrayValue(runtime, a.namedReference({ NAME: "n" }));
+  const raw = '{"bwReference":{"kind":"array","id":"foreign","scope":"other"}}';
+  guard.access = (_ticket, facts) => {
+    if (
+      facts.kind === "transport" &&
+      facts.body?.bwReference?.scope === "other"
+    )
+      throw failure;
+  };
+  for (const method of ["set", "push", "insert", "setMulti"]) {
+    assert.throws(
+      () => a[method]({ NAME: "n", INDEX: 0, INDICES: "[0]", VALUE: raw }),
+      (error) => error === failure
+    );
+    assert.equal(JSON.stringify(body), "[1,2]");
+  }
+});
+
+test("table argument coercions are checked before each state write and before renderer effects", () => {
+  const guard = recorder(),
+    { a, runtime, values } = load(guard),
+    failure = new Error("table graph changed");
+  let invalid = false;
+  a.create1D({ NAME: "n", JSON: "[1,2]" });
+  const st = a._tableState("n");
+  st.title = "old";
+  st.marks["0,0"] = true;
+  const cases = [
+    [
+      "showTable",
+      {
+        X: {
+          valueOf() {
+            invalid = true;
+            return 9;
+          },
+        },
+        Y: 8,
+      },
+      () => assert.equal(st.x, 0),
+    ],
+    [
+      "setTableTitle",
+      {
+        TITLE: {
+          toString() {
+            invalid = true;
+            return "new";
+          },
+        },
+      },
+      () => assert.equal(st.title, "old"),
+    ],
+    [
+      "setTableStyle",
+      {
+        W: {
+          valueOf() {
+            invalid = true;
+            return 9;
+          },
+        },
+        H: 8,
+        SIZE: 7,
+      },
+      () => assert.equal(st.cellW, 44),
+    ],
+    [
+      "markCell",
+      {
+        ROW: 0,
+        COL: {
+          valueOf() {
+            invalid = true;
+            return 1;
+          },
+        },
+      },
+      () => assert.equal(st.marks["0,1"], undefined),
+    ],
+    [
+      "unmarkCell",
+      {
+        ROW: {
+          valueOf() {
+            invalid = true;
+            return 0;
+          },
+        },
+        COL: 0,
+      },
+      () => assert.equal(st.marks["0,0"], true),
+    ],
+  ];
+  for (const [method, args, check] of cases) {
+    invalid = false;
+    guard.access = () => {
+      if (invalid) throw failure;
+    };
+    assert.throws(
+      () => a[method]({ NAME: "n", ...args }),
+      (error) => error === failure
+    );
+    check();
+  }
+  guard.access = () => {};
+  invalid = false;
+  let calls = 0;
+  runtime.renderer = {
+    createSVGSkin() {
+      calls++;
+      return 1;
+    },
+    createDrawable() {
+      calls++;
+      return 2;
+    },
+  };
+  const body = values.arrayValue(runtime, a.namedReference({ NAME: "n" }));
+  body[0] = {
+    toString() {
+      invalid = true;
+      return "cell";
+    },
+  };
+  guard.access = () => {
+    if (invalid) throw failure;
+  };
+  assert.throws(
+    () => a.showTable({ NAME: "n", X: 0, Y: 0 }),
+    (error) => error === failure
+  );
+  assert.equal(calls, 0);
+  assert.equal(st.skinId, null);
+});
+
+test("nullish stateful row retains RHS and TypeError without an extra final-key conversion", () => {
+  const observe = (guard) => {
+    const { a } = load(guard),
+      trace = [];
+    a.create1D({ NAME: "n", JSON: "[[1],null]" });
+    let rows = 0,
+      error;
+    try {
+      a.set2D({
+        NAME: "n",
+        ROW: {
+          toString() {
+            trace.push("row");
+            return rows++ ? "1" : "0";
+          },
+        },
+        COL: {
+          toString() {
+            trace.push("col");
+            return "0";
+          },
+        },
+        VALUE: {
+          valueOf() {
+            trace.push("value");
+            return 9;
+          },
+        },
+      });
+    } catch (e) {
+      error = e.name;
+    }
+    return { trace, error };
+  };
+  assert.deepEqual(observe(recorder()), observe(undefined));
+  assert.deepEqual(observe(undefined), {
+    trace: ["row", "row", "value"],
+    error: "TypeError",
+  });
 });

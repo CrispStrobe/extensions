@@ -231,3 +231,50 @@ still becomes Null; the existing explicit Undefined carrier remains distinct.
 This candidate changes no consumer pin or generated source and has not been
 published. The successor's focused tests are run explicitly during qualification;
 the existing workflow is retained from the prior Number-input candidate.
+
+## Pre-effect normalization checkpoints
+
+The installed-host path rechecks access after effectful argument conversion and
+immediately before committing each corresponding change. `finish` is cleanup and
+result validation; it is not a substitute for a before-write check.
+
+The existing access record shape and original argument/utility identities remain
+unchanged. A `transport` record may additionally carry the actual normalized
+mutation value or retained native argument list in `body`, paired with the
+original raw input in `raw`. Neither normalized data nor that list issues an
+Array or element certificate. This permits rejection of references which only
+become visible after legacy JSON parsing, before they enter a backing body.
+
+| Registered methods                                                                                 | Committed effect and checkpoint                                                                                                                                                                                                        |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create1D`, `create2D`, `createEmpty`, `createZeros`, `createRange`                                | Existing `bindingValue` check after construction and before named publication. Zeros and range also check after argument conversion before private construction.                                                                       |
+| `delete`                                                                                           | Check the selected body immediately before removing the named binding.                                                                                                                                                                 |
+| `set`                                                                                              | Convert INDEX and parse VALUE in their existing order, then check the actual value and backing body before assignment.                                                                                                                 |
+| `set2D`                                                                                            | Preserve each repeated ROW lookup. Guard any newly created row before publishing it; evaluate the final RHS, then convert its final COL property key, then check before assignment.                                                    |
+| `setMulti`                                                                                         | Parse and traverse INDICES, retain its final key, evaluate RHS and convert that key in original assignment order, then check before assignment.                                                                                        |
+| `push`, `pop`, `insert`, `remove`                                                                  | Retain the actual selected callee before its arguments normalize, check normalized arguments and the actual body, then invoke that same callee. Removal candidates remain checked.                                                     |
+| `referenceRemove`                                                                                  | Check after actual value interpretation/index selection and before splice.                                                                                                                                                             |
+| `referenceTake`                                                                                    | Check after INDEX/OP conversion and candidate selection, before each pop/shift/splice.                                                                                                                                                 |
+| `mutateReference`                                                                                  | Check after existing INDEX, VALUE and OP processing for all ten mutations. Length checks after its additional Number conversion and before assigning length.                                                                           |
+| `showTable`, `hideTable`, `setTableTitle`, `setTableStyle`, `markCell`, `unmarkCell`, `clearMarks` | Recheck Array read access after each relevant conversion and before table state changes. Check after SVG cell conversion before renderer effects. Table creation and returned renderer IDs are checked before their state publication. |
+
+These are sixteen backing Array/binding mutator entry points and seven table
+mutator entry points. `namedReference` and `createReference` retain their existing
+resolved-body/post-parse checks before heap reference publication. Named `sort`,
+`reverse` and `reshape` change detached copies, not the named backing Array; they
+do not become backing writers. Their ordinary read/result checks remain.
+
+A selected mutator callee which differs from the module's captured local Array
+intrinsic produces the existing `escape` request before invocation. A host may
+refuse this for an owned body; an unowned host may retain that callee's original
+behavior and `this`. Cross-realm functions are not attested merely by their name.
+This does not introduce a callback sandbox or qualify arbitrary JavaScript,
+Proxy/concurrent access, global prototype modification or renderer callbacks.
+The host still owns its body/view/intrinsic/lifecycle policy.
+
+The absent-host path retains the original operations. In particular, final
+computed assignment keys convert after their RHS; present and missing rows keep
+their original repeated coercions; nullish bases retain the original error
+without an extra final-key conversion. Earlier legitimate effects in a multi-step
+operation are not rolled back if a later conversion invalidates the operation.
+No guard rejection is repaired into an empty binding or successful fallback.
