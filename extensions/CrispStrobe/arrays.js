@@ -2209,7 +2209,7 @@
       );
     }
 
-    referenceValues(args) {
+    referenceValues(args, util) {
       const operation = currentOperation(this);
       const raw = operation ? args.REST : undefined;
       let rest;
@@ -2230,7 +2230,10 @@
         this._error("Array value chain requires an array tail");
         return "[]";
       }
-      return JSON.stringify([args.VALUE, ...rest], valuesFor().jsonReplacer);
+      return JSON.stringify(
+        [valueInput(args, util, "arrays_referenceValues", "VALUE"), ...rest],
+        valuesFor().jsonReplacer
+      );
     }
 
     createReference(args) {
@@ -2327,10 +2330,13 @@
       return array ? this._arrayResult(array[Number(args.INDEX)]) : "";
     }
 
-    referenceRemove(args) {
+    referenceRemove(args, util) {
       const array = this._array(args);
       if (!array) return false;
-      const index = valuesFor().indexOf(array, args.VALUE);
+      const index = valuesFor().indexOf(
+        array,
+        valueInput(args, util, "arrays_referenceRemove", "VALUE")
+      );
       if (index < 0) return false;
       array.splice(index, 1);
       return true;
@@ -2413,10 +2419,14 @@
       return this._arrayResult(result);
     }
 
-    referenceIndexOf(args) {
+    referenceIndexOf(args, util) {
       const array = this._array(args);
       return array
-        ? valuesFor().indexOf(array, args.VALUE, Number(args.INDEX))
+        ? valuesFor().indexOf(
+            array,
+            valueInput(args, util, "arrays_referenceIndexOf", "VALUE"),
+            Number(args.INDEX)
+          )
         : -1;
     }
 
@@ -2450,12 +2460,14 @@
       return "";
     }
 
-    mutateReference(args) {
+    mutateReference(args, util) {
       const array = this._array(args);
       if (!array) return;
       const values = valuesFor();
       const index = Number(args.INDEX);
-      const value = values.decode(args.VALUE);
+      const value = values.decode(
+        valueInput(args, util, "arrays_mutateReference", "VALUE")
+      );
       switch (String(args.OP)) {
         case "push":
           array.push(value);

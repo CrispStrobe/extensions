@@ -200,3 +200,34 @@ single coercion and nested cleanup. A separate no-host differential compared all
 62 covered methods and 40 additional mutations against the unchanged source.
 These are supplier controls. They do not qualify a real VM host loan, private
 failure signal, typed record domain, Settings receiver, GUI journey or SDK result.
+
+## Physical Number value ingress prerequisite
+
+A separate successor normally composes the physical Number value-operation
+candidate with the optional guards. It then uses the same existing optional
+`Scratch.BWNumberInput(args, util, opcode, name)` boundary for VALUE of exactly
+`referenceValues`, `mutateReference`, `referenceRemove` and `referenceIndexOf`.
+The four prior arithmetic/unary/comparison/truthiness opt-ins remain intact.
+No new value kind, canonical word, Array constraint or host enrollment is added.
+
+Guard begin/raw access still receives the original args and utility first.
+Semantic interpretation happens inside the original operation before its actual
+serialization, decode or search. The guard does not replace an input/result or
+rewrite raw args. Without the Number-input service, the operation uses its exact
+original input. An installed VM service interprets only its actual current finite
+Number shadow and explicit VALUE role; identical text, numeric text variables,
+copied arguments, copied utilities and stale callers gain no conversion.
+
+Real VM controls register the candidate through the production extension adapter
+and compare Number20, Text20 and variable Number values through reference creation,
+write, removal and index search. Supplier controls separately check original
+argument identity, raw guard ordering, once-only service calls, early fallback
+and no-service behavior. These controls do not install an Array host owner or
+qualify typed Array source/Procedure/Settings admission. Serialized VALUES/REST,
+legacy named parsing, ordinary Array lifetime and the failure coordinator remain
+separate boundaries. Existing bare JavaScript Undefined in the legacy JSON list
+still becomes Null; the existing explicit Undefined carrier remains distinct.
+
+This candidate changes no consumer pin or generated source and has not been
+published. The successor's focused tests are run explicitly during qualification;
+the existing workflow is retained from the prior Number-input candidate.
