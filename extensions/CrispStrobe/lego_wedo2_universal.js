@@ -703,10 +703,24 @@
       this._discoverPromise = null;
       this._onPeripheralFound = null;
       this._onDiscoverFailed = null;
+      this._connectPromise = null;
+      this._connectionTimer = null;
       logger.info("Scratch Link Adapter initialized");
     }
 
     connect() {
+      if (this._connected) return Promise.resolve(true);
+      if (this._connectPromise) return this._connectPromise;
+      // Install the resolvers BEFORE opening: native sockets may open inline.
+      const pending = new Promise((resolve, reject) => {
+        this._connectResolve = resolve;
+        this._connectReject = reject;
+      });
+      this._connectPromise = pending;
+      const clearPending = () => {
+        if (this._connectPromise === pending) this._connectPromise = null;
+      };
+      pending.then(clearPending, clearPending);
       logger.group("Scratch Link Connection");
       try {
         logger.info("Getting Scratch Link socket from runtime...");
@@ -715,31 +729,75 @@
           this._socket = this._runtime.getScratchLinkSocket("BLE");
           logger.info("✓ Got socket from runtime");
 
-          this._socket.setOnOpen(this._onOpen.bind(this));
-          this._socket.setOnClose(this._onClose.bind(this));
-          this._socket.setOnError(this._onError.bind(this));
-          this._socket.setHandleMessage(this._handleMessage.bind(this));
+          const socket = this._socket;
+          // Late callbacks from a closed socket must not affect a new attempt.
+          const current =
+            (handler) =>
+            (...args) => {
+              if (this._socket === socket) handler.apply(this, args);
+            };
+          socket.setOnOpen(current(this._onOpen));
+          socket.setOnClose(current(this._onClose));
+          socket.setOnError(current(this._onError));
+          socket.setHandleMessage(current(this._handleMessage));
 
           logger.info("Opening socket...");
+          this._armConnectionTimeout(10000, "opening Scratch Link");
           this._socket.open();
-
-          return new Promise((resolve, reject) => {
-            this._connectResolve = resolve;
-            this._connectReject = reject;
-          });
         } else {
           throw new Error("Runtime does not support Scratch Link");
         }
       } catch (error) {
         logger.error("Scratch Link connection failed:", error);
-        throw error;
+        this._abort(error);
       } finally {
         logger.groupEnd();
+      }
+      return pending;
+    }
+
+    _armConnectionTimeout(ms, stage) {
+      clearTimeout(this._connectionTimer);
+      this._connectionTimer = setTimeout(() => {
+        this._abort(new Error(`WeDo connection timed out: ${stage}`));
+      }, ms);
+    }
+
+    _abort(error) {
+      const socket = this._socket;
+      this._socket = null;
+      this._connected = false;
+      clearTimeout(this._connectionTimer);
+      this._connectionTimer = null;
+      const rejectConnect = this._connectReject;
+      const rejectDiscovery = this._onDiscoverFailed;
+      this._connectResolve = null;
+      this._connectReject = null;
+      this._onPeripheralFound = null;
+      this._onDiscoverFailed = null;
+      this._discoverPromise = null;
+      if (rejectConnect) rejectConnect(error);
+      if (rejectDiscovery) rejectDiscovery(error);
+      for (const request of this._requests.values()) request.reject(error);
+      this._requests.clear();
+      // Cancel CONNECTING sockets too. isOpen() alone leaves failed sessions alive.
+      if (socket) {
+        try {
+          socket.close();
+        } catch (closeError) {
+          logger.warn("Could not close Scratch Link:", closeError);
+        }
       }
     }
 
     _onOpen() {
       logger.info("✓ Socket opened, discovering devices...");
+      const socket = this._socket;
+      this._armConnectionTimeout(20000, "discovering a hub");
+      const ensureCurrent = () => {
+        if (this._socket !== socket)
+          throw new Error("WeDo connection cancelled");
+      };
 
       // `discover` is answered IMMEDIATELY with null and the scan results
       // arrive afterwards as `didDiscoverPeripheral` notifications -- that is
@@ -753,8 +811,9 @@
         this._onPeripheralFound = resolve;
         this._onDiscoverFailed = reject;
       });
+      const discovery = this._discoverPromise;
 
-      this._sendRequest("discover", {
+      const discoverRequest = this._sendRequest("discover", {
         filters: [
           {
             services: [WeDo2BLE.advertisementService],
@@ -771,9 +830,12 @@
         // access unexpected service" and the hub was reachable only over Web
         // Bluetooth, which carries its own optionalServices below.
         optionalServices: [WeDo2BLE.ioService, WeDo2BLE.batteryService],
-      })
-        .then(() => this._discoverPromise)
-        .then((device) => {
+      });
+      // Observe both promises immediately, including a discovery failure that
+      // arrives before the discover RPC reply.
+      Promise.all([discoverRequest, discovery])
+        .then(([, device]) => {
+          ensureCurrent();
           logger.info(`Device discovered: ${device.name || "WeDo 2.0"}`);
 
           if (this._runtime) {
@@ -783,12 +845,19 @@
             );
           }
 
-          return this._sendRequest("connect", {
-            peripheralId: device.peripheralId,
-          });
+          this._armConnectionTimeout(15000, "connecting to the hub");
+          return this._sendRequest(
+            "connect",
+            {
+              peripheralId: device.peripheralId,
+            },
+            15000
+          );
         })
         .then(() => {
+          ensureCurrent();
           logger.info("✓ Connected to device");
+          this._armConnectionTimeout(10000, "enabling hub notifications");
 
           // Start notifications for all input characteristics
           const notifications = [
@@ -805,32 +874,30 @@
           );
         })
         .then(() => {
+          ensureCurrent();
           logger.info("✓ Notifications started");
           this._connected = true;
-
-          if (this._runtime) {
-            this._runtime.emit(this._runtime.constructor.PERIPHERAL_CONNECTED);
-          }
+          clearTimeout(this._connectionTimer);
+          this._connectionTimer = null;
 
           if (this._connectResolve) {
             this._connectResolve(true);
             this._connectResolve = null;
+            this._connectReject = null;
           }
         })
         .catch((error) => {
           logger.error("Connection sequence failed:", error);
-          if (this._connectReject) {
-            this._connectReject(error);
-            this._connectReject = null;
-          }
+          if (this._socket === socket) this._abort(error);
         });
     }
 
     _onClose() {
       logger.warn("Socket closed");
-      this._connected = false;
+      const wasConnected = this._connected;
+      this._abort(new Error("Scratch Link socket closed"));
 
-      if (this._runtime) {
+      if (this._runtime && wasConnected) {
         this._runtime.emit(
           this._runtime.constructor.PERIPHERAL_CONNECTION_LOST_ERROR,
           {
@@ -851,10 +918,9 @@
         });
       }
 
-      if (this._connectReject) {
-        this._connectReject(error);
-        this._connectReject = null;
-      }
+      this._abort(
+        error instanceof Error ? error : new Error("Scratch Link socket error")
+      );
     }
 
     _handleMessage(message) {
@@ -891,7 +957,7 @@
             }
           } else if (json.method === "discoverDidFinish") {
             // The scan window closed. If nothing matched, stop waiting.
-            if (this._onDiscoverFailed && !json.params.count) {
+            if (this._onDiscoverFailed && !(json.params && json.params.count)) {
               const reject = this._onDiscoverFailed;
               this._onPeripheralFound = null;
               this._onDiscoverFailed = null;
@@ -923,12 +989,7 @@
 
     disconnect() {
       logger.info("Disconnecting Scratch Link...");
-      if (this._socket && this._socket.isOpen && this._socket.isOpen()) {
-        this._socket.close();
-      }
-      this._socket = null;
-      this._connected = false;
-      this._requests.clear();
+      this._abort(new Error("WeDo connection cancelled"));
       logger.info("✓ Scratch Link disconnected");
     }
 
@@ -968,10 +1029,21 @@
       return data;
     }
 
-    _sendRequest(method, params) {
+    _sendRequest(method, params, timeout = 10000) {
       return new Promise((resolve, reject) => {
         const id = ++this._requestId;
-        this._requests.set(id, { resolve, reject });
+        const settle = (callback) => (value) => {
+          clearTimeout(timer);
+          this._requests.delete(id);
+          callback(value);
+        };
+        const timer = setTimeout(() => {
+          this._abort(new Error(`Scratch Link ${method} timed out`));
+        }, timeout);
+        this._requests.set(id, {
+          resolve: settle(resolve),
+          reject: settle(reject),
+        });
 
         const request = {
           jsonrpc: "2.0",
@@ -982,10 +1054,13 @@
 
         logger.trace("Sending request:", request);
 
-        if (this._socket && this._socket.sendMessage) {
+        try {
+          if (!this._socket || !this._socket.sendMessage) {
+            throw new Error("Socket not available");
+          }
           this._socket.sendMessage(request);
-        } else {
-          reject(new Error("Socket not available"));
+        } catch (error) {
+          this._abort(error);
         }
       });
     }
@@ -1010,6 +1085,8 @@
       this._ports = {};
       this._rateLimiter = new RateLimiter(WeDo2BLE.sendRateMax);
       this._heartbeatInterval = null;
+      this._scanPromise = null;
+      this._initializing = false;
 
       // Hub status
       this.hubStatus = {
@@ -1045,12 +1122,24 @@
     }
 
     scan() {
+      if (this._scanPromise) return this._scanPromise;
+      const pending = this._scan();
+      this._scanPromise = pending;
+      const clearPending = () => {
+        if (this._scanPromise === pending) this._scanPromise = null;
+      };
+      pending.then(clearPending, clearPending);
+      return pending;
+    }
+
+    async _scan() {
       logger.info("============ SCAN CALLED ============");
 
       if (this._connection) {
         logger.info("Disconnecting existing connection");
-        this._connection.disconnect();
+        await this._connection.disconnect();
       }
+      this.reset();
 
       switch (this._connectionType) {
         case ConnectionType.BLE:
@@ -1083,8 +1172,25 @@
         throw new Error("No connection adapter - call scan() first");
       }
 
-      await this._connection.connect();
-      await this._initialize();
+      const connection = this._connection;
+      this._initializing = true;
+      try {
+        await connection.connect();
+        await this._initialize();
+        if (this._connection !== connection || !connection.isConnected()) {
+          throw new Error("WeDo connection cancelled during initialization");
+        }
+        this._initializing = false;
+        if (this._runtime) {
+          this._runtime.emit(this._runtime.constructor.PERIPHERAL_CONNECTED);
+        }
+      } catch (error) {
+        this.reset();
+        await connection.disconnect();
+        throw error;
+      } finally {
+        this._initializing = false;
+      }
       logger.info("✓ WeDo 2.0 Hub connected and initialized");
     }
 
@@ -1135,10 +1241,13 @@
         this._heartbeatInterval = null;
       }
 
-      // Send disconnect command
+      // While connecting, cancel immediately rather than waiting for another
+      // GATT write on the same unresponsive connection.
       try {
-        const cmd = new Uint8Array([1]);
-        await this.send(WeDo2BLE.disconnect, cmd, false);
+        if (!this._initializing && this.isConnected()) {
+          const cmd = new Uint8Array([1]);
+          await this.send(WeDo2BLE.disconnect, cmd, false);
+        }
       } catch (error) {
         logger.warn("Could not send disconnect command:", error);
       }
@@ -1154,7 +1263,11 @@
     }
 
     isConnected() {
-      return this._connection && this._connection.isConnected();
+      return (
+        !this._initializing &&
+        this._connection &&
+        this._connection.isConnected()
+      );
     }
 
     getDevice(portId) {
@@ -1486,6 +1599,7 @@
       logger.info("Runtime available:", !!this._runtime);
 
       this._hub = null;
+      this._connectPromise = null;
       this._connectionType = ConnectionType.SCRATCH_LINK;
 
       logger.info("Extension initialized");
@@ -1791,7 +1905,18 @@
       logger.info(`Connection type set to: ${this._connectionType}`);
     }
 
-    async connect() {
+    connect() {
+      if (this._connectPromise) return this._connectPromise;
+      const pending = this._connect();
+      this._connectPromise = pending;
+      const clearPending = () => {
+        if (this._connectPromise === pending) this._connectPromise = null;
+      };
+      pending.then(clearPending, clearPending);
+      return pending;
+    }
+
+    async _connect() {
       logger.group("=== CONNECT ===");
       try {
         if (!this._hub) {
@@ -1806,13 +1931,15 @@
         }
 
         if (!this._hub.isConnected()) {
+          this._hub._connectionType = this._connectionType;
           await this._hub.scan();
         }
 
         logger.info("✓ Successfully connected");
       } catch (error) {
         logger.error("Connection failed:", error);
-        this._hub = null;
+        // Keep the registered hub so retries do not accumulate runtime
+        // listeners. Hub.connect has already released a failed transport.
         throw error;
       } finally {
         logger.groupEnd();
@@ -1828,7 +1955,6 @@
         }
 
         await this._hub.disconnect();
-        this._hub = null;
         logger.info("✓ Disconnected");
       } catch (error) {
         logger.error("Disconnect failed:", error);
