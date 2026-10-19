@@ -662,9 +662,11 @@
   const allocationSome = Array.prototype.some;
   const allocationSame = Object.is;
   const allocationText = String;
-  const allocationValues = Scratch.BWArrayOperations == null ? null : valuesFor();
+  const allocationValues =
+    Scratch.BWArrayOperations == null ? null : valuesFor();
   const allocationDecode = allocationValues && allocationValues.decode;
-  const allocationReference = allocationValues && allocationValues.arrayReference;
+  const allocationReference =
+    allocationValues && allocationValues.arrayReference;
   const allocationBody = allocationValues && allocationValues.arrayValue;
   const operations = new WeakMap();
   const currentOperation = (extension) => operations.get(extension);
@@ -685,7 +687,7 @@
           parent: undefined,
           key: undefined,
           ...facts,
-        })
+        }),
       ]);
     } catch (error) {
       operation.rejections.push(error);
@@ -846,24 +848,43 @@
     if (!args || typeof args !== "object") return false;
     const left = allocationDescriptor(args, "LEFT");
     const right = allocationDescriptor(args, "RIGHT");
-    return left && right && allocationOwn(left, "value") && allocationOwn(right, "value") &&
+    return (
+      left &&
+      right &&
+      allocationOwn(left, "value") &&
+      allocationOwn(right, "value") &&
       (left.value === null || typeof left.value !== "object") &&
-      (right.value === null || typeof right.value !== "object");
+      (right.value === null || typeof right.value !== "object")
+    );
   };
   const binaryOperand = (extension, values, value, slot, op) => {
     const operation = currentOperation(extension);
     if (
-      !operation || op !== "+" || !values.isReference(value) ||
+      !operation ||
+      op !== "+" ||
+      !values.isReference(value) ||
       value.bwReference.kind !== "array"
-    ) return value;
+    )
+      return value;
     if (typeof operation.primitive !== "function")
-      rejectAccess(extension, "Array addition requires the host primitive loan");
+      rejectAccess(
+        extension,
+        "Array addition requires the host primitive loan"
+      );
     try {
-      const primitive = allocationApply(operation.primitive, operation.service, [
-        operation.ticket,
-        allocationFreeze({opcode: operation.opcode, runtime: extension._runtime,
-          slot, raw: value})
-      ]);
+      const primitive = allocationApply(
+        operation.primitive,
+        operation.service,
+        [
+          operation.ticket,
+          allocationFreeze({
+            opcode: operation.opcode,
+            runtime: extension._runtime,
+            slot,
+            raw: value,
+          }),
+        ]
+      );
       if (typeof primitive !== "string")
         rejectAccess(extension, "Array primitive loan must return a string");
       return primitive;
@@ -2398,12 +2419,21 @@
       const literal = operation && operation.ticket !== undefined;
       let list;
       try {
-        const text = literal ? allocationText(raw) : String(operation ? raw : args.VALUES);
+        const text = literal
+          ? allocationText(raw)
+          : String(operation ? raw : args.VALUES);
         if (literal)
-          access(this, {kind: "literal-ingress", slot: "VALUES", raw, text,
-            parser: allocationParse, stringify: allocationText,
-            decoder: allocationDecode, reference: allocationReference,
-            lookup: allocationBody});
+          access(this, {
+            kind: "literal-ingress",
+            slot: "VALUES",
+            raw,
+            text,
+            parser: allocationParse,
+            stringify: allocationText,
+            decoder: allocationDecode,
+            reference: allocationReference,
+            lookup: allocationBody,
+          });
         list = literal ? allocationParse(text) : JSON.parse(text);
       } catch (e) {
         rethrowAccess(this, e);
@@ -2429,7 +2459,13 @@
       // nested direct Arrays remain fresh JSON allocations, not callbacks.
       const body = [];
       for (let i = 0; i < list.length; i++) body[i] = allocationDecode(list[i]);
-      access(this, {kind: "literal-body", slot: "VALUES", raw, body, parsed: list});
+      access(this, {
+        kind: "literal-body",
+        slot: "VALUES",
+        raw,
+        body,
+        parsed: list,
+      });
       return allocationReference(this._runtime, body);
     }
 
@@ -3033,9 +3069,13 @@
     const original = ArrayExtension.prototype[opcode];
     ArrayExtension.prototype[opcode] = function (args, util) {
       const service = Scratch.BWArrayOperations;
-      if (service === undefined || service === null ||
+      if (
+        service === undefined ||
+        service === null ||
         (opcode === "valueBinary" &&
-          ((typeof args?.OP === "string" && args.OP !== "+") || scalarBinaryInputs(args)))) {
+          ((typeof args?.OP === "string" && args.OP !== "+") ||
+            scalarBinaryInputs(args)))
+      ) {
         return original.call(this, args, util);
       }
       const host = {
@@ -3047,9 +3087,20 @@
         throw new Error("Invalid Array host guards");
       }
       const previous = currentOperation(this);
-      const operation = { service, host, args, opcode, spec, rejections: [],
-        primitive: opcode === "valueBinary" ? service.primitive : undefined };
-      operation.ticket = allocationApply(host.begin, service, [opcode, args, util]);
+      const operation = {
+        service,
+        host,
+        args,
+        opcode,
+        spec,
+        rejections: [],
+        primitive: opcode === "valueBinary" ? service.primitive : undefined,
+      };
+      operation.ticket = allocationApply(host.begin, service, [
+        opcode,
+        args,
+        util,
+      ]);
       operations.set(this, operation);
       let result,
         failure,
@@ -3118,7 +3169,7 @@
                 : spec[0] === "named" || spec[0] === "namedString"
                   ? arrays[operation.name]
                   : allocationBody(this._runtime, result),
-            })
+            }),
           ]);
         } finally {
           if (previous) operations.set(this, previous);
