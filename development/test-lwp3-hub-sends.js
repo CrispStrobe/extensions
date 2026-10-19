@@ -113,9 +113,10 @@ function setup(source, { devices, fwVersion = 0x10000224 }) {
     window: { addEventListener: quiet },
     btoa,
     atob,
-    // The hub's keep-alive ping and scan timeouts must not keep the test
-    // process alive once a test has finished.
-    setTimeout: (fn, ms) => setTimeout(fn, ms).unref(),
+    // The hub's keep-alive ping must not keep the test process alive once a
+    // test has finished. One-shot timers stay referenced: the tests await
+    // them, and with nothing referenced the event loop would end mid-test.
+    setTimeout,
     clearTimeout,
     setInterval: (fn, ms) => setInterval(fn, ms).unref(),
     clearInterval,

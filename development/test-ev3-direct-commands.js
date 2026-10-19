@@ -77,7 +77,7 @@ function setup() {
     window: { addEventListener: quiet },
     btoa,
     atob,
-    setTimeout: (fn, ms) => setTimeout(fn, ms).unref(),
+    setTimeout,
     clearTimeout,
     setInterval: (fn, ms) => setInterval(fn, ms).unref(),
     clearInterval,
