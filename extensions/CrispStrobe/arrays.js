@@ -670,8 +670,12 @@
   const allocationReference =
     allocationValues && allocationValues.arrayReference;
   const allocationBody = allocationValues && allocationValues.arrayValue;
+  const operationGet = WeakMap.prototype.get;
+  const operationSet = WeakMap.prototype.set;
+  const operationDelete = WeakMap.prototype.delete;
   const operations = new WeakMap();
-  const currentOperation = (extension) => operations.get(extension);
+  const currentOperation = (extension) =>
+    allocationApply(operationGet, operations, [extension]);
   const access = (extension, facts) => {
     const operation = currentOperation(extension);
     if (!operation) return;
@@ -3103,7 +3107,7 @@
         args,
         util,
       ]);
-      operations.set(this, operation);
+      allocationApply(operationSet, operations, [this, operation]);
       let result,
         failure,
         failed = true;
@@ -3174,8 +3178,9 @@
             }),
           ]);
         } finally {
-          if (previous) operations.set(this, previous);
-          else operations.delete(this);
+          if (previous)
+            allocationApply(operationSet, operations, [this, previous]);
+          else allocationApply(operationDelete, operations, [this]);
         }
       }
     };

@@ -17,3 +17,5 @@ The supplier implementation is committed and explicitly adopted by the embedding
 ## Compatibility with older JavaScript hosts
 
 Own-property checks capture `Object.prototype.hasOwnProperty` and invoke it through the held `Reflect.apply`. They work when `Object.hasOwn` is unavailable and retain their original implementation after a later prototype replacement. The complete protocol controls include that older-host case. The embedding currently carries the earlier supplier payload; adopting this correction requires an explicit supplier revision, body, notice and mirror update followed by fresh installation and affected execution.
+
+Operation records also use captured WeakMap get, set and delete methods through the held Reflect.apply. Later prototype hooks cannot inspect or substitute an operation record, replace its rejection, or intercept retirement. The protocol controls arm real hooks and verify both normal completion and original rejection identity. Embedding native qualification remains required.

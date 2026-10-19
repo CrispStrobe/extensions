@@ -202,3 +202,60 @@ test("scalar ownership works without Object.hasOwn and retains the captured lega
   );
   assert.equal(run.extension.valueBinary({ OP: "+", LEFT: 3, RIGHT: 1 }), 4);
 });
+
+test("mutable WeakMap methods cannot observe operation records or intercept retirement", () => {
+  const service = guard(),
+    run = load(service);
+  service.primitive = () => "5";
+  const reference = run.values.arrayReference(run.runtime, [5]);
+  runInContext(
+    `
+    globalThis.operationHooks = {get:0,set:0,delete:0};
+    for (const name of ['get','set','delete']) {
+      const native = WeakMap.prototype[name];
+      WeakMap.prototype[name] = function (...args) {
+        operationHooks[name]++;
+        return Reflect.apply(native, this, args);
+      };
+    }
+    const probe = new WeakMap(), key = {};
+    probe.set(key, 1); probe.get(key); probe.delete(key);
+    if (operationHooks.get !== 1 || operationHooks.set !== 1 || operationHooks.delete !== 1) throw Error('hooks not armed');
+    operationHooks.get = operationHooks.set = operationHooks.delete = 0;
+  `,
+    run.context
+  );
+  assert.equal(
+    run.extension.valueBinary({ OP: "+", LEFT: reference, RIGHT: "" }, {}),
+    "5"
+  );
+  assert.equal(
+    runInContext(
+      "operationHooks.get + operationHooks.set + operationHooks.delete",
+      run.context
+    ),
+    0
+  );
+  assert.equal(service.events.at(-1).facts.status, "return");
+});
+
+test("a foreign WeakMap lookup cannot replace the current operation or its original rejection", () => {
+  const service = guard(),
+    run = load(service),
+    refusal = new Error("original primitive refusal");
+  const reference = run.values.arrayReference(run.runtime, [5]);
+  service.primitive = () => {
+    throw refusal;
+  };
+  runInContext(
+    "WeakMap.prototype.get = function () { return []; };",
+    run.context
+  );
+  assert.throws(
+    () =>
+      run.extension.valueBinary({ OP: "+", LEFT: reference, RIGHT: "" }, {}),
+    (error) => error === refusal
+  );
+  assert.equal(service.events.at(-1).facts.status, "throw");
+  assert.equal(service.events.at(-1).facts.error, refusal);
+});
