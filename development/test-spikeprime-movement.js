@@ -196,6 +196,32 @@ test("a hub that reports nothing continues after the time estimate", async () =>
   assert.ok(elapsed >= 590 && elapsed < 1000, `fallback at ${elapsed} ms`);
 });
 
+test("run motor for degrees waits for a motor slower than the estimate", async () => {
+  const ext = loadExtension();
+  captureSends(ext);
+  ext._peripheral.motorSettings.A.speed = 100;
+  const positions = ext._peripheral._repl._sensors.motorPositions;
+  positions.A = { relativePosition: 0 };
+  // 60 degrees at 100 % is 100 ms; + 0.5 s = 600 ms. The motor is still
+  // turning well after that (loaded, or a simulated hub running slow).
+  const run = ext.motorRunFor({
+    PORT: "A",
+    DIRECTION: 1,
+    VALUE: 60,
+    UNIT: "degrees",
+  });
+  await sleep(250);
+  positions.A = { relativePosition: 20 };
+  await sleep(500);
+  assert.equal(
+    await settled(run),
+    false,
+    "returned at the wall-clock estimate"
+  );
+  positions.A = { relativePosition: 58 };
+  await run;
+});
+
 test("seconds waits that long", async () => {
   const ext = loadExtension();
   captureSends(ext);

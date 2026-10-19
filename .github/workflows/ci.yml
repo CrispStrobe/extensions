@@ -50,6 +50,8 @@ jobs:
       # Pure protocol encoders that can be checked without hardware.
       - name: Circuit Cubes protocol tests
         run: node development/test-circuitcubes.js
+      - name: WeDo light, tone and connection recovery contracts
+        run: node --test development/test-wedo-lights.js development/test-wedo-connection.js
       # stc12 `show number` on the Prechin A2 7-segment: right-aligned, the
       # minus directly before the most significant digit.
       - name: stc12 7-segment show number
