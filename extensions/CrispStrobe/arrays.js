@@ -627,6 +627,7 @@
     listAll: ["registry", "read"],
     namedReference: ["namedString", "alias"],
     referenceValues: ["transport", "transport"],
+    valueBinary: ["transport", "read"],
     createReference: ["transport", "allocate"],
     parseLegacyValue: ["transport", "transport"],
     jsonValue: ["transport", "read"],
@@ -651,16 +652,29 @@
     markedCount: ["namedString", "read"],
   });
   for (const spec of Object.values(operationSpecs)) Object.freeze(spec);
+  // Allocation backing used by a primitive loan must come from these held
+  // native JSON operations and indexed allocation, not late replaced globals or Array species.
+  const allocationParse = JSON.parse;
+  const allocationApply = Reflect.apply;
+  const allocationFreeze = Object.freeze;
+  const allocationDescriptor = Object.getOwnPropertyDescriptor;
+  const allocationOwn = Object.hasOwn;
+  const allocationSome = Array.prototype.some;
+  const allocationSame = Object.is;
+  const allocationText = String;
+  const allocationValues = Scratch.BWArrayOperations == null ? null : valuesFor();
+  const allocationDecode = allocationValues && allocationValues.decode;
+  const allocationReference = allocationValues && allocationValues.arrayReference;
+  const allocationBody = allocationValues && allocationValues.arrayValue;
   const operations = new WeakMap();
   const currentOperation = (extension) => operations.get(extension);
   const access = (extension, facts) => {
     const operation = currentOperation(extension);
     if (!operation) return;
     try {
-      operation.host.access.call(
-        operation.service,
+      allocationApply(operation.host.access, operation.service, [
         operation.ticket,
-        Object.freeze({
+        allocationFreeze({
           opcode: operation.opcode,
           runtime: extension._runtime,
           kind: operation.spec[1],
@@ -672,7 +686,7 @@
           key: undefined,
           ...facts,
         })
-      );
+      ]);
     } catch (error) {
       operation.rejections.push(error);
       throw error;
@@ -688,7 +702,9 @@
     const operation = currentOperation(extension);
     if (
       operation &&
-      operation.rejections.some((item) => Object.is(item, error))
+      allocationApply(allocationSome, operation.rejections, [
+        (item) => allocationSame(item, error),
+      ])
     ) {
       throw error;
     }
@@ -817,6 +833,44 @@
     return typeof hostInput === "function"
       ? hostInput(args, util, opcode, name)
       : args[name];
+  };
+
+  // Only an embedding host can lend an actual owned Array's primitive value.
+  // Standalone operation keeps the original reference/object behavior. The host
+  // receives the original operand slot and current private operation ticket;
+  // the supplier never obtains a generic reference-to-string capability.
+  // Necessary negative prefilter only: primitive-only operands cannot request
+  // an Array loan. Inspect descriptors without invoking input getters; all
+  // object/uncertain cases retain the full guarded route.
+  const scalarBinaryInputs = (args) => {
+    if (!args || typeof args !== "object") return false;
+    const left = allocationDescriptor(args, "LEFT");
+    const right = allocationDescriptor(args, "RIGHT");
+    return left && right && allocationOwn(left, "value") && allocationOwn(right, "value") &&
+      (left.value === null || typeof left.value !== "object") &&
+      (right.value === null || typeof right.value !== "object");
+  };
+  const binaryOperand = (extension, values, value, slot, op) => {
+    const operation = currentOperation(extension);
+    if (
+      !operation || op !== "+" || !values.isReference(value) ||
+      value.bwReference.kind !== "array"
+    ) return value;
+    if (typeof operation.primitive !== "function")
+      rejectAccess(extension, "Array addition requires the host primitive loan");
+    try {
+      const primitive = allocationApply(operation.primitive, operation.service, [
+        operation.ticket,
+        allocationFreeze({opcode: operation.opcode, runtime: extension._runtime,
+          slot, raw: value})
+      ]);
+      if (typeof primitive !== "string")
+        rejectAccess(extension, "Array primitive loan must return a string");
+      return primitive;
+    } catch (error) {
+      operation.rejections.push(error);
+      throw error;
+    }
   };
 
   class ArrayExtension {
@@ -2206,8 +2260,10 @@
     valueBinary(args, util) {
       const values = valuesFor(),
         op = String(args.OP),
-        left = valueInput(args, util, "arrays_valueBinary", "LEFT"),
-        right = valueInput(args, util, "arrays_valueBinary", "RIGHT");
+        leftInput = valueInput(args, util, "arrays_valueBinary", "LEFT"),
+        rightInput = valueInput(args, util, "arrays_valueBinary", "RIGHT"),
+        left = binaryOperand(this, values, leftInput, "LEFT", op),
+        right = binaryOperand(this, values, rightInput, "RIGHT", op);
       if (["&", "|", "^", "<<", ">>", ">>>"].includes(op)) {
         try {
           return values.binary(left, op, right);
@@ -2339,14 +2395,21 @@
     createReference(args) {
       const operation = currentOperation(this);
       const raw = operation ? args.VALUES : undefined;
+      const literal = operation && operation.ticket !== undefined;
       let list;
       try {
-        list = JSON.parse(String(operation ? raw : args.VALUES));
+        const text = literal ? allocationText(raw) : String(operation ? raw : args.VALUES);
+        if (literal)
+          access(this, {kind: "literal-ingress", slot: "VALUES", raw, text,
+            parser: allocationParse, stringify: allocationText,
+            decoder: allocationDecode, reference: allocationReference,
+            lookup: allocationBody});
+        list = literal ? allocationParse(text) : JSON.parse(text);
       } catch (e) {
         rethrowAccess(this, e);
         list = null;
       }
-      if (operation)
+      if (operation && !literal)
         access(this, {
           kind: "transport",
           slot: "VALUES",
@@ -2357,8 +2420,17 @@
         this._error("Array reference requires an argument list");
         return "";
       }
-      const values = valuesFor();
-      return values.arrayReference(this._runtime, list.map(values.decode));
+      if (!literal) {
+        const values = valuesFor();
+        return values.arrayReference(this._runtime, list.map(values.decode));
+      }
+      // A new literal backing has no replaceable map/species construction.
+      // The held decoder only interprets the freshly parsed root elements;
+      // nested direct Arrays remain fresh JSON allocations, not callbacks.
+      const body = [];
+      for (let i = 0; i < list.length; i++) body[i] = allocationDecode(list[i]);
+      access(this, {kind: "literal-body", slot: "VALUES", raw, body, parsed: list});
+      return allocationReference(this._runtime, body);
     }
 
     namedReference(args) {
@@ -2961,7 +3033,9 @@
     const original = ArrayExtension.prototype[opcode];
     ArrayExtension.prototype[opcode] = function (args, util) {
       const service = Scratch.BWArrayOperations;
-      if (service === undefined || service === null) {
+      if (service === undefined || service === null ||
+        (opcode === "valueBinary" &&
+          ((typeof args?.OP === "string" && args.OP !== "+") || scalarBinaryInputs(args)))) {
         return original.call(this, args, util);
       }
       const host = {
@@ -2973,8 +3047,9 @@
         throw new Error("Invalid Array host guards");
       }
       const previous = currentOperation(this);
-      const operation = { service, host, args, opcode, spec, rejections: [] };
-      operation.ticket = host.begin.call(service, opcode, args, util);
+      const operation = { service, host, args, opcode, spec, rejections: [],
+        primitive: opcode === "valueBinary" ? service.primitive : undefined };
+      operation.ticket = allocationApply(host.begin, service, [opcode, args, util]);
       operations.set(this, operation);
       let result,
         failure,
@@ -3021,7 +3096,7 @@
             access(this, { slot: "NAME", name, body: arrays[name] });
           }
         }
-        result = original.call(this, args, util);
+        result = allocationApply(original, this, [args, util]);
         failed = false;
         return result;
       } catch (error) {
@@ -3030,11 +3105,10 @@
       } finally {
         try {
           // Finish is cleanup/verification only: its return value is ignored.
-          host.finish.call(
-            service,
+          allocationApply(host.finish, service, [
             operation.ticket,
             result,
-            Object.freeze({
+            allocationFreeze({
               opcode,
               runtime: this._runtime,
               status: failed ? "throw" : "return",
@@ -3043,9 +3117,9 @@
                 ? undefined
                 : spec[0] === "named" || spec[0] === "namedString"
                   ? arrays[operation.name]
-                  : valuesFor().arrayValue(this._runtime, result),
+                  : allocationBody(this._runtime, result),
             })
-          );
+          ]);
         } finally {
           if (previous) operations.set(this, previous);
           else operations.delete(this);
