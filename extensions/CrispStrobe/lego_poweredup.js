@@ -387,21 +387,91 @@
     },
   };
 
-  // Rate limiter
+  // Rate limiter. Messages are spaced 1000 / maxRate ms apart and queued,
+  // never dropped: a dropped message is a motor that never starts (the B of
+  // an "AB" block) or a sensor that never reports. A queued message with the
+  // same key (an output command's port and sub command) is replaced by the
+  // newer one, so a fast loop cannot build up a backlog.
   class RateLimiter {
     constructor(maxRate) {
       this._maxRate = maxRate;
       this._lastSendTime = 0;
       this._sendInterval = 1000 / maxRate;
+      this._queue = [];
+      this._timer = null;
     }
 
-    okayToSend() {
-      const now = Date.now();
-      if (now - this._lastSendTime >= this._sendInterval) {
-        this._lastSendTime = now;
-        return true;
+    // Runs sendFn now if the interval has passed and nothing is waiting,
+    // otherwise when its turn comes. The promise settles when the message
+    // has been written, or has been replaced or discarded.
+    enqueue(key, sendFn) {
+      if (key !== null) {
+        const pending = this._queue.find((entry) => entry.key === key);
+        if (pending) {
+          pending.sendFn = sendFn;
+          return pending.promise;
+        }
       }
-      return false;
+      const now = Date.now();
+      if (
+        this._queue.length === 0 &&
+        now - this._lastSendTime >= this._sendInterval
+      ) {
+        this._lastSendTime = now;
+        return Promise.resolve(sendFn());
+      }
+      const entry = { key, sendFn };
+      entry.promise = new Promise((resolve, reject) => {
+        entry.resolve = resolve;
+        entry.reject = reject;
+      });
+      this._queue.push(entry);
+      this._scheduleNext();
+      return entry.promise;
+    }
+
+    // Records a message sent outside the queue, so the spacing holds.
+    noteSent() {
+      this._lastSendTime = Date.now();
+    }
+
+    // Drops the queued messages whose key `match` accepts.
+    discard(match) {
+      this._queue = this._queue.filter((entry) => {
+        if (entry.key !== null && match(entry.key)) {
+          entry.resolve();
+          return false;
+        }
+        return true;
+      });
+    }
+
+    clear() {
+      for (const entry of this._queue) entry.resolve();
+      this._queue = [];
+      if (this._timer) {
+        clearTimeout(this._timer);
+        this._timer = null;
+      }
+    }
+
+    _scheduleNext() {
+      if (this._timer || this._queue.length === 0) return;
+      const wait = Math.max(
+        0,
+        this._lastSendTime + this._sendInterval - Date.now()
+      );
+      this._timer = setTimeout(() => {
+        this._timer = null;
+        const entry = this._queue.shift();
+        if (entry) {
+          this._lastSendTime = Date.now();
+          Promise.resolve()
+            .then(entry.sendFn)
+            .then(entry.resolve, entry.reject);
+        }
+        this._scheduleNext();
+      }, wait);
     }
   }
 
@@ -429,12 +499,14 @@
     const view = new DataView(buffer);
     view.setInt32(0, version, true);
 
-    const major = view.getUint8(3) >> 4;
+    // LWP3 §3.5.6 Version Number Encoding: 0MMM mmmm, then the bug fix
+    // number and the build number in BCD, so they print as hex digits.
+    const major = (view.getUint8(3) >> 4) & 0x07;
     const minor = view.getUint8(3) & 0x0f;
     const bugfix = view.getUint8(2);
     const build = view.getUint16(0, true);
 
-    return `${major}.${minor}.${bugfix.toString().padStart(2, "0")}.${build.toString().padStart(4, "0")}`;
+    return `${major}.${minor}.${bugfix.toString(16).padStart(2, "0")}.${build.toString(16).padStart(4, "0")}`;
   };
 
   // ============================================================================
@@ -764,10 +836,11 @@
     COMMAND_FEEDBACK: 0x01,
   };
 
+  // LWP3 §3.27.7–3.27.12 EndState: 0 = FLOAT, 126 = HOLD, 127 = BRAKE.
   const MotorEndState = {
     FLOAT: 0,
-    HOLD: 127,
-    BRAKE: 128,
+    HOLD: 126,
+    BRAKE: 127,
   };
 
   const MotorProfile = {
@@ -1966,6 +2039,7 @@
         this._pingIntervalId = null;
       }
 
+      this._rateLimiter.clear();
       await this._connection.disconnect();
 
       this._devices = {};
@@ -2037,15 +2111,32 @@
     }
 
     send(characteristic, data, useLimiter = true) {
-      // This used to compute okayToSend(), log, and send anyway -- the verdict
-      // was discarded, so the limiter was decorative. scratch-vm returns early
-      // here. `useLimiter: false` is for commands that must not be dropped.
-      if (useLimiter && !this._rateLimiter.okayToSend()) {
-        logger.trace("Rate limiter: dropped a throttled message");
-        return Promise.resolve();
+      // Output commands are keyed by port and sub command (LWP3 §3.27: length,
+      // hub id, 0x81, port, startup/completion, sub command), so a newer one
+      // replaces a queued one for the same port; everything else is queued
+      // as is. `useLimiter: false` (a stop) goes out at once and discards the
+      // queued motion commands for its port, which would otherwise restart
+      // the motor after it.
+      const isOutput = data[2] === Message.OUTPUT;
+      const key = isOutput ? `${data[3]}:${data[5]}` : null;
+
+      if (!useLimiter) {
+        if (isOutput) {
+          const port = `${data[3]}:`;
+          this._rateLimiter.discard(
+            (queued) =>
+              queued.startsWith(port) &&
+              queued !== `${port}${OutputSubCommand.SET_ACC_TIME}` &&
+              queued !== `${port}${OutputSubCommand.SET_DEC_TIME}`
+          );
+        }
+        this._rateLimiter.noteSent();
+        return this._connection.send(characteristic, data);
       }
 
-      return this._connection.send(characteristic, data);
+      return this._rateLimiter.enqueue(key, () =>
+        this._connection.send(characteristic, data)
+      );
     }
 
     generateOutputCommand(portID, execution, subCommand, payload) {
@@ -3409,7 +3500,8 @@
           brake: MotorEndState.BRAKE,
           hold: MotorEndState.HOLD,
         };
-        motor.stopMode = stopModeMap[args.ACTION] || MotorEndState.BRAKE;
+        // FLOAT is 0, so `||` would turn "float" into brake.
+        motor.stopMode = stopModeMap[args.ACTION] ?? MotorEndState.BRAKE;
       }
     }
 
