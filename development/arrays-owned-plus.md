@@ -13,3 +13,7 @@ The embedding's narrowed metadata profile requires actual native allocation prov
 ## Integration qualification
 
 The supplier implementation is committed and explicitly adopted by the embedding candidate. CI runs the complete owned-addition protocol controls alongside the existing Array controls. The embedding has reproduced a normal installation, but its first complete native run exposed rejection-routing failures in the host. A host correction and fresh affected execution remain required; protocol tests alone do not establish working games or general Array coercion. Named constructors, serialized aliases after a decoder cache miss, and object-element conversion remain separately scoped embedding work.
+
+## Compatibility with older JavaScript hosts
+
+Own-property checks capture `Object.prototype.hasOwnProperty` and invoke it through the held `Reflect.apply`. They work when `Object.hasOwn` is unavailable and retain their original implementation after a later prototype replacement. The complete protocol controls include that older-host case. The embedding currently carries the earlier supplier payload; adopting this correction requires an explicit supplier revision, body, notice and mirror update followed by fresh installation and affected execution.

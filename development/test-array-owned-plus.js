@@ -7,7 +7,7 @@ const source = readFileSync(
   new URL("../extensions/CrispStrobe/arrays.js", import.meta.url),
   "utf8"
 );
-function load(guard) {
+function load(guard, { legacyOwn = false } = {}) {
   const start = source.indexOf("  const makeValues = () => {"),
     end = source.indexOf("\n  };\n", start);
   const values = runInContext(
@@ -29,6 +29,7 @@ function load(guard) {
     ArgumentType: { STRING: "string", NUMBER: "number" },
   };
   const context = createContext({ Scratch, console });
+  if (legacyOwn) runInContext("Object.hasOwn = undefined;", context);
   runInContext(source, context);
   return { extension, values, runtime, Scratch, context };
 }
@@ -187,4 +188,17 @@ test("literal allocation avoids late parse, decode, map and species replacement"
   assert.notEqual(body[0], foreign);
   assert.equal(decodeCalls, 0);
   assert.equal(service.events.at(-1).facts.body, body);
+});
+
+test("scalar ownership works without Object.hasOwn and retains the captured legacy intrinsic", () => {
+  const service = guard();
+  service.begin = () => {
+    throw new Error("scalar addition entered host ownership");
+  };
+  const run = load(service, { legacyOwn: true });
+  runInContext(
+    "Object.prototype.hasOwnProperty = () => { throw new Error('late own-property hook'); };",
+    run.context
+  );
+  assert.equal(run.extension.valueBinary({ OP: "+", LEFT: 3, RIGHT: 1 }), 4);
 });

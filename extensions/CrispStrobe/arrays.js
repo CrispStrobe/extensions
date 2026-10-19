@@ -658,7 +658,9 @@
   const allocationApply = Reflect.apply;
   const allocationFreeze = Object.freeze;
   const allocationDescriptor = Object.getOwnPropertyDescriptor;
-  const allocationOwn = Object.hasOwn;
+  const allocationHasOwn = Object.prototype.hasOwnProperty;
+  const allocationOwn = (value, key) =>
+    allocationApply(allocationHasOwn, value, [key]);
   const allocationSome = Array.prototype.some;
   const allocationSame = Object.is;
   const allocationText = String;
