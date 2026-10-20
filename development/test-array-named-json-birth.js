@@ -173,7 +173,11 @@ test("unqualified custom parser keeps original receiver and one RHS call before 
   a.create1D({ NAME: "custom", JSON: "[1]" });
   assert.equal(events.length, 3);
   assert.equal(events[0].kind, "bind");
-  assert.equal(events[0].body, undefined, "preflight checks the old named body");
+  assert.equal(
+    events[0].body,
+    undefined,
+    "preflight checks the old named body"
+  );
   assert.equal(events[1].kind, "parse");
   assert.equal(events[1].receiver, custom);
   assert.equal(events[1].text, "[1]");
