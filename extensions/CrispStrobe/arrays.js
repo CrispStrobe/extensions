@@ -1866,7 +1866,10 @@
           name: operation.name,
         });
         if (!allocationIsArray(body)) {
-          rejectAccess(this, "Named empty allocation requires its current host body");
+          rejectAccess(
+            this,
+            "Named empty allocation requires its current host body"
+          );
         }
       } else {
         // No host, or a non-String name outside the primitive birth profile.
