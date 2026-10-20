@@ -387,21 +387,91 @@
     },
   };
 
-  // Rate limiter
+  // Rate limiter. Messages are spaced 1000 / maxRate ms apart and queued,
+  // never dropped: a dropped message is a motor that never starts (the B of
+  // an "AB" block) or a sensor that never reports. A queued message with the
+  // same key (an output command's port and sub command) is replaced by the
+  // newer one, so a fast loop cannot build up a backlog.
   class RateLimiter {
     constructor(maxRate) {
       this._maxRate = maxRate;
       this._lastSendTime = 0;
       this._sendInterval = 1000 / maxRate;
+      this._queue = [];
+      this._timer = null;
     }
 
-    okayToSend() {
-      const now = Date.now();
-      if (now - this._lastSendTime >= this._sendInterval) {
-        this._lastSendTime = now;
-        return true;
+    // Runs sendFn now if the interval has passed and nothing is waiting,
+    // otherwise when its turn comes. The promise settles when the message
+    // has been written, or has been replaced or discarded.
+    enqueue(key, sendFn) {
+      if (key !== null) {
+        const pending = this._queue.find((entry) => entry.key === key);
+        if (pending) {
+          pending.sendFn = sendFn;
+          return pending.promise;
+        }
       }
-      return false;
+      const now = Date.now();
+      if (
+        this._queue.length === 0 &&
+        now - this._lastSendTime >= this._sendInterval
+      ) {
+        this._lastSendTime = now;
+        return Promise.resolve(sendFn());
+      }
+      const entry = { key, sendFn };
+      entry.promise = new Promise((resolve, reject) => {
+        entry.resolve = resolve;
+        entry.reject = reject;
+      });
+      this._queue.push(entry);
+      this._scheduleNext();
+      return entry.promise;
+    }
+
+    // Records a message sent outside the queue, so the spacing holds.
+    noteSent() {
+      this._lastSendTime = Date.now();
+    }
+
+    // Drops the queued messages whose key `match` accepts.
+    discard(match) {
+      this._queue = this._queue.filter((entry) => {
+        if (entry.key !== null && match(entry.key)) {
+          entry.resolve();
+          return false;
+        }
+        return true;
+      });
+    }
+
+    clear() {
+      for (const entry of this._queue) entry.resolve();
+      this._queue = [];
+      if (this._timer) {
+        clearTimeout(this._timer);
+        this._timer = null;
+      }
+    }
+
+    _scheduleNext() {
+      if (this._timer || this._queue.length === 0) return;
+      const wait = Math.max(
+        0,
+        this._lastSendTime + this._sendInterval - Date.now()
+      );
+      this._timer = setTimeout(() => {
+        this._timer = null;
+        const entry = this._queue.shift();
+        if (entry) {
+          this._lastSendTime = Date.now();
+          Promise.resolve()
+            .then(entry.sendFn)
+            .then(entry.resolve, entry.reject);
+        }
+        this._scheduleNext();
+      }, wait);
     }
   }
 
@@ -429,12 +499,14 @@
     const view = new DataView(buffer);
     view.setInt32(0, version, true);
 
-    const major = view.getUint8(3) >> 4;
+    // LWP3 §3.5.6 Version Number Encoding: 0MMM mmmm, then the bug fix
+    // number and the build number in BCD, so they print as hex digits.
+    const major = (view.getUint8(3) >> 4) & 0x07;
     const minor = view.getUint8(3) & 0x0f;
     const bugfix = view.getUint8(2);
     const build = view.getUint16(0, true);
 
-    return `${major}.${minor}.${bugfix.toString().padStart(2, "0")}.${build.toString().padStart(4, "0")}`;
+    return `${major}.${minor}.${bugfix.toString(16).padStart(2, "0")}.${build.toString(16).padStart(4, "0")}`;
   };
 
   // ============================================================================
@@ -460,30 +532,33 @@
 
   const PoweredUpPingInterval = 5000;
 
-  // Hub Types
-  const HubType = {
-    UNKNOWN: 0,
-    WEDO2_SMART_HUB: 1,
-    MOVE_HUB: 2, // Boost Move Hub
-    HUB: 3, // Powered Up Hub
-    REMOTE_CONTROL: 4,
-    DUPLO_TRAIN_BASE: 5,
-    TECHNIC_MEDIUM_HUB: 6, // Also called Control+ Hub
-    MARIO: 7,
-    TECHNIC_SMALL_HUB: 8,
+  // Hub types by LWP3 System Type and Device Number (§2.1, Hub Property
+  // System Type ID 0x0B, §3.5): the high 3 bits are the system (000 WeDo 2.0,
+  // 001 Duplo, 010 / 011 LEGO System, 100 LEGO Technic), the low 5 bits the
+  // device. LEGO's document lists 0x00, 0x20, 0x40, 0x41 and 0x42; the other
+  // ids are the community's (node-poweredup BLEManufacturerData, pybricksdev
+  // lwp3 HubKind).
+  const HubTypeName = {
+    0x00: "WeDo 2.0 Smart Hub",
+    0x20: "Duplo Train Hub",
+    0x40: "Boost Move Hub",
+    0x41: "Powered Up Hub", // 2-port hub, "City hub" (88009)
+    0x42: "Powered Up Remote", // 2-port handset (88010)
+    0x43: "Mario", // community
+    0x44: "Luigi", // community
+    0x45: "Peach", // community
+    0x80: "Control+ Hub", // community: Technic Medium Hub (88012)
+    0x81: "SPIKE Prime Hub", // community: also MINDSTORMS Robot Inventor
+    0x83: "SPIKE Essential Hub", // community: Technic Small Hub (45609)
+    0x84: "Technic Move Hub", // community
   };
 
-  const HubTypeName = {
-    [HubType.UNKNOWN]: "Unknown Hub",
-    [HubType.WEDO2_SMART_HUB]: "WeDo 2.0 Smart Hub",
-    [HubType.MOVE_HUB]: "Boost Move Hub",
-    [HubType.HUB]: "Powered Up Hub",
-    [HubType.REMOTE_CONTROL]: "Powered Up Remote",
-    [HubType.DUPLO_TRAIN_BASE]: "Duplo Train Hub",
-    [HubType.TECHNIC_MEDIUM_HUB]: "Control+ Hub", // Also Technic Medium Hub
-    [HubType.MARIO]: "Mario",
-    [HubType.TECHNIC_SMALL_HUB]: "Technic Small Hub",
-  };
+  function hubTypeName(systemTypeId) {
+    return (
+      HubTypeName[systemTypeId] ??
+      `Unknown Hub (0x${systemTypeId.toString(16).padStart(2, "0")})`
+    );
+  }
 
   // Device Types (all Powered Up compatible devices)
   const DeviceType = {
@@ -764,10 +839,11 @@
     COMMAND_FEEDBACK: 0x01,
   };
 
+  // LWP3 §3.27.7–3.27.12 EndState: 0 = FLOAT, 126 = HOLD, 127 = BRAKE.
   const MotorEndState = {
     FLOAT: 0,
-    HOLD: 127,
-    BRAKE: 128,
+    HOLD: 126,
+    BRAKE: 127,
   };
 
   const MotorProfile = {
@@ -1088,12 +1164,31 @@
 
       this._status = MotorState.OFF;
 
-      const cmd = this._parent.generateOutputCommand(
-        this._portId,
-        OutputExecution.EXECUTE_IMMEDIATELY + OutputExecution.COMMAND_FEEDBACK,
-        OutputSubCommand.START_SPEED,
-        [0, 100, MotorProfile.DO_NOT_USE]
-      );
+      // The stop honours the stop action. StartSpeed(0) holds position
+      // (LWP3 §3.27.5), so it is only the stop for "hold" on a motor with a
+      // tacho; float and brake are StartPower(0) and StartPower(127),
+      // WriteDirectModeData mode 0 (§3.27.1, §6.1).
+      const cmd =
+        this._stopMode === MotorEndState.HOLD && this._hasTacho
+          ? this._parent.generateOutputCommand(
+              this._portId,
+              OutputExecution.EXECUTE_IMMEDIATELY +
+                OutputExecution.COMMAND_FEEDBACK,
+              OutputSubCommand.START_SPEED,
+              [0, 100, MotorProfile.DO_NOT_USE]
+            )
+          : this._parent.generateOutputCommand(
+              this._portId,
+              OutputExecution.EXECUTE_IMMEDIATELY +
+                OutputExecution.COMMAND_FEEDBACK,
+              OutputSubCommand.WRITE_DIRECT_MODE_DATA,
+              [
+                0x00,
+                this._stopMode === MotorEndState.FLOAT
+                  ? MotorEndState.FLOAT
+                  : MotorEndState.BRAKE,
+              ]
+            );
 
       // A dropped stop is a motor that keeps running, so this one
       // bypasses the rate limiter.
@@ -1966,6 +2061,7 @@
         this._pingIntervalId = null;
       }
 
+      this._rateLimiter.clear();
       await this._connection.disconnect();
 
       this._devices = {};
@@ -2037,15 +2133,32 @@
     }
 
     send(characteristic, data, useLimiter = true) {
-      // This used to compute okayToSend(), log, and send anyway -- the verdict
-      // was discarded, so the limiter was decorative. scratch-vm returns early
-      // here. `useLimiter: false` is for commands that must not be dropped.
-      if (useLimiter && !this._rateLimiter.okayToSend()) {
-        logger.trace("Rate limiter: dropped a throttled message");
-        return Promise.resolve();
+      // Output commands are keyed by port and sub command (LWP3 §3.27: length,
+      // hub id, 0x81, port, startup/completion, sub command), so a newer one
+      // replaces a queued one for the same port; everything else is queued
+      // as is. `useLimiter: false` (a stop) goes out at once and discards the
+      // queued motion commands for its port, which would otherwise restart
+      // the motor after it.
+      const isOutput = data[2] === Message.OUTPUT;
+      const key = isOutput ? `${data[3]}:${data[5]}` : null;
+
+      if (!useLimiter) {
+        if (isOutput) {
+          const port = `${data[3]}:`;
+          this._rateLimiter.discard(
+            (queued) =>
+              queued.startsWith(port) &&
+              queued !== `${port}${OutputSubCommand.SET_ACC_TIME}` &&
+              queued !== `${port}${OutputSubCommand.SET_DEC_TIME}`
+          );
+        }
+        this._rateLimiter.noteSent();
+        return this._connection.send(characteristic, data);
       }
 
-      return this._connection.send(characteristic, data);
+      return this._rateLimiter.enqueue(key, () =>
+        this._connection.send(characteristic, data)
+      );
     }
 
     generateOutputCommand(portID, execution, subCommand, payload) {
@@ -2276,7 +2389,7 @@
       switch (property) {
         case HubProperty.SYSTEM_TYPE_ID:
           this.hubType = data[5];
-          this.hubName = HubTypeName[this.hubType] || "Unknown Hub";
+          this.hubName = hubTypeName(this.hubType);
           logger.info(`Hub type: ${this.hubName} (ID: ${this.hubType})`);
           break;
         case HubProperty.BUTTON:
@@ -3409,7 +3522,8 @@
           brake: MotorEndState.BRAKE,
           hold: MotorEndState.HOLD,
         };
-        motor.stopMode = stopModeMap[args.ACTION] || MotorEndState.BRAKE;
+        // FLOAT is 0, so `||` would turn "float" into brake.
+        motor.stopMode = stopModeMap[args.ACTION] ?? MotorEndState.BRAKE;
       }
     }
 

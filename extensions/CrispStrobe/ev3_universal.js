@@ -3089,7 +3089,10 @@
       this.mode = "auto";
       this.detectedMode = null;
       this.backend = null;
-      this.messageCounter = 0;
+      // Direct-command message counter (EV3 Communication Developer Kit §4:
+      // two bytes, little endian) and the bytes of a reply not yet complete.
+      this.msgCounter = 0;
+      this.readBuffer = new Uint8Array(0);
       this.pendingRequests = new Map();
 
       // Bridge configuration
@@ -3316,11 +3319,16 @@
     }
 
     isConnected() {
-      return this.backend ? this.backend.connected : false;
+      // ScratchLinkBackend keeps `_connected` behind isConnected(); the
+      // other backends expose `connected` directly.
+      if (!this.backend) return false;
+      return !!(this.backend.connected || this.backend.isConnected?.());
     }
 
     _onConnect() {
       log.info("EV3Peripheral: Connection established");
+      // Drop any partial reply left over from a previous connection.
+      this.readBuffer = new Uint8Array(0);
     }
 
     _onMessage(data) {

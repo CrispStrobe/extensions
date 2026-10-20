@@ -963,6 +963,10 @@
       this.connected = false;
       this.readBuffer = new Uint8Array(0);
 
+      // Last values read by processTelegram
+      this.motors = {};
+      this.sensors = {};
+
       // Request tracking
       this.requests = new Map();
       this.nextId = 0;
@@ -1117,7 +1121,10 @@
             const port = ["S1", "S2", "S3", "S4"][data[3]];
             const valid = data[4] === 1;
             if (valid) {
-              const val = data[14] | (data[15] << 8);
+              // 12-13 scaled value (SWORD); 14-15 is the "calibrated
+              // value" the BDK calls unused (the firmware fills it with the
+              // normalized value).
+              const val = data[12] | (data[13] << 8);
               this.sensors[port] = val > 32767 ? val - 65536 : val;
               console.log(`📡 [NXT] Sensor ${port}: ${this.sensors[port]}`);
               this.resolveRequest(opcode, this.sensors[port]);
@@ -1128,7 +1135,8 @@
         case NXT_OPCODE.GET_OUT_STATE:
           if (data.length >= 25) {
             const port = ["A", "B", "C"][data[3]];
-            const rot = this.toSigned32(data[23], data[24], data[25], data[26]);
+            // Reply without the length prefix: 21-24 RotationCount (SLONG).
+            const rot = this.toSigned32(data[21], data[22], data[23], data[24]);
             this.motors[port] = ((rot % 360) + 360) % 360;
             console.log(`⚙️ [NXT] Motor ${port}: ${this.motors[port]}°`);
             this.resolveRequest(opcode, this.motors[port]);
