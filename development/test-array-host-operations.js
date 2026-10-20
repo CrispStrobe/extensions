@@ -44,6 +44,8 @@ const recorder = () => {
       return ticket;
     },
     access(actual, facts) {
+      if (facts.kind === "named-json-parse")
+        return Object.freeze({ status: "unqualified" });
       assert.equal(actual, ticket);
       assert.ok(Object.isFrozen(facts));
       events.push({ stage: "access", facts });
@@ -75,6 +77,8 @@ test("host sees original args/util and raw VALUE before decoding, same backing n
     args = { ARRAY: ref, OP: "push", INDEX: 0, VALUE: raw };
   guard.events.length = 0;
   guard.access = (ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (
       facts.slot === "ARRAY" ||
       (facts.kind === "transport" &&
@@ -93,7 +97,10 @@ test("host sees original args/util and raw VALUE before decoding, same backing n
   assert.equal(guard.events[0].util, util);
   assert.equal(decodes, 1);
   assert.equal(body[1], undefined);
-  guard.access = () => {};
+  guard.access = (_ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
+  };
   a.push({ NAME: "a", VALUE: 2 });
   assert.equal(body[2], 2);
 });
@@ -117,6 +124,8 @@ test("all reference mutators and named mutators reject before any actual write",
     const body = [1, 2],
       ref = values.arrayReference(runtime, body);
     guard.access = (ticket, facts) => {
+      if (facts.kind === "named-json-parse")
+        return Object.freeze({ status: "unqualified" });
       if (facts.body === body && facts.kind === "write") throw failure;
     };
     assert.throws(
@@ -125,7 +134,10 @@ test("all reference mutators and named mutators reject before any actual write",
     );
     assert.deepEqual(body, [1, 2]);
   }
-  guard.access = () => {};
+  guard.access = (_ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
+  };
   a.create1D({ NAME: "n", JSON: "[[1],[2]]" });
   const body = values.arrayValue(runtime, a.namedReference({ NAME: "n" }));
   for (const opcode of [
@@ -138,6 +150,8 @@ test("all reference mutators and named mutators reject before any actual write",
     "remove",
   ]) {
     guard.access = (ticket, facts) => {
+      if (facts.kind === "named-json-parse")
+        return Object.freeze({ status: "unqualified" });
       if (facts.body === body && facts.kind === "write") throw failure;
     };
     assert.throws(
@@ -156,6 +170,8 @@ test("all reference mutators and named mutators reject before any actual write",
   }
   for (const opcode of ["referenceRemove", "referenceTake"]) {
     guard.access = (ticket, facts) => {
+      if (facts.kind === "named-json-parse")
+        return Object.freeze({ status: "unqualified" });
       if (facts.body === body) throw failure;
     };
     assert.throws(
@@ -212,6 +228,8 @@ test("both concat bodies and deep named aliases are checked before reads or nest
     ),
     inner = outer[0];
   guard.access = (ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (facts.body === inner) {
       assert.equal(facts.parent, outer);
       assert.equal(facts.key, "0");
@@ -246,6 +264,8 @@ test("both concat bodies and deep named aliases are checked before reads or nest
   const first = [1],
     second = [2];
   guard.access = (ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (facts.slot === "OTHER" && facts.body === second) throw failure;
   };
   assert.throws(
@@ -268,6 +288,8 @@ test("guard rejection inside recursive JSON is not converted to legacy Undefined
   const outer = [values.arrayReference(runtime, inner)],
     ref = values.arrayReference(runtime, outer);
   guard.access = (ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (facts.body === inner) throw failure;
   };
   assert.throws(
@@ -322,6 +344,8 @@ test("raw malformed transports may be refused before parse/decode and before fal
     guard = recorder(),
     { a, errors } = load(guard);
   guard.access = (ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (facts.kind === "transport" && facts.slot === null) throw failure;
   };
   let conversions = 0;
@@ -359,6 +383,8 @@ test("cross-runtime named aliases expose the same body even after disposal; refs
   Scratch.vm.runtime = otherRuntime;
   const other = new a.constructor();
   guard.access = (ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (facts.runtime === otherRuntime && facts.body === body) throw failure;
   };
   assert.throws(
@@ -371,7 +397,10 @@ test("cross-runtime named aliases expose the same body even after disposal; refs
   );
   assert.deepEqual(Array.from(body), [1]);
   runtime.emit("RUNTIME_DISPOSED");
-  guard.access = () => {};
+  guard.access = (_ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
+  };
   assert.equal(a.referenceLength({ ARRAY: ref }), 0);
   assert.equal(a.length({ NAME: "shared" }), 1);
 });
@@ -397,6 +426,8 @@ test("installed-host aggregate discovery never invokes accessors or legacy callb
   a.create1D({ NAME: "a", JSON: "[1]" });
   const failure = {};
   guard.access = (ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (facts.kind === "escape") throw failure;
   };
   assert.throws(
@@ -423,6 +454,8 @@ test("new named binding is checked before replacement, and discarded old aliases
   const old = a.namedReference({ NAME: "a" }),
     body = values.arrayValue(runtime, old);
   guard.access = (ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (facts.kind === "bind" && facts.body !== body) throw failure;
     if (facts.kind === "empty-allocation") return [];
   };
@@ -457,6 +490,8 @@ test("selected Array is checked before take/pop changes an unowned outer Array",
     failure = {};
   const ref = values.arrayReference(runtime, outer);
   guard.access = (ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (facts.kind === "select" && facts.body === inner) throw failure;
   };
   for (const OP of ["pop", "shift", "removeAt"]) {
@@ -483,6 +518,8 @@ test("deep named access checks a referenced descendant's actual body, not only i
     VALUE: values.arrayReference(runtime, inner),
   });
   guard.access = (ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (facts.body === inner) throw failure;
   };
   assert.throws(
@@ -535,6 +572,8 @@ test("direct table reads have no invented current ticket and still expose descen
   a.create1D({ NAME: "table", JSON: "[[1]]" });
   const body = values.arrayValue(runtime, a.namedReference({ NAME: "table" }));
   guard.access = (ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     assert.equal(ticket, undefined);
     assert.equal(facts.opcode, null);
     if (facts.body === body[0]) throw failure;
@@ -601,12 +640,17 @@ test("post-normalization guards prevent body writes after index, value, key or o
     ["referenceTake", { INDEX: 0, OP: changingText("shift") }],
   ];
   for (const [method, args] of cases) {
-    guard.access = () => {};
+    guard.access = (_ticket, facts) => {
+      if (facts.kind === "named-json-parse")
+        return Object.freeze({ status: "unqualified" });
+    };
     invalid = false;
     a.create1D({ NAME: "n", JSON: "[[1],[2]]" });
     const ref = a.namedReference({ NAME: "n" }),
       body = values.arrayValue(runtime, ref);
     guard.access = (_ticket, facts) => {
+      if (facts.kind === "named-json-parse")
+        return Object.freeze({ status: "unqualified" });
       if (invalid && (facts.body === body || facts.kind === "select"))
         throw failure;
     };
@@ -617,7 +661,10 @@ test("post-normalization guards prevent body writes after index, value, key or o
     );
     assert.equal(JSON.stringify(body), "[[1],[2]]", method);
   }
-  guard.access = () => {};
+  guard.access = (_ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
+  };
   invalid = false;
   a.create1D({ NAME: "n", JSON: "[1,2]" });
   const ref = a.namedReference({ NAME: "n" }),
@@ -627,6 +674,8 @@ test("post-normalization guards prevent body writes after index, value, key or o
     return args.VALUE;
   };
   guard.access = (_ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (invalid && facts.body === body) throw failure;
   };
   assert.throws(
@@ -647,7 +696,10 @@ test("creation coercion cannot publish a replacement registry body or enter a fa
     ["createZeros", "SHAPE", "[2,2]"],
     ["createRange", "START", 0],
   ]) {
-    guard.access = () => {};
+    guard.access = (_ticket, facts) => {
+      if (facts.kind === "named-json-parse")
+        return Object.freeze({ status: "unqualified" });
+    };
     invalid = false;
     a.create1D({ NAME: "n", JSON: "[1,2]" });
     const ref = a.namedReference({ NAME: "n" }),
@@ -658,14 +710,19 @@ test("creation coercion cannot publish a replacement registry body or enter a fa
         return text;
       },
     };
-    guard.access = () => {
+    guard.access = (_ticket, facts) => {
+      if (facts.kind === "named-json-parse")
+        return Object.freeze({ status: "unqualified" });
       if (invalid) throw failure;
     };
     assert.throws(
       () => a[method]({ NAME: "n", END: 1, [slot]: value }),
       (error) => error === failure
     );
-    guard.access = () => {};
+    guard.access = (_ticket, facts) => {
+      if (facts.kind === "named-json-parse")
+        return Object.freeze({ status: "unqualified" });
+    };
     assert.equal(
       values.arrayValue(runtime, a.namedReference({ NAME: "n" })),
       body
@@ -755,6 +812,8 @@ test("a replaced mutator is an explicit escape before callback execution, while 
     return 2;
   };
   guard.access = (_ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (facts.kind === "escape" && facts.body === body) throw failure;
   };
   assert.throws(
@@ -763,7 +822,10 @@ test("a replaced mutator is an explicit escape before callback execution, while 
   );
   assert.equal(calls, 0);
   assert.equal(body.length, 1);
-  guard.access = () => {};
+  guard.access = (_ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
+  };
   a.push({ NAME: "n", VALUE: 9 });
   assert.equal(calls, 1);
   assert.equal(body[1], 9);
@@ -777,6 +839,8 @@ test("normalized legacy JSON references are checked before insertion, not after 
   const body = values.arrayValue(runtime, a.namedReference({ NAME: "n" }));
   const raw = '{"bwReference":{"kind":"array","id":"foreign","scope":"other"}}';
   guard.access = (_ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (
       facts.kind === "transport" &&
       facts.body?.bwReference?.scope === "other"
@@ -870,7 +934,9 @@ test("table argument coercions are checked before each state write and before re
   ];
   for (const [method, args, check] of cases) {
     invalid = false;
-    guard.access = () => {
+    guard.access = (_ticket, facts) => {
+      if (facts.kind === "named-json-parse")
+        return Object.freeze({ status: "unqualified" });
       if (invalid) throw failure;
     };
     assert.throws(
@@ -879,7 +945,10 @@ test("table argument coercions are checked before each state write and before re
     );
     check();
   }
-  guard.access = () => {};
+  guard.access = (_ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
+  };
   invalid = false;
   let calls = 0;
   runtime.renderer = {
@@ -899,7 +968,9 @@ test("table argument coercions are checked before each state write and before re
       return "cell";
     },
   };
-  guard.access = () => {
+  guard.access = (_ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (invalid) throw failure;
   };
   assert.throws(
@@ -951,7 +1022,6 @@ test("nullish stateful row retains RHS and TypeError without an extra final-key 
   });
 });
 
-
 test("named empty factory publishes exactly the current host birth body", () => {
   const guard = recorder(),
     body = [],
@@ -961,6 +1031,8 @@ test("named empty factory publishes exactly the current host birth body", () => 
   let births = 0;
   const original = guard.access;
   guard.access = (ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     original(ticket, facts);
     if (facts.kind === "empty-allocation") {
       births++;
@@ -979,7 +1051,10 @@ test("named empty factory publishes exactly the current host birth body", () => 
   assert.equal(beginning.args, args);
   assert.equal(beginning.util, util);
   assert.equal(births, 1);
-  assert.equal(guard.events.findLast((event) => event.stage === "finish").facts.body, body);
+  assert.equal(
+    guard.events.findLast((event) => event.stage === "finish").facts.body,
+    body
+  );
   const reference = a.namedReference({ NAME: "empty" });
   assert.equal(values.arrayValue(runtime, reference), body);
   assert.deepEqual(body, []);
@@ -991,35 +1066,55 @@ test("qualified empty birth missing or rejected by host never becomes fallback a
   a.create1D({ NAME: "held", JSON: "[7]" });
   guard.access = () => undefined;
   let thrown;
-  assert.throws(() => a.createEmpty({ NAME: "held" }), (error) => {
-    thrown = error;
-    return /requires its current host body/.test(error.message);
-  });
+  assert.throws(
+    () => a.createEmpty({ NAME: "held" }),
+    (error) => {
+      thrown = error;
+      return /requires its current host body/.test(error.message);
+    }
+  );
   let finish = guard.events.findLast((event) => event.stage === "finish");
   assert.equal(finish.facts.status, "throw");
   assert.equal(finish.facts.error, thrown);
   assert.equal(a.toJSON({ NAME: "held" }), "[7]");
   const failure = Object.freeze(new TypeError("host birth rejected"));
   guard.access = (_ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (facts.kind === "empty-allocation") throw failure;
   };
-  assert.throws(() => a.createEmpty({ NAME: "held" }), (error) => error === failure);
+  assert.throws(
+    () => a.createEmpty({ NAME: "held" }),
+    (error) => error === failure
+  );
   finish = guard.events.findLast((event) => event.stage === "finish");
   assert.equal(finish.facts.error, failure);
   assert.equal(a.toJSON({ NAME: "held" }), "[7]");
 });
 
 test("empty factory without a host or success ticket retains the legacy allocation", () => {
-  for (const guard of [undefined, {
-    begin() { return undefined; },
-    access(_ticket, facts) {
-      assert.notEqual(facts.kind, "empty-allocation", "no successful call means no birth request");
+  for (const guard of [
+    undefined,
+    {
+      begin() {
+        return undefined;
+      },
+      access(_ticket, facts) {
+        assert.notEqual(
+          facts.kind,
+          "empty-allocation",
+          "no successful call means no birth request"
+        );
+      },
+      finish() {},
     },
-    finish() {},
-  }]) {
+  ]) {
     const { a, values, runtime } = load(guard);
     a.createEmpty({ NAME: "legacy" });
-    assert.equal(values.arrayValue(runtime, a.namedReference({ NAME: "legacy" })).length, 0);
+    assert.equal(
+      values.arrayValue(runtime, a.namedReference({ NAME: "legacy" })).length,
+      0
+    );
   }
 });
 
@@ -1028,12 +1123,22 @@ test("nonstring empty name keeps its original single coercion and no primitive b
     { a, values, runtime } = load(guard);
   let conversions = 0,
     requests = 0;
-  const name = { toString() { conversions++; return "coerced"; } };
+  const name = {
+    toString() {
+      conversions++;
+      return "coerced";
+    },
+  };
   guard.access = (_ticket, facts) => {
+    if (facts.kind === "named-json-parse")
+      return Object.freeze({ status: "unqualified" });
     if (facts.kind === "empty-allocation") requests++;
   };
   a.createEmpty({ NAME: name });
   assert.equal(conversions, 1);
   assert.equal(requests, 0);
-  assert.equal(values.arrayValue(runtime, a.namedReference({ NAME: "coerced" })).length, 0);
+  assert.equal(
+    values.arrayValue(runtime, a.namedReference({ NAME: "coerced" })).length,
+    0
+  );
 });

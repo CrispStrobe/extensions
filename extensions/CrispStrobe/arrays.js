@@ -827,6 +827,53 @@
     if (operation && operation.args === args) return operation.name;
     return stringOnly ? String(args.NAME) : args.NAME;
   };
+  // Called at the original JSON.parse RHS position, after namedKey.
+  // Preserve parser receiver, one raw read, and original catch/fallback below.
+  const namedJSON = (extension, args) => {
+    const operation = currentOperation(extension);
+    const name = operation && allocationDescriptor(args, "NAME");
+    if (
+      !operation ||
+      operation.ticket === undefined ||
+      !name ||
+      !allocationOwn(name, "value") ||
+      typeof name.value !== "string" ||
+      operation.name !== name.value
+    )
+      return JSON.parse(args.JSON);
+    const owner = JSON,
+      parser = owner.parse,
+      raw = args.JSON;
+    if (typeof raw !== "string") return allocationApply(parser, owner, [raw]);
+    const outcome = access(extension, {
+      kind: "named-json-parse",
+      slot: "JSON",
+      raw,
+      name: name.value,
+      parser,
+      owner,
+    });
+    const status = outcome && allocationDescriptor(outcome, "status");
+    if (!status || !allocationOwn(status, "value"))
+      return rejectAccess(
+        extension,
+        "Named JSON allocation requires its current parse outcome"
+      );
+    if (status.value === "unqualified")
+      return allocationApply(parser, owner, [raw]);
+    const field = allocationDescriptor(
+      outcome,
+      status.value === "parse-error" ? "error" : "value"
+    );
+    if (
+      !field ||
+      !allocationOwn(field, "value") ||
+      (status.value !== "parsed" && status.value !== "parse-error")
+    )
+      return rejectAccess(extension, "Named JSON allocation outcome differs");
+    if (status.value === "parse-error") throw field.value;
+    return field.value;
+  };
   const namedArray = (extension, args) => {
     const operation = currentOperation(extension);
     return operation && operation.args === args
@@ -1830,7 +1877,7 @@
       try {
         arrays[namedKey(this, args)] = bindingValue(
           this,
-          JSON.parse(args.JSON)
+          namedJSON(this, args)
         );
       } catch (e) {
         rethrowAccess(this, e);
@@ -1842,7 +1889,7 @@
       try {
         arrays[namedKey(this, args)] = bindingValue(
           this,
-          JSON.parse(args.JSON)
+          namedJSON(this, args)
         );
       } catch (e) {
         rethrowAccess(this, e);
