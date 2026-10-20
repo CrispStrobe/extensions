@@ -57,6 +57,10 @@ jobs:
       # replies over Scratch Link.
       - name: LWP3 hub sends and EV3 direct commands
         run: node --test development/test-lwp3-hub-sends.js development/test-ev3-direct-commands.js
+      # NXT GETOUTPUTSTATE / GETINPUTVALUES replies read at the BDK offsets,
+      # over Scratch Link and the bridge backend.
+      - name: NXT direct command replies
+        run: node --test development/test-nxt-direct-commands.js
       # stc12 `show number` on the Prechin A2 7-segment: right-aligned, the
       # minus directly before the most significant digit.
       - name: stc12 7-segment show number
