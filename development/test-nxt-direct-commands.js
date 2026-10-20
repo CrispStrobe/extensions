@@ -127,9 +127,12 @@ function setup() {
       return socket;
     }
   }
-  const unref = (fn, ms) => {
+  // Short timers (the rate limiter's sleep) are part of the exchange and keep
+  // the event loop alive; the multi-second request / discover timeouts only
+  // guard a silent brick and must not hold the test process open.
+  const timeout = (fn, ms) => {
     const timer = setTimeout(fn, ms);
-    timer.unref();
+    if (ms >= 1000) timer.unref();
     return timer;
   };
   vm.runInNewContext(source, {
@@ -147,12 +150,12 @@ function setup() {
     ),
     window: {
       addEventListener: quiet,
-      setTimeout: unref,
+      setTimeout: timeout,
       clearTimeout,
     },
     btoa,
     atob,
-    setTimeout: unref,
+    setTimeout: timeout,
     clearTimeout,
     setInterval: (fn, ms) => setInterval(fn, ms).unref(),
     clearInterval,
