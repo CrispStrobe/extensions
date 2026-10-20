@@ -123,10 +123,13 @@ test("the original parse SyntaxError enters original catch and binds the method-
       guard.events.filter((event) => event.kind === "named-json-parse").length,
       1
     );
-    assert.equal(
-      guard.events.filter((event) => event.kind === "bind").length,
-      1
-    );
+    // The wrapper first checks the old named body; only the second bind
+    // observation is the actual fallback RHS publication.
+    const binds = guard.events.filter((event) => event.kind === "bind");
+    assert.equal(binds.length, 2);
+    assert.equal(binds[0].body, undefined);
+    assert.equal(binds[1].body, finish.facts.body);
+    assert.ok(Array.isArray(binds[1].body));
   }
 });
 
@@ -162,17 +165,25 @@ test("unqualified custom parser keeps original receiver and one RHS call before 
   guard.access = (ticket, facts) => {
     if (facts.kind === "named-json-parse")
       return Object.freeze({ status: "unqualified" });
-    if (facts.kind === "bind") events.push({ kind: "bind" });
+    if (facts.kind === "bind") events.push({ kind: "bind", body: facts.body });
     return access(ticket, facts);
   };
   const { a } = load(guard, { JSON: custom });
   events.length = 0;
   a.create1D({ NAME: "custom", JSON: "[1]" });
-  assert.equal(events.length, 2);
-  assert.equal(events[0].kind, "parse");
-  assert.equal(events[0].receiver, custom);
-  assert.equal(events[0].text, "[1]");
-  assert.equal(events[1].kind, "bind");
+  assert.equal(events.length, 3);
+  assert.equal(events[0].kind, "bind");
+  assert.equal(events[0].body, undefined, "preflight checks the old named body");
+  assert.equal(events[1].kind, "parse");
+  assert.equal(events[1].receiver, custom);
+  assert.equal(events[1].text, "[1]");
+  assert.equal(events[2].kind, "bind");
+  assert.equal(
+    events[2].body,
+    guard.events.find((event) => event.kind === "finish").facts.body
+  );
+  assert.equal(JSON.stringify(events[2].body), "[9]");
+  assert.equal(events.filter((event) => event.kind === "parse").length, 1);
 });
 
 test("nonstring NAME and JSON preserve existing one-coercion order without requesting native parse", () => {
@@ -253,7 +264,7 @@ test("no host or successful ticket retains standalone JSON parser and fallback s
   }
 });
 
-test("legacy syntax failure repeats raw property-key evaluation and custom parser errors keep fallback", () => {
+test("legacy syntax failure preserves deferred raw property-key coercion and custom parser fallback", () => {
   const { a } = load(undefined),
     order = [];
   const name = {
@@ -269,7 +280,9 @@ test("legacy syntax failure repeats raw property-key evaluation and custom parse
       },
     };
   a.create1D({ NAME: name, JSON: json });
-  assert.deepEqual(order, ["name", "json", "name"]);
+  // namedKey returns the raw object without a host. The failed parser
+  // prevents the first assignment; only the fallback commits a property key.
+  assert.deepEqual(order, ["json", "name"]);
   assert.equal(a.toJSON({ NAME: "bad" }), "[]");
   const original = Object.freeze(new TypeError("custom parse"));
   const custom = {
