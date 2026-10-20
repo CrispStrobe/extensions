@@ -532,30 +532,33 @@
 
   const PoweredUpPingInterval = 5000;
 
-  // Hub Types
-  const HubType = {
-    UNKNOWN: 0,
-    WEDO2_SMART_HUB: 1,
-    MOVE_HUB: 2, // Boost Move Hub
-    HUB: 3, // Powered Up Hub
-    REMOTE_CONTROL: 4,
-    DUPLO_TRAIN_BASE: 5,
-    TECHNIC_MEDIUM_HUB: 6, // Also called Control+ Hub
-    MARIO: 7,
-    TECHNIC_SMALL_HUB: 8,
+  // Hub types by LWP3 System Type and Device Number (§2.1, Hub Property
+  // System Type ID 0x0B, §3.5): the high 3 bits are the system (000 WeDo 2.0,
+  // 001 Duplo, 010 / 011 LEGO System, 100 LEGO Technic), the low 5 bits the
+  // device. LEGO's document lists 0x00, 0x20, 0x40, 0x41 and 0x42; the other
+  // ids are the community's (node-poweredup BLEManufacturerData, pybricksdev
+  // lwp3 HubKind).
+  const HubTypeName = {
+    0x00: "WeDo 2.0 Smart Hub",
+    0x20: "Duplo Train Hub",
+    0x40: "Boost Move Hub",
+    0x41: "Powered Up Hub", // 2-port hub, "City hub" (88009)
+    0x42: "Powered Up Remote", // 2-port handset (88010)
+    0x43: "Mario", // community
+    0x44: "Luigi", // community
+    0x45: "Peach", // community
+    0x80: "Control+ Hub", // community: Technic Medium Hub (88012)
+    0x81: "SPIKE Prime Hub", // community: also MINDSTORMS Robot Inventor
+    0x83: "SPIKE Essential Hub", // community: Technic Small Hub (45609)
+    0x84: "Technic Move Hub", // community
   };
 
-  const HubTypeName = {
-    [HubType.UNKNOWN]: "Unknown Hub",
-    [HubType.WEDO2_SMART_HUB]: "WeDo 2.0 Smart Hub",
-    [HubType.MOVE_HUB]: "Boost Move Hub",
-    [HubType.HUB]: "Powered Up Hub",
-    [HubType.REMOTE_CONTROL]: "Powered Up Remote",
-    [HubType.DUPLO_TRAIN_BASE]: "Duplo Train Hub",
-    [HubType.TECHNIC_MEDIUM_HUB]: "Control+ Hub", // Also Technic Medium Hub
-    [HubType.MARIO]: "Mario",
-    [HubType.TECHNIC_SMALL_HUB]: "Technic Small Hub",
-  };
+  function hubTypeName(systemTypeId) {
+    return (
+      HubTypeName[systemTypeId] ??
+      `Unknown Hub (0x${systemTypeId.toString(16).padStart(2, "0")})`
+    );
+  }
 
   // Device Types (all Powered Up compatible devices)
   const DeviceType = {
@@ -1161,12 +1164,31 @@
 
       this._status = MotorState.OFF;
 
-      const cmd = this._parent.generateOutputCommand(
-        this._portId,
-        OutputExecution.EXECUTE_IMMEDIATELY + OutputExecution.COMMAND_FEEDBACK,
-        OutputSubCommand.START_SPEED,
-        [0, 100, MotorProfile.DO_NOT_USE]
-      );
+      // The stop honours the stop action. StartSpeed(0) holds position
+      // (LWP3 §3.27.5), so it is only the stop for "hold" on a motor with a
+      // tacho; float and brake are StartPower(0) and StartPower(127),
+      // WriteDirectModeData mode 0 (§3.27.1, §6.1).
+      const cmd =
+        this._stopMode === MotorEndState.HOLD && this._hasTacho
+          ? this._parent.generateOutputCommand(
+              this._portId,
+              OutputExecution.EXECUTE_IMMEDIATELY +
+                OutputExecution.COMMAND_FEEDBACK,
+              OutputSubCommand.START_SPEED,
+              [0, 100, MotorProfile.DO_NOT_USE]
+            )
+          : this._parent.generateOutputCommand(
+              this._portId,
+              OutputExecution.EXECUTE_IMMEDIATELY +
+                OutputExecution.COMMAND_FEEDBACK,
+              OutputSubCommand.WRITE_DIRECT_MODE_DATA,
+              [
+                0x00,
+                this._stopMode === MotorEndState.FLOAT
+                  ? MotorEndState.FLOAT
+                  : MotorEndState.BRAKE,
+              ]
+            );
 
       // A dropped stop is a motor that keeps running, so this one
       // bypasses the rate limiter.
@@ -2367,7 +2389,7 @@
       switch (property) {
         case HubProperty.SYSTEM_TYPE_ID:
           this.hubType = data[5];
-          this.hubName = HubTypeName[this.hubType] || "Unknown Hub";
+          this.hubName = hubTypeName(this.hubType);
           logger.info(`Hub type: ${this.hubName} (ID: ${this.hubType})`);
           break;
         case HubProperty.BUTTON:
