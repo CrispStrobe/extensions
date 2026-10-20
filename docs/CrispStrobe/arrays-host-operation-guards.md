@@ -303,3 +303,22 @@ allocation; the new request never re-coerces NAME. Existing access calls ignore
 the returned value. Existing hosts that return no body for the new qualified
 request reject explicitly rather than silently claiming primitive support.
 The broader factory and reference-derived conversion matrix remains separate.
+
+## Named JSON parse birthplace candidate
+
+The separate `named-json-parse` request is made at the original parser RHS
+position for a successful current call with primitive string name and JSON.
+The host returns an own-data `parsed` value, the original native `parse-error`,
+or a pre-parse `unqualified` disposition. The supplier binds the exact parsed
+value; a parse error is thrown inside the original catch so method-specific
+fallback and key evaluation stay intact. Guard rejections cannot be swallowed.
+A custom parser is called with its original receiver exactly once; nonstring
+inputs and calls without successful tickets retain their original path.
+
+Only the host's actual fresh primitive/nested Array parse tree can later earn a
+conversion proof. Scalar/object roots and object entries remain legacy values,
+without dimensional reinterpretation or tagged-value decoding. These source
+changes are unexecuted and not an adopted supplier revision. Existing protocol
+fixtures explicitly decline this new parse request; a separate whole module
+checks its outcomes. Fresh canonical installation and affected native/public
+roundtrip qualification are still required.
