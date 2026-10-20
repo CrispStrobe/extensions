@@ -655,6 +655,7 @@
   // Allocation backing used by a primitive loan must come from these held
   // native JSON operations and indexed allocation, not late replaced globals or Array species.
   const allocationParse = JSON.parse;
+  const allocationIsArray = Array.isArray;
   const allocationApply = Reflect.apply;
   const allocationFreeze = Object.freeze;
   const allocationDescriptor = Object.getOwnPropertyDescriptor;
@@ -680,7 +681,7 @@
     const operation = currentOperation(extension);
     if (!operation) return;
     try {
-      allocationApply(operation.host.access, operation.service, [
+      return allocationApply(operation.host.access, operation.service, [
         operation.ticket,
         allocationFreeze({
           opcode: operation.opcode,
@@ -1850,7 +1851,29 @@
     }
 
     createEmpty(args) {
-      arrays[namedKey(this, args)] = bindingValue(this, []);
+      const operation = currentOperation(this);
+      let body;
+      if (
+        operation &&
+        operation.ticket !== undefined &&
+        typeof args.NAME === "string" &&
+        operation.name === args.NAME
+      ) {
+        body = access(this, {
+          kind: "empty-allocation",
+          slot: "NAME",
+          raw: args.NAME,
+          name: operation.name,
+        });
+        if (!allocationIsArray(body)) {
+          rejectAccess(this, "Named empty allocation requires its current host body");
+        }
+      } else {
+        // No host, or a non-String name outside the primitive birth profile.
+        // Preserve the original allocation without claiming primitive origin.
+        body = [];
+      }
+      arrays[namedKey(this, args)] = bindingValue(this, body);
     }
 
     createZeros(args) {
