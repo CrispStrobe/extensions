@@ -3179,6 +3179,19 @@
         opcode,
         args,
         util,
+        spec[1] === "bind"
+          ? allocationFreeze({
+              role: "bind",
+              // This held closure reads only our native registry's own data
+              // binding. It never traverses or interprets the prior body.
+              lookup(name) {
+                const descriptor = allocationDescriptor(arrays, name);
+                return descriptor && allocationOwn(descriptor, "value")
+                  ? allocationFreeze({ name, body: descriptor.value })
+                  : null;
+              },
+            })
+          : undefined,
       ]);
       allocationApply(operationSet, operations, [this, operation]);
       let result,
@@ -3203,12 +3216,28 @@
           operation.name =
             spec[0] === "namedString" ? String(rawName) : propertyKey(rawName);
           operation.body = arrays[operation.name];
-          bodyAccess(
-            this,
-            operation.body,
-            { slot: "NAME", raw: rawName, name: operation.name },
-            spec[2]
-          );
+          // A constructor replaces a binding; its prior body is not an
+          // operand. Only the current primitive-string destination can use
+          // this notice. Older hosts may decline it and keep their old path.
+          const discarded =
+            spec[1] === "bind" &&
+            operation.ticket !== undefined &&
+            typeof rawName === "string" &&
+            operation.name === rawName &&
+            access(this, {
+              kind: "prior-binding",
+              slot: "NAME",
+              raw: rawName,
+              name: operation.name,
+            }) === true;
+          if (!discarded) {
+            bodyAccess(
+              this,
+              operation.body,
+              { slot: "NAME", raw: rawName, name: operation.name },
+              spec[2]
+            );
+          }
         } else if (spec[0] === "reference") {
           access(this, { kind: "transport", slot: "ARRAY", raw: args.ARRAY });
           operation.body = valuesFor().arrayValue(this._runtime, args.ARRAY);
