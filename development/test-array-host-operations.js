@@ -47,6 +47,7 @@ const recorder = () => {
       assert.equal(actual, ticket);
       assert.ok(Object.isFrozen(facts));
       events.push({ stage: "access", facts });
+      if (facts.kind === "empty-allocation") return [];
     },
     finish(actual, result, facts) {
       assert.equal(actual, ticket);
@@ -423,6 +424,7 @@ test("new named binding is checked before replacement, and discarded old aliases
     body = values.arrayValue(runtime, old);
   guard.access = (ticket, facts) => {
     if (facts.kind === "bind" && facts.body !== body) throw failure;
+    if (facts.kind === "empty-allocation") return [];
   };
   for (const opcode of [
     "create1D",
@@ -438,7 +440,8 @@ test("new named binding is checked before replacement, and discarded old aliases
     );
     assert.equal(a.toJSON({ NAME: "a" }), "[1]");
   }
-  guard.access = () => {};
+  guard.access = (_ticket, facts) =>
+    facts.kind === "empty-allocation" ? [] : undefined;
   a.createEmpty({ NAME: "a" });
   assert.equal(a.referenceLength({ ARRAY: old }), 1);
   assert.equal(values.arrayValue(runtime, old), body);
@@ -946,4 +949,119 @@ test("nullish stateful row retains RHS and TypeError without an extra final-key 
     trace: ["row", "row", "value"],
     error: "TypeError",
   });
+});
+
+test("named empty factory publishes exactly the current host birth body", () => {
+  const guard = recorder(),
+    body = [],
+    { a, values, runtime } = load(guard),
+    args = { NAME: "empty" },
+    util = {};
+  let births = 0;
+  const original = guard.access;
+  guard.access = (ticket, facts) => {
+    original(ticket, facts);
+    if (facts.kind === "empty-allocation") {
+      births++;
+      assert.equal(ticket, guard.ticket);
+      assert.equal(facts.runtime, runtime);
+      assert.equal(facts.opcode, "createEmpty");
+      assert.equal(facts.raw, args.NAME);
+      assert.equal(facts.name, args.NAME);
+      assert.equal(facts.slot, "NAME");
+      assert.equal(facts.body, undefined);
+      return body;
+    }
+  };
+  a.createEmpty(args, util);
+  const beginning = guard.events[0];
+  assert.equal(beginning.args, args);
+  assert.equal(beginning.util, util);
+  assert.equal(births, 1);
+  assert.equal(
+    guard.events.findLast((event) => event.stage === "finish").facts.body,
+    body
+  );
+  const reference = a.namedReference({ NAME: "empty" });
+  assert.equal(values.arrayValue(runtime, reference), body);
+  assert.deepEqual(body, []);
+});
+
+test("qualified empty birth missing or rejected by host never becomes fallback allocation", () => {
+  const guard = recorder(),
+    { a } = load(guard);
+  a.create1D({ NAME: "held", JSON: "[7]" });
+  guard.access = () => undefined;
+  let thrown;
+  assert.throws(
+    () => a.createEmpty({ NAME: "held" }),
+    (error) => {
+      thrown = error;
+      return /requires its current host body/.test(error.message);
+    }
+  );
+  let finish = guard.events.findLast((event) => event.stage === "finish");
+  assert.equal(finish.facts.status, "throw");
+  assert.equal(finish.facts.error, thrown);
+  assert.equal(a.toJSON({ NAME: "held" }), "[7]");
+  const failure = Object.freeze(new TypeError("host birth rejected"));
+  guard.access = (_ticket, facts) => {
+    if (facts.kind === "empty-allocation") throw failure;
+  };
+  assert.throws(
+    () => a.createEmpty({ NAME: "held" }),
+    (error) => error === failure
+  );
+  finish = guard.events.findLast((event) => event.stage === "finish");
+  assert.equal(finish.facts.error, failure);
+  assert.equal(a.toJSON({ NAME: "held" }), "[7]");
+});
+
+test("empty factory without a host or success ticket retains the legacy allocation", () => {
+  for (const guard of [
+    undefined,
+    {
+      begin() {
+        return undefined;
+      },
+      access(_ticket, facts) {
+        assert.notEqual(
+          facts.kind,
+          "empty-allocation",
+          "no successful call means no birth request"
+        );
+      },
+      finish() {},
+    },
+  ]) {
+    const { a, values, runtime } = load(guard);
+    a.createEmpty({ NAME: "legacy" });
+    assert.equal(
+      values.arrayValue(runtime, a.namedReference({ NAME: "legacy" })).length,
+      0
+    );
+  }
+});
+
+test("nonstring empty name keeps its original single coercion and no primitive birthplace claim", () => {
+  const guard = recorder(),
+    { a, values, runtime } = load(guard);
+  let conversions = 0,
+    requests = 0;
+  const name = {
+    toString() {
+      conversions++;
+      return "coerced";
+    },
+  };
+  guard.access = (_ticket, facts) => {
+    if (facts.kind === "empty-allocation") requests++;
+  };
+  a.createEmpty({ NAME: name });
+  assert.equal(conversions, 1);
+  assert.equal(requests, 0);
+  assert.equal(
+    values.arrayValue(runtime, a.namedReference({ NAME: "coerced" })).length,
+    0
+  );
 });

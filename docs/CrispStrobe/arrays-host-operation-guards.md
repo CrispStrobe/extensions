@@ -278,3 +278,28 @@ their original repeated coercions; nullish bases retain the original error
 without an extra final-key conversion. Earlier legitimate effects in a multi-step
 operation are not rolled back if a later conversion invalidates the operation.
 No guard rejection is repaired into an empty binding or successful fallback.
+
+
+## Named empty birthplace protocol candidate
+
+SOURCE CANDIDATE — qualification pending. For `createEmpty` only, an original
+primitive String NAME with its exact resolved operation name and a successful
+host ticket issues `kind: "empty-allocation"`, `slot: "NAME"`, original raw name
+and actual operation name. The shallow-frozen access record keeps the existing
+runtime/opcode binding. Its return is the host's actual fresh empty Array.
+The supplier publishes that same body through its existing binding guard; it
+neither copies the body nor treats a missing result as a successful empty value.
+
+The host must create and privately reserve the body itself, validate current
+call/graph/intrinsics before birth and again before enrollment, and reject
+replay, substitution, prototype/descriptor/length/extensibility changes or
+expiry. An Array-shaped return or opcode name alone is no provenance proof.
+The protocol fixture's simple provider is a protocol control, not a guest or
+native ownership qualification. `finish` still ignores return values.
+
+No host or no successful ticket retains the original standalone allocation.
+Non-String names retain their existing single key coercion and unqualified
+allocation; the new request never re-coerces NAME. Existing access calls ignore
+the returned value. Existing hosts that return no body for the new qualified
+request reject explicitly rather than silently claiming primitive support.
+The broader factory and reference-derived conversion matrix remains separate.
