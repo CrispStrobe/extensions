@@ -1,0 +1,21 @@
+# Optional owned Array addition
+
+The embedding operation service may provide `primitive(ticket, facts)` for an actual `valueBinary` `+` call. Facts retain the original LEFT or RIGHT operand, runtime and private operation ticket. Both input interpretations complete before left-to-right primitive conversion. The supplier accepts the returned primitive string and keeps its existing binary operation and completion fence. Missing or refused loans throw; they do not fall back to object text.
+
+Without a service, standalone behavior remains unchanged. Other scalar operators retain their original route. The service owns runtime/body/generation, physical input and cached-call checks; the supplier does not infer them from a reference label. Witnessed literal reference allocation holds the actual parser, decoder and heap functions, validates their identities with the embedding host after once-only input conversion, and creates a fresh Array literal with indexed decoding. Replaced value methods and Array species cannot issue its backing provenance. Default no-service construction retains its original path.
+
+This is a source candidate. Host protocol controls do not prove actual runtime ownership. Complete embedding native controls and fresh production installation/guest qualification are required before adoption. No change to generic reference prototypes, Cast or shared value domains is included.
+
+The literal-body protocol records the newly constructed root identity before reference registration. Direct nested Arrays must come from the native parsed tree. The host uses a closed existing-heap primitive identity lookup and the exact descriptors observed during rendering, then fences after later observations and operand effects. Metadata-only registered constructors are permanently inert. This remains a source candidate pending a real supplier commit, explicit embedding adoption, installation and affected execution; the embedding carrier still retains the preceding supplier payload until that transaction.
+
+The embedding's narrowed metadata profile requires actual native allocation provenance or invariant immutable metadata. Arbitrary mutable host-inserted number/undefined boxes and mutable serialized references returned on an interning cache miss are not qualified by this source candidate. Final publication uses one all-loan callback phase followed by one global native-data barrier; native WeakRef dereference is held directly. These are new unexecuted admission conditions, not old whole-module success claims.
+
+## Integration qualification
+
+The supplier implementation is committed and explicitly adopted by the embedding candidate. CI runs the complete owned-addition protocol controls alongside the existing Array controls. The embedding has reproduced a normal installation, but its first complete native run exposed rejection-routing failures in the host. A host correction and fresh affected execution remain required; protocol tests alone do not establish working games or general Array coercion. Named constructors, serialized aliases after a decoder cache miss, and object-element conversion remain separately scoped embedding work.
+
+## Compatibility with older JavaScript hosts
+
+Own-property checks capture `Object.prototype.hasOwnProperty` and invoke it through the held `Reflect.apply`. They work when `Object.hasOwn` is unavailable and retain their original implementation after a later prototype replacement. The complete protocol controls include that older-host case. The embedding currently carries the earlier supplier payload; adopting this correction requires an explicit supplier revision, body, notice and mirror update followed by fresh installation and affected execution.
+
+Operation records also use captured WeakMap get, set and delete methods through the held Reflect.apply. Later prototype hooks cannot inspect or substitute an operation record, replace its rejection, or intercept retirement. The protocol controls arm real hooks and verify both normal completion and original rejection identity. Embedding native qualification remains required.
