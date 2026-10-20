@@ -34,8 +34,9 @@ const attached = (port, type) => [
   0x10,
 ];
 
-// fwVersion is the int32 of LWP3 §3.5.6, e.g. 0x10000223 for 1.0.00.0223.
-function setup(source, { devices, fwVersion = 0x10000224 }) {
+// fwVersion is the int32 of LWP3 §3.5.6, e.g. 0x10000223 for 1.0.00.0223;
+// systemType the System Type and Device Number byte of §2.1 / §3.5.
+function setup(source, { devices, fwVersion = 0x10000224, systemType = 0x80 }) {
   const writes = [];
   let extension;
   let socket;
@@ -84,6 +85,13 @@ function setup(source, { devices, fwVersion = 0x10000224 }) {
           v.writeInt32LE(fwVersion);
           setTimeout(
             () => this.notifyBytes([9, 0x00, 0x01, 0x03, 0x06, ...v]),
+            0
+          );
+        }
+        // §3.5: Hub Property System Type ID (0x0B), Request Update (0x05)
+        if (bytes[2] === 0x01 && bytes[3] === 0x0b && bytes[4] === 0x05) {
+          setTimeout(
+            () => this.notifyBytes([6, 0x00, 0x01, 0x0b, 0x06, systemType]),
             0
           );
         }
@@ -310,4 +318,55 @@ test("poweredup: the motors' Port Input Format Setup is not dropped on connect",
     .map((bytes) => bytes[3]);
   assert.deepEqual([...new Set(setups)].sort(), [0x00, 0x01]);
   await f.extension.disconnect();
+});
+
+test("poweredup: turn motor off honours float, brake and hold", async () => {
+  const f = setup(PUP, { devices: TECHNIC });
+  await connect(f);
+  await wait(300);
+  const sent = {};
+  for (const action of ["float", "brake", "hold"]) {
+    f.extension.setMotorStopAction({ PORT: "A", ACTION: action });
+    const from = f.writes.length;
+    await f.extension.motorOff({ PORT: "A" });
+    sent[action] = f.outputs(from);
+  }
+  assert.deepEqual(sent, {
+    // §6.1 WriteDirectModeData mode 0, StartPower(Power): 0 float, 127 brake
+    float: [[8, 0x00, 0x81, 0x00, 0x11, 0x51, 0x00, 0]],
+    brake: [[8, 0x00, 0x81, 0x00, 0x11, 0x51, 0x00, 127]],
+    // §3.27.5 StartSpeed(0, MaxPower 100, no profile) holds position
+    hold: [[9, 0x00, 0x81, 0x00, 0x11, 0x07, 0, 100, 0]],
+  });
+  await f.extension.disconnect();
+});
+
+test("poweredup: stopping all motors brakes them by default", async () => {
+  const f = setup(PUP, { devices: TECHNIC });
+  await connect(f);
+  await wait(300);
+  const from = f.writes.length;
+  f.extension._hub.stopAll();
+  assert.deepEqual(f.outputs(from), [
+    [8, 0x00, 0x81, 0x00, 0x11, 0x51, 0x00, 127],
+    [8, 0x00, 0x81, 0x01, 0x11, 0x51, 0x00, 127],
+  ]);
+  await f.extension.disconnect();
+});
+
+test("poweredup: the hub type is named from the LWP3 System Type ID", async () => {
+  const names = {};
+  for (const id of [0x40, 0x41, 0x80, 0x83, 0x7f]) {
+    const f = setup(PUP, { devices: TECHNIC, systemType: id });
+    await connect(f);
+    names[id.toString(16)] = f.extension.getHubType();
+    await f.extension.disconnect();
+  }
+  assert.deepEqual(names, {
+    40: "Boost Move Hub",
+    41: "Powered Up Hub",
+    80: "Control+ Hub",
+    83: "SPIKE Essential Hub",
+    "7f": "Unknown Hub (0x7f)",
+  });
 });
