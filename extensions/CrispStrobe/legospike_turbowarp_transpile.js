@@ -1476,7 +1476,17 @@
 
     sendMessage(options) {
       if (!this.isConnected()) return Promise.resolve();
-      this._ws.send(options.message);
+      // The REPL hands every link what Scratch Link takes: base64 of the
+      // text. The relay forwards text to the hub's serial port as it is (and
+      // ws.onmessage above reads the hub's text as it is), so the base64 has
+      // to come off here, or the hub's REPL is sent base64 and runs nothing.
+      const text =
+        options.encoding === "base64"
+          ? new TextDecoder().decode(
+              Base64Util.base64ToUint8Array(options.message)
+            )
+          : options.message;
+      this._ws.send(text);
       return Promise.resolve();
     }
   }
