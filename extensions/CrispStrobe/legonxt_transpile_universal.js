@@ -817,7 +817,20 @@
         this.startReading();
 
         await this.sleep(100);
-        const firmware = await this.getFirmwareVersion();
+        // SerialBackend has no getFirmwareVersion of its own (that is
+        // NXTPeripheral's): calling it threw a TypeError, the catch below
+        // turned it into "Connection failed", and Web Serial never connected.
+        // Ask the brick directly: GET FIRMWARE VERSION (system command 0x88,
+        // BDK Appendix 1), reply bytes 3-4 = protocol minor/major... 5-6 =
+        // firmware minor/major; reported as NXTPeripheral reports it.
+        const reply = await this.sendTelegram(
+          NXT_OPCODE.GET_FIRMWARE_VERSION,
+          [],
+          true,
+          true
+        );
+        const firmware =
+          reply && reply.length >= 7 ? `${reply[4]}.${reply[3]}` : "Unknown";
         logger.success(`Connected to NXT! Firmware: ${firmware}`);
         return true;
       } catch (error) {
@@ -991,7 +1004,10 @@
           console.log("✅ [NXT] Connected!");
 
           try {
-            await this.getBattery();
+            // BridgeBackend has no getBattery (that is the extension's
+            // block): calling it threw, so every bridge connect was torn
+            // down and rejected. Probe with GET BATTERY LEVEL (0x0B) instead.
+            await this.sendTelegram(NXT_OPCODE.GET_BATT_LVL, [], true);
             resolve();
           } catch (e) {
             this.disconnect();
@@ -1033,7 +1049,9 @@
 
       let cmd;
       if (isSystemCmd) {
-        cmd = needsReply ? NXT_OPCODE.SYSTEM_CMD : NXT_OPCODE.SYSTEM_CMD;
+        cmd = needsReply
+          ? NXT_OPCODE.SYSTEM_CMD
+          : NXT_OPCODE.SYSTEM_CMD_NO_REPLY;
       } else {
         cmd = needsReply
           ? NXT_OPCODE.DIRECT_CMD
@@ -1103,7 +1121,7 @@
         console.warn(
           `⚠️ [NXT] Error: ${status.toString(16)} for opcode ${opcode.toString(16)}`
         );
-        this.resolveRequest(opcode, null);
+        this.resolveRequest(opcode, data);
         return;
       }
 
@@ -1112,7 +1130,6 @@
           if (data.length >= 5) {
             this.battery = data[3] | (data[4] << 8);
             console.log(`🔋 [NXT] Battery: ${this.battery}mV`);
-            this.resolveRequest(opcode, this.battery);
           }
           break;
 
@@ -1127,7 +1144,6 @@
               const val = data[12] | (data[13] << 8);
               this.sensors[port] = val > 32767 ? val - 65536 : val;
               console.log(`📡 [NXT] Sensor ${port}: ${this.sensors[port]}`);
-              this.resolveRequest(opcode, this.sensors[port]);
             }
           }
           break;
@@ -1139,7 +1155,6 @@
             const rot = this.toSigned32(data[21], data[22], data[23], data[24]);
             this.motors[port] = ((rot % 360) + 360) % 360;
             console.log(`⚙️ [NXT] Motor ${port}: ${this.motors[port]}°`);
-            this.resolveRequest(opcode, this.motors[port]);
           }
           break;
 
@@ -1147,16 +1162,13 @@
           if (data.length >= 5) {
             const bytes = Array.from(data.slice(4, 4 + data[3]));
             console.log(`📊 [NXT] LS Read: ${bytes.length} bytes`);
-            this.resolveRequest(opcode, bytes);
           }
           break;
 
         case NXT_OPCODE.READ_IO_MAP:
           if (data.length >= 7) {
             const bytesRead = data[3] | (data[4] << 8);
-            const ioData = Array.from(data.slice(5, 5 + bytesRead));
             console.log(`💾 [NXT] IO Map Read: ${bytesRead} bytes`);
-            this.resolveRequest(opcode, ioData);
           }
           break;
 
@@ -1164,7 +1176,6 @@
           if (data.length >= 7) {
             const bytesWritten = data[5] | (data[6] << 8);
             console.log(`💾 [NXT] IO Map Written: ${bytesWritten} bytes`);
-            this.resolveRequest(opcode, bytesWritten);
           }
           break;
 
@@ -1172,7 +1183,6 @@
           if (data.length >= 4) {
             const handle = data[3];
             console.log(`📂 [NXT] File opened: handle=${handle}`);
-            this.resolveRequest(opcode, handle);
           }
           break;
 
@@ -1180,15 +1190,19 @@
           if (data.length >= 6) {
             const bytesWritten = data[4] | (data[5] << 8);
             console.log(`📝 [NXT] File written: ${bytesWritten} bytes`);
-            this.resolveRequest(opcode, bytesWritten);
           }
           break;
 
         case NXT_OPCODE.CLOSE:
           console.log(`📂 [NXT] File closed`);
-          this.resolveRequest(opcode, true);
           break;
       }
+      // Every caller (NXTPeripheral's getFirmwareVersion, getMotorPosition,
+      // getSensorValue, ...) parses the reply telegram itself, as it gets it
+      // from the serial and Scratch Link backends; resolving with the values
+      // above instead handed them a number, and opcodes outside the switch
+      // (GET FIRMWARE VERSION, ...) never resolved at all.
+      this.resolveRequest(opcode, data);
     }
 
     resolveRequest(opcode, value) {
@@ -6204,7 +6218,10 @@
     }
 
     connect(args) {
-      return this.peripheral.connect(args.PARAM);
+      // In bridge mode the block's argument is URL (_getConnectArgs).
+      return this.peripheral.connect(
+        args.URL !== undefined ? args.URL : args.PARAM
+      );
     }
 
     // ==================== SPRITE STATE BLOCKS (RUNTIME) ====================
