@@ -406,6 +406,32 @@ test("raw colour channels read the colour record's red, green and blue", () => {
   assert.equal(ext.getColorRGB({ PORT: "D", CHANNEL: "red" }), 0);
 });
 
+// --- "start motor at % power": a duty cycle, not a speed ---------------------
+
+test("start motor at % power sends each firmware's documented duty-cycle call", async () => {
+  const ext = loadExtension();
+  const sent = captureSends(ext);
+  // SPIKE 3: motor.set_duty_cycle(port, -10000..10000).
+  ext._peripheral._activeProtocol = "spike3";
+  await ext.motorStartPower({ PORT: "B", POWER: 50 });
+  assert.deepEqual(sent, [
+    "import motor; from hub import port; motor.set_duty_cycle(port.B, 5000)",
+  ]);
+  // 2.x hub module: motor.pwm(-100..100), clamped, one call per port.
+  sent.length = 0;
+  ext._peripheral._activeProtocol = "repl";
+  await ext.motorStartPower({ PORT: "A+C", POWER: -130 });
+  assert.deepEqual(sent, [
+    "import hub; hub.port.A.motor.pwm(-100)",
+    "import hub; hub.port.C.motor.pwm(-100)",
+  ]);
+  // It is a block of its own, labelled as a power in every language.
+  const info = ext.getInfo();
+  const block = info.blocks.find((b) => b && b.opcode === "motorStartPower");
+  assert.ok(block, "motorStartPower is a block");
+  assert.match(block.text, /\[POWER\]/);
+});
+
 let failed = 0;
 for (const { name, fn } of tests) {
   try {

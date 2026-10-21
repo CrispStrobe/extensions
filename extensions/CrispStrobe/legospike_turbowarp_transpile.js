@@ -127,6 +127,7 @@
       motorStart: "[PORT] start motor [DIRECTION]",
       motorStop: "[PORT] stop motor",
       motorSetSpeed: "[PORT] set speed to [SPEED] %",
+      motorStartPower: "[PORT] start motor at [POWER] % power",
       motorSetStopAction: "[PORT] set stop action to [ACTION]",
       getPosition: "[PORT] position",
       getRelativePosition: "[PORT] relative position",
@@ -274,6 +275,7 @@
       motorStart: "[PORT] starte Motor [DIRECTION]",
       motorStop: "[PORT] stoppe Motor",
       motorSetSpeed: "[PORT] setze Geschwindigkeit auf [SPEED] %",
+      motorStartPower: "[PORT] starte Motor mit [POWER] % Leistung",
       motorSetStopAction: "[PORT] setze Stopp-Aktion auf [ACTION]",
       getPosition: "[PORT] Position",
       getRelativePosition: "[PORT] relative Position",
@@ -389,6 +391,7 @@
       motorStart: "[PORT] démarrer moteur [DIRECTION]",
       motorStop: "[PORT] arrêter moteur",
       motorSetSpeed: "[PORT] définir vitesse sur [SPEED] %",
+      motorStartPower: "[PORT] démarrer moteur à [POWER] % de puissance",
       getPosition: "[PORT] position",
       getRelativePosition: "position du moteur [PORT]",
       startMotor: "démarrer moteur [PORT] à [SPEED]%",
@@ -3899,6 +3902,24 @@ continuous_sensor_loop()
             this.addLine(`motor.start(${direction} * 75)`);
           });
         }
+      } else if (opcode === "spikeprime_motorStartPower") {
+        const port = this.getInputValue(block, "PORT", blocks).replace(
+          /"/g,
+          ""
+        );
+        const power = this.getInputValue(block, "POWER", blocks);
+
+        this.usedMotors.add(port);
+
+        const ports = port.includes("+") ? port.split("+") : [port];
+
+        for (const p of ports) {
+          this.addLine(`motor = get_motor("${p}")`);
+          this.safeIfBlock("motor", () => {
+            // Unregulated: the hub module's duty cycle, -100..100.
+            this.addLine(`motor.pwm(int(max(-100, min(100, ${power}))))`);
+          });
+        }
       } else if (opcode === "spikeprime_motorStop") {
         const port = this.getInputValue(block, "PORT", blocks).replace(
           /"/g,
@@ -5174,6 +5195,24 @@ continuous_sensor_loop()
                 defaultValue: "A",
               },
               SPEED: { type: ArgumentType.NUMBER, defaultValue: 75 },
+            },
+          },
+          {
+            // The SPIKE app's "More Motors" block "start motor at % power":
+            // an unregulated duty cycle, not a speed. The hub does not hold a
+            // speed under load (the motor slows, and stalls at a hard stop).
+            // SPIKE 3 Python: motor.set_duty_cycle(port, -10000..10000);
+            // 2.x hub module: hub.port.X.motor.pwm(-100..100).
+            opcode: "motorStartPower",
+            text: t("motorStartPower"),
+            blockType: BlockType.COMMAND,
+            arguments: {
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "MULTIPLE_PORT",
+                defaultValue: "A",
+              },
+              POWER: { type: ArgumentType.NUMBER, defaultValue: 100 },
             },
           },
           {
@@ -7370,6 +7409,29 @@ continuous_sensor_loop()
             )
           );
       });
+      return Promise.all(promises).then(() => {});
+    }
+
+    /**
+     * Start at a power (duty cycle), unregulated: the "More Motors" block.
+     * There is no JSON-RPC or tunnel verb for it that is documented, so both
+     * firmwares get their documented MicroPython call: SPIKE 3's
+     * motor.set_duty_cycle (-10000..10000) and the 2.x hub module's
+     * motor.pwm (-100..100). Power 0 lets the motor coast, as a duty of 0 does.
+     */
+    motorStartPower(args) {
+      const ports = this._validatePorts(Cast.toString(args.PORT));
+      const power = Math.round(
+        MathUtil.clamp(Cast.toNumber(args.POWER), -100, 100)
+      );
+      const spike3 = this._peripheral.protocol === "spike3";
+      const promises = ports.map((port) =>
+        this._peripheral.sendPythonCommand(
+          spike3
+            ? `import motor; from hub import port; motor.set_duty_cycle(port.${port}, ${power * 100})`
+            : `import hub; hub.port.${port}.motor.pwm(${power})`
+        )
+      );
       return Promise.all(promises).then(() => {});
     }
 

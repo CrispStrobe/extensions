@@ -224,12 +224,31 @@ test("nxt bridge: replies read RotationCount 21-24 and the scaled value", async 
   bridge.connected = true;
   bridge.ws = { send() {} };
 
+  // The bridge resolves the reply telegram, as the serial and Scratch Link
+  // backends hand it over (every caller parses it), and keeps its own
+  // readings from the BDK offsets.
   const rotation = bridge.sendTelegram(0x06, [2], true);
   bridge.handleData(framed(outputStateReply(2)));
-  // The bridge reports the angle within one turn: -98765 mod 360.
-  assert.equal(await rotation, ((-98765 % 360) + 360) % 360);
+  assert.deepEqual([...(await rotation)], [...outputStateReply(2)]);
+  // The angle within one turn, from RotationCount 21-24: -98765 mod 360.
+  assert.equal(bridge.motors.C, ((-98765 % 360) + 360) % 360);
 
   const sensor = bridge.sendTelegram(0x07, [0], true);
   bridge.handleData(framed(inputValuesReply(0)));
-  assert.equal(await sensor, -42);
+  assert.deepEqual([...(await sensor)], [...inputValuesReply(0)]);
+  assert.equal(bridge.sensors.S1, -42);
+});
+
+test("nxt: start motor at % power is SETOUTPUTSTATE unregulated (MOTORON|BRAKE, IDLE)", async () => {
+  const f = setup();
+  await connect(f);
+  await f.extension.motorStartPower({ PORT: "B", POWER: -50 });
+  await wait(10);
+  // Appendix 2 SETOUTPUTSTATE (0x04, no reply 0x80): port, power (int8),
+  // mode 0x03 (MOTORON | BRAKE, no REGULATED bit), regulation 0x00 (IDLE),
+  // turn ratio, run state 0x20 (RUNNING), TachoLimit 0 (forever).
+  assert.deepEqual(
+    f.sent.at(-1).slice(2),
+    [0x80, 0x04, 1, 0xce, 0x03, 0x00, 0, 0x20, 0, 0, 0, 0]
+  );
 });

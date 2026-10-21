@@ -370,3 +370,41 @@ test("poweredup: the hub type is named from the LWP3 System Type ID", async () =
     "7f": "Unknown Hub (0x7f)",
   });
 });
+
+test("poweredup: start motor at % power is StartPower, signed, direction applied", async () => {
+  const f = setup(PUP, { devices: TECHNIC });
+  await connect(f);
+  await wait(300);
+  let from = f.writes.length;
+  await f.extension.motorStartPower({ PORT: "A", POWER: 50 });
+  // §3.27.1 StartPower(Power) as §6.1 WriteDirectModeData mode 0: a duty, no regulation.
+  assert.deepEqual(f.outputs(from), [
+    [8, 0x00, 0x81, 0x00, 0x11, 0x51, 0x00, 50],
+  ]);
+  f.extension.setMotorDirection({ PORT: "A", DIRECTION: "backward" });
+  await wait(60);
+  from = f.writes.length;
+  await f.extension.motorStartPower({ PORT: "A", POWER: 140 });
+  // Clamped to 100 (never the 127 BRAKE sentinel), reversed: -100 as int8.
+  assert.deepEqual(f.outputs(from), [
+    [8, 0x00, 0x81, 0x00, 0x11, 0x51, 0x00, 0x9c],
+  ]);
+  await f.extension.disconnect();
+});
+
+test("boost: start motor at % power is StartPower on each motor of the block", async () => {
+  const f = setup(BOOST, { devices: MOVE_HUB_NEW });
+  await connect(f);
+  const from = f.writes.length;
+  await f.extension.motorStartPower({ MOTOR_ID: "AB", POWER: -30 });
+  await wait(120);
+  const sent = f
+    .outputs(from)
+    .filter((bytes) => bytes[5] === 0x51)
+    .map((bytes) => [bytes[3], bytes[6], bytes[7]]);
+  assert.deepEqual(sent, [
+    [0x00, 0x00, 0xe2],
+    [0x01, 0x00, 0xe2],
+  ]);
+  await f.extension.disconnect();
+});
