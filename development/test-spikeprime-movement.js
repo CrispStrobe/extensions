@@ -125,6 +125,25 @@ test("cm and in are sent as rotations", async () => {
   await done;
 });
 
+// --- an empty or unknown port is a no-op, not a TypeError -------------------
+
+test("a single-port block with no valid port does nothing", async () => {
+  const ext = loadExtension();
+  const sent = captureSends(ext);
+  const before = JSON.stringify(ext._peripheral.motorSettings);
+  for (const PORT of ["", "G", "A+B", undefined]) {
+    await ext.motorSetStopAction({ PORT, ACTION: "hold" });
+    await ext.motorRunToPosition({ PORT, POSITION: 90 });
+    await ext.setMovementMotors({ PORT_A: PORT, PORT_B: "B" });
+  }
+  assert.equal(JSON.stringify(ext._peripheral.motorSettings), before);
+  assert.deepEqual([...ext._peripheral.movementMotors], ["A", "B"]);
+  assert.deepEqual(sent, []);
+  await ext.motorSetStopAction({ PORT: " c ", ACTION: "hold" });
+  assert.equal(ext._peripheral.motorSettings.C.stopMode, 2);
+  assert.match(sent[0], /hub\.port\.C\.motor\.set_stop_action\('hold'\)/);
+});
+
 // --- defect 1: the block waits for the move to end --------------------------
 
 test("waits for the counted position to advance by the wheel degrees", async () => {

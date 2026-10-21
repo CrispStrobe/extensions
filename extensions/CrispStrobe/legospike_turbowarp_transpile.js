@@ -6407,8 +6407,9 @@ continuous_sensor_loop()
 
     // Movement implementations
     setMovementMotors(args) {
-      const portA = Cast.toString(args.PORT_A).trim().toUpperCase();
-      const portB = Cast.toString(args.PORT_B).trim().toUpperCase();
+      const portA = this._validatePort(args.PORT_A);
+      const portB = this._validatePort(args.PORT_B);
+      if (!portA || !portB) return;
       this._peripheral._movementMotors = [portA, portB];
       // Tell the hub too: motors.move/start/... drive whatever the hub's own
       // motors pair is, and recording the ports here alone left it unchanged.
@@ -6628,7 +6629,8 @@ continuous_sensor_loop()
     }
 
     motorRunToPosition(args) {
-      const port = Cast.toString(args.PORT).trim().toUpperCase();
+      const port = this._validatePort(args.PORT);
+      if (!port) return;
       const position = Cast.toNumber(args.POSITION);
       const speed = this._peripheral.motorSettings[port].speed;
       return this._peripheral.sendPythonCommand(
@@ -6729,7 +6731,8 @@ continuous_sensor_loop()
     }
 
     motorSetStopAction(args) {
-      const port = Cast.toString(args.PORT).trim().toUpperCase();
+      const port = this._validatePort(args.PORT);
+      if (!port) return;
       const action = Cast.toString(args.ACTION);
       const stopModeMap = { coast: 0, brake: 1, hold: 2 };
       this._peripheral.motorSettings[port].stopMode = stopModeMap[action] || 1;
@@ -7575,6 +7578,22 @@ continuous_sensor_loop()
     _noteToFrequency(note) {
       return Math.pow(2, (note - 69 + 12) / 12) * 440;
     }
+    /**
+     * One motor port, A to F, or "" when the argument names none. A block
+     * whose port menu arrives empty (a project that stored the port where the
+     * editor does not read it) or holding a reporter's odd value does
+     * nothing, as a multi-port block already does with no valid port
+     * (_validatePorts), rather than throwing on motorSettings[port].
+     */
+    _validatePort(value) {
+      const port = Cast.toString(value).trim().toUpperCase();
+      if (/^[A-F]$/.test(port)) return port;
+      console.warn(
+        `[SPIKE] no motor port "${Cast.toString(value)}": the block does nothing`
+      );
+      return "";
+    }
+
     _validatePorts(text) {
       return text
         .toUpperCase()
