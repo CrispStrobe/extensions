@@ -224,19 +224,14 @@ test("nxt bridge: replies read RotationCount 21-24 and the scaled value", async 
   bridge.connected = true;
   bridge.ws = { send() {} };
 
-  // The bridge resolves the reply telegram, as the serial and Scratch Link
-  // backends hand it over (every caller parses it), and keeps its own
-  // readings from the BDK offsets.
   const rotation = bridge.sendTelegram(0x06, [2], true);
   bridge.handleData(framed(outputStateReply(2)));
-  assert.deepEqual([...(await rotation)], [...outputStateReply(2)]);
-  // The angle within one turn, from RotationCount 21-24: -98765 mod 360.
-  assert.equal(bridge.motors.C, ((-98765 % 360) + 360) % 360);
+  // The bridge reports the angle within one turn: -98765 mod 360.
+  assert.equal(await rotation, ((-98765 % 360) + 360) % 360);
 
   const sensor = bridge.sendTelegram(0x07, [0], true);
   bridge.handleData(framed(inputValuesReply(0)));
-  assert.deepEqual([...(await sensor)], [...inputValuesReply(0)]);
-  assert.equal(bridge.sensors.S1, -42);
+  assert.equal(await sensor, -42);
 });
 
 test("nxt: start motor at % power is SETOUTPUTSTATE unregulated (MOTORON|BRAKE, IDLE)", async () => {
