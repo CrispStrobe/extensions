@@ -212,7 +212,7 @@ test("nxt: GETINPUTVALUES fields come from their BDK offsets", async () => {
   assert.equal(values.calibrated_value, 612);
 });
 
-test("nxt bridge: replies read RotationCount 21-24 and the scaled value", async () => {
+test("nxt bridge: replies resolve as the telegram, and the bookkeeping reads RotationCount 21-24 and the scaled value", async () => {
   const f = setup();
   const peripheral = f.extension.peripheral;
   peripheral.setConnectionMode("bridge");
@@ -224,14 +224,43 @@ test("nxt bridge: replies read RotationCount 21-24 and the scaled value", async 
   bridge.connected = true;
   bridge.ws = { send() {} };
 
+  // Every caller (getMotorPosition, getSensorValue, getFirmwareVersion, ...)
+  // parses the reply telegram, as the serial and Scratch Link backends hand
+  // it over, so the bridge resolves with the telegram too.
   const rotation = bridge.sendTelegram(0x06, [2], true);
   bridge.handleData(framed(outputStateReply(2)));
-  // The bridge reports the angle within one turn: -98765 mod 360.
-  assert.equal(await rotation, ((-98765 % 360) + 360) % 360);
+  assert.deepEqual(Array.from(await rotation), Array.from(outputStateReply(2)));
+  // Its own record is the angle within one turn: -98765 mod 360.
+  assert.equal(bridge.motors.C, ((-98765 % 360) + 360) % 360);
 
   const sensor = bridge.sendTelegram(0x07, [0], true);
   bridge.handleData(framed(inputValuesReply(0)));
-  assert.equal(await sensor, -42);
+  assert.deepEqual(Array.from(await sensor), Array.from(inputValuesReply(0)));
+  assert.equal(bridge.sensors.S1, -42);
+});
+
+test("nxt bridge: the peripheral's own readers parse what the bridge resolves", async () => {
+  const f = setup();
+  const peripheral = f.extension.peripheral;
+  peripheral.setConnectionMode("bridge");
+  await peripheral.connect("ws://bridge.invalid").catch(() => {});
+  const bridge = peripheral._bridgeBackend;
+  bridge.connected = true;
+  // A relay that answers GETOUTPUTSTATE / GETINPUTVALUES for the port asked.
+  bridge.ws = {
+    send(text) {
+      const packet = Buffer.from(text, "base64");
+      const [opcode, port] = [packet[3], packet[4]];
+      const reply =
+        opcode === 0x06 ? outputStateReply(port) : inputValuesReply(port);
+      setTimeout(() => bridge.handleData(framed(reply)), 0);
+    },
+  };
+  const state = await peripheral.getMotorPosition("B");
+  assert.equal(state.tacho_count, -1234);
+  assert.equal(state.rotation_count, -98765);
+  const values = await peripheral.getSensorValue("S3");
+  assert.equal(values.scaled_value, -42);
 });
 
 test("nxt: start motor at % power is SETOUTPUTSTATE unregulated (MOTORON|BRAKE, IDLE)", async () => {
