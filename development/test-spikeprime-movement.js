@@ -456,6 +456,18 @@ test("start motor at % power sends each firmware's documented duty-cycle call", 
   assert.match(block.text, /\[POWER\]/);
 });
 
+test("start motor's MicroPython fallback asks for a speed, not a duty", async () => {
+  const ext = loadExtension();
+  const sent = captureSends(ext);
+  // A hub that does not take the JSON-RPC verb: the block falls back to MicroPython.
+  ext._peripheral._repl.sendCommand = () =>
+    Promise.reject(new Error("no verb"));
+  ext._peripheral._activeProtocol = "repl";
+  ext._peripheral.motorSettings.A.speed = 50;
+  await ext.motorStart({ PORT: "A", DIRECTION: -1 });
+  assert.deepEqual(sent, ["import hub; hub.port.A.motor.run_at_speed(-50)"]);
+});
+
 let failed = 0;
 for (const { name, fn } of tests) {
   try {

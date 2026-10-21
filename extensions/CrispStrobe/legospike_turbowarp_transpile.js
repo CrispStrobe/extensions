@@ -6696,7 +6696,10 @@ continuous_sensor_loop()
           false // needsResponse = false
         );
         const altCommand = this._peripheral.sendPythonCommand(
-          `import hub; hub.port.${port}.motor.pwm(${Math.round(setting.speed * direction)})`
+          // The hub module's speed command (percent, regulated), not pwm():
+          // pwm is a duty cycle, so a loaded motor would not hold the speed
+          // the block asks for (pwm is "start motor at % power").
+          `import hub; hub.port.${port}.motor.run_at_speed(${Math.round(setting.speed * direction)})`
         );
         return standardCommand.catch(() => altCommand);
       });
