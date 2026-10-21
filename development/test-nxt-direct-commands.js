@@ -262,3 +262,17 @@ test("nxt bridge: the peripheral's own readers parse what the bridge resolves", 
   const values = await peripheral.getSensorValue("S3");
   assert.equal(values.scaled_value, -42);
 });
+
+test("nxt: start motor at % power is SETOUTPUTSTATE unregulated (MOTORON|BRAKE, IDLE)", async () => {
+  const f = setup();
+  await connect(f);
+  await f.extension.motorStartPower({ PORT: "B", POWER: -50 });
+  await wait(10);
+  // Appendix 2 SETOUTPUTSTATE (0x04, no reply 0x80): port, power (int8),
+  // mode 0x03 (MOTORON | BRAKE, no REGULATED bit), regulation 0x00 (IDLE),
+  // turn ratio, run state 0x20 (RUNNING), TachoLimit 0 (forever).
+  assert.deepEqual(
+    f.sent.at(-1).slice(2),
+    [0x80, 0x04, 1, 0xce, 0x03, 0x00, 0, 0x20, 0, 0, 0, 0]
+  );
+});

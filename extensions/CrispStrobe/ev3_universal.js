@@ -53,6 +53,7 @@
       // Motors
       motors: "Motors",
       motorRun: "motor [PORT] run at [POWER]%",
+      motorStartPower: "start motor [PORT] at [POWER] % power",
       motorRunTime: "motor [PORT] run for [TIME] seconds at [POWER]%",
       motorRunRotations: "motor [PORT] run [ROTATIONS] rotations at [POWER]%",
       motorRunDegrees: "motor [PORT] run [DEGREES] degrees at [POWER]%",
@@ -188,6 +189,7 @@
 
       motors: "Motoren",
       motorRun: "Motor [PORT] läuft mit [POWER]%",
+      motorStartPower: "Motor [PORT] mit [POWER] % Leistung starten",
       motorRunTime: "Motor [PORT] läuft für [TIME] Sekunden mit [POWER]%",
       motorRunRotations:
         "Motor [PORT] läuft [ROTATIONS] Umdrehungen mit [POWER]%",
@@ -1436,6 +1438,12 @@
       this.log(`Processing block: ${opcode}`, { block: block.id });
       try {
         if (opcode === "ev3_motorRun" || opcode === "ev3lms_motorRun") {
+          this.transpileMotorRun(block, blocks);
+        } else if (
+          opcode === "ev3_motorStartPower" ||
+          opcode === "ev3lms_motorStartPower"
+        ) {
+          // Unregulated: the same OUTPUT_POWER + OUTPUT_START.
           this.transpileMotorRun(block, blocks);
         } else if (
           opcode === "ev3_motorRunTime" ||
@@ -3417,6 +3425,26 @@
       this.sendDirect(cmd);
     }
 
+    /**
+     * Unregulated: opOUTPUT_POWER, "the system will NOT automatically adjust
+     * the power to keep a speed" (EV3 Firmware Developer Kit, opOUTPUT_POWER
+     * against opOUTPUT_SPEED), then opOUTPUT_START. The motor slows under
+     * load and stalls at a hard stop.
+     */
+    motorStartPower(ports, power) {
+      log.debug("EV3Peripheral: Motor start at power", ports, "power", power);
+      const p = Math.round(Math.max(-100, Math.min(100, power)));
+      return this.sendDirect([
+        OP.OUTPUT_POWER,
+        0x00,
+        ports,
+        ...LC1(p),
+        OP.OUTPUT_START,
+        0x00,
+        ports,
+      ]);
+    }
+
     motorOn(ports, power) {
       log.debug("EV3Peripheral: Motor on", ports, "power", power);
       const p = Math.max(-100, Math.min(100, power));
@@ -4373,6 +4401,17 @@
             opcode: "motorRun",
             blockType: Scratch.BlockType.COMMAND,
             text: t("motorRun"),
+            arguments: {
+              PORT: { type: Scratch.ArgumentType.STRING, menu: "motorPorts" },
+              POWER: { type: Scratch.ArgumentType.NUMBER, defaultValue: 50 },
+            },
+          },
+          {
+            // An unregulated duty cycle (opOUTPUT_POWER), not a speed: the
+            // brick does not hold the speed under load.
+            opcode: "motorStartPower",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("motorStartPower"),
             arguments: {
               PORT: { type: Scratch.ArgumentType.STRING, menu: "motorPorts" },
               POWER: { type: Scratch.ArgumentType.NUMBER, defaultValue: 50 },
@@ -5443,6 +5482,13 @@
     }
 
     // Motor methods (real-time control when connected)
+    motorStartPower(args) {
+      return this.ev3.motorStartPower(
+        this._ports(args.PORT),
+        _Cast.toNumber(args.POWER)
+      );
+    }
+
     motorRun(args) {
       return this.ev3.motorRun(
         this._ports(args.PORT),

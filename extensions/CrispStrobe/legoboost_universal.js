@@ -30,6 +30,7 @@
       "boost.motorOnSeconds": "turn motor [MOTOR_ID] on for [TIME] seconds",
       "boost.motorOnDegrees": "turn motor [MOTOR_ID] on for [DEGREES] degrees",
       "boost.motorPower": "set motor [MOTOR_ID] power to [POWER]%",
+      "boost.motorStartPower": "start motor [MOTOR_ID] at [POWER] % power",
       "boost.motorDirection":
         "set motor [MOTOR_ID] direction to [MOTOR_DIRECTION]",
       "boost.motorStopAction": "set motor [MOTOR_ID] stop action to [ACTION]",
@@ -72,6 +73,8 @@
         "Motor [MOTOR_ID] für [TIME] Sekunden einschalten",
       "boost.motorOnDegrees": "Motor [MOTOR_ID] um [DEGREES] Grad drehen",
       "boost.motorPower": "Motorleistung [MOTOR_ID] auf [POWER]% setzen",
+      "boost.motorStartPower":
+        "Motor [MOTOR_ID] mit [POWER] % Leistung starten",
       "boost.motorDirection":
         "Motorrichtung [MOTOR_ID] auf [MOTOR_DIRECTION] setzen",
       "boost.motorStopAction":
@@ -117,6 +120,8 @@
         "allumer moteur [MOTOR_ID] pendant [TIME] secondes",
       "boost.motorOnDegrees": "tourner moteur [MOTOR_ID] de [DEGREES] degrés",
       "boost.motorPower": "régler puissance moteur [MOTOR_ID] sur [POWER]%",
+      "boost.motorStartPower":
+        "démarrer moteur [MOTOR_ID] à [POWER] % de puissance",
       "boost.motorDirection":
         "régler direction moteur [MOTOR_ID] sur [MOTOR_DIRECTION]",
       "boost.motorStopAction":
@@ -712,6 +717,8 @@
     ON_FOREVER: 1,
     ON_FOR_TIME: 2,
     ON_FOR_ROTATION: 3,
+    // StartPower: an unregulated duty cycle (LWP3 §3.27.1), not a speed.
+    ON_AT_POWER: 4,
   };
 
   const BoostMotorLabel = {
@@ -851,6 +858,33 @@
         ]
       );
 
+      this._parent.send(BoostBLE.characteristic, cmd);
+    }
+
+    /**
+     * StartPower(Power) (LWP3 §3.27.1, sent as WriteDirectModeData mode 0,
+     * §6.1): "adjustable PWM output … no speed regulation". The power is
+     * -100..100 with the motor's direction applied; 0 floats.
+     */
+    startPower(power) {
+      const duty = Math.round(
+        MathUtil.clamp(power * this._direction, -100, 100)
+      );
+      logger.debug(`Motor ${this._index} start at power ${duty}`);
+      if (this._pendingDurationTimeoutId) {
+        clearTimeout(this._pendingDurationTimeoutId);
+        this._pendingDurationTimeoutId = null;
+        this._pendingDurationTimeoutStartTime = null;
+        this._pendingDurationTimeoutDelay = null;
+      }
+      this._status = BoostMotorState.ON_AT_POWER;
+      const cmd = this._parent.generateOutputCommand(
+        this._index,
+        BoostOutputExecution.EXECUTE_IMMEDIATELY +
+          BoostOutputExecution.COMMAND_FEEDBACK,
+        BoostOutputSubCommand.WRITE_DIRECT_MODE_DATA,
+        [0x00, duty & 0xff]
+      );
       this._parent.send(BoostBLE.characteristic, cmd);
     }
 
@@ -2230,6 +2264,27 @@
 
           "---",
 
+          {
+            // An unregulated duty cycle (LWP3 StartPower), not a speed: the
+            // motor slows under load and stalls at a hard stop.
+            opcode: "motorStartPower",
+            blockType: BlockType.COMMAND,
+            text: t("boost.motorStartPower"),
+            arguments: {
+              MOTOR_ID: {
+                type: ArgumentType.STRING,
+                menu: "motorId",
+                defaultValue: BoostMotorLabel.A,
+              },
+              POWER: {
+                type: ArgumentType.NUMBER,
+                defaultValue: 50,
+              },
+            },
+          },
+
+          "---",
+
           // Motor settings blocks
           {
             opcode: "setMotorPower",
@@ -2809,6 +2864,21 @@
       });
 
       return Promise.all(promises).then(() => {});
+    }
+
+    motorStartPower(args) {
+      if (!this._ensureConnected()) return;
+
+      this._forEachMotor(args.MOTOR_ID, (motorIndex) => {
+        const motor = this._peripheral.motor(motorIndex);
+        if (motor) {
+          motor.startPower(Cast.toNumber(args.POWER));
+        }
+      });
+
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(), BoostBLE.sendInterval);
+      });
     }
 
     // ========================================================================

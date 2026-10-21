@@ -146,3 +146,21 @@ test("ev3: a reply split across two messages resolves its request", async () => 
   assert.equal(await value, 42);
   await f.extension.disconnect();
 });
+
+test("ev3: start motor at % power is opOUTPUT_POWER (unregulated), not OUTPUT_SPEED", async () => {
+  const f = setup();
+  await connect(f);
+  await f.extension.motorStartPower({ PORT: "B", POWER: 50 });
+  await wait(10);
+  const packet = f.sent.at(-1);
+  // After length, counter, type and the 2-byte allocation: the byte codes.
+  // opOUTPUT_POWER 0xA4, layer 0, ports B (2), LC1 50; opOUTPUT_START 0xA6.
+  assert.deepEqual(
+    packet.slice(7),
+    [0xa4, 0x00, 0x02, 0x81, 50, 0xa6, 0x00, 0x02]
+  );
+  await f.extension.motorStartPower({ PORT: "B", POWER: -140 });
+  await wait(10);
+  assert.deepEqual(f.sent.at(-1).slice(7, 12), [0xa4, 0x00, 0x02, 0x81, 0x9c]);
+  await f.extension.disconnect();
+});

@@ -33,6 +33,7 @@
       "pup.motorOnSeconds": "turn motor [PORT] on for [TIME] seconds",
       "pup.motorOnDegrees": "turn motor [PORT] on for [DEGREES] degrees",
       "pup.motorPower": "set motor [PORT] power to [POWER]%",
+      "pup.motorStartPower": "start motor [PORT] at [POWER] % power",
       "pup.motorDirection": "set motor [PORT] direction to [DIRECTION]",
       "pup.motorStopAction": "set motor [PORT] stop action to [ACTION]",
       "pup.motorAccel": "set motor [PORT] acceleration to [TIME] ms",
@@ -81,6 +82,7 @@
       "pup.motorOnSeconds": "Motor [PORT] für [TIME] Sekunden einschalten",
       "pup.motorOnDegrees": "Motor [PORT] um [DEGREES] Grad drehen",
       "pup.motorPower": "Motorleistung [PORT] auf [POWER]% setzen",
+      "pup.motorStartPower": "Motor [PORT] mit [POWER] % Leistung starten",
       "pup.motorDirection": "Motorrichtung [PORT] auf [DIRECTION] setzen",
       "pup.motorStopAction": "Motor-Stoppaktion [PORT] auf [ACTION] setzen",
       "pup.motorAccel": "Motor-Beschleunigung [PORT] auf [TIME] ms setzen",
@@ -129,6 +131,7 @@
       "pup.motorOnSeconds": "allumer moteur [PORT] pendant [TIME] secondes",
       "pup.motorOnDegrees": "tourner moteur [PORT] de [DEGREES] degrés",
       "pup.motorPower": "régler puissance moteur [PORT] sur [POWER]%",
+      "pup.motorStartPower": "démarrer moteur [PORT] à [POWER] % de puissance",
       "pup.motorDirection": "régler direction moteur [PORT] sur [DIRECTION]",
       "pup.motorStopAction": "régler action d'arrêt moteur [PORT] sur [ACTION]",
       "pup.motorAccel": "régler accélération moteur [PORT] sur [TIME] ms",
@@ -909,6 +912,8 @@
     ON_FOREVER: 1,
     ON_FOR_TIME: 2,
     ON_FOR_ROTATION: 3,
+    // StartPower: an unregulated duty cycle (LWP3 §3.27.1), not a speed.
+    ON_AT_POWER: 4,
   };
 
   const _MotorLabel = {
@@ -1149,6 +1154,33 @@
         ])
       );
 
+      this._parent.send(PoweredUpBLE.characteristic, cmd);
+    }
+
+    /**
+     * StartPower(Power) (LWP3 §3.27.1, sent as WriteDirectModeData mode 0,
+     * §6.1): "adjustable PWM output … no speed regulation". The power is
+     * -100..100 with the motor's direction applied; 0 floats (and 127, which
+     * the clamp never reaches, would brake).
+     */
+    startPower(power) {
+      const duty = Math.round(
+        MathUtil.clamp(power * this._direction, -100, 100)
+      );
+      logger.debug(`Motor ${this._portId} start at power ${duty}`);
+      if (this._pendingDurationTimeoutId) {
+        clearTimeout(this._pendingDurationTimeoutId);
+        this._pendingDurationTimeoutId = null;
+        this._pendingDurationTimeoutStartTime = null;
+        this._pendingDurationTimeoutDelay = null;
+      }
+      this._status = MotorState.ON_AT_POWER;
+      const cmd = this._parent.generateOutputCommand(
+        this._portId,
+        OutputExecution.EXECUTE_IMMEDIATELY + OutputExecution.COMMAND_FEEDBACK,
+        OutputSubCommand.WRITE_DIRECT_MODE_DATA,
+        [0x00, duty & 0xff]
+      );
       this._parent.send(PoweredUpBLE.characteristic, cmd);
     }
 
@@ -2779,6 +2811,27 @@
 
           "---",
 
+          {
+            // An unregulated duty cycle (LWP3 StartPower), not a speed: the
+            // motor slows under load and stalls at a hard stop.
+            opcode: "motorStartPower",
+            blockType: BlockType.COMMAND,
+            text: t("pup.motorStartPower"),
+            arguments: {
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "portLabel",
+                defaultValue: "A",
+              },
+              POWER: {
+                type: ArgumentType.NUMBER,
+                defaultValue: 50,
+              },
+            },
+          },
+
+          "---",
+
           // Motor settings blocks
           {
             opcode: "setMotorPower",
@@ -3449,6 +3502,19 @@
         (Math.abs(degrees) / 360) * 1000 * (100 / motor.power);
       return new Promise((resolve) => {
         setTimeout(() => resolve(), estimatedTime);
+      });
+    }
+
+    motorStartPower(args) {
+      if (!this._ensureConnected()) return;
+
+      const motor = this._getMotor(args.PORT);
+      if (motor) {
+        motor.startPower(Cast.toNumber(args.POWER));
+      }
+
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(), PoweredUpBLE.sendInterval);
       });
     }
 

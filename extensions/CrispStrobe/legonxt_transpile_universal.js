@@ -27,6 +27,7 @@
 
       // Motors
       motorOn: "motor [PORT] power [POWER]",
+      motorStartPower: "start motor [PORT] at [POWER] % power",
       motorRunDegrees: "motor [PORT] power [POWER] for [DEGREES]°",
       motorRunRotations: "motor [PORT] power [POWER] for [ROTATIONS] rotations",
       motorStop: "stop motor [PORT] [ACTION]",
@@ -175,6 +176,7 @@
 
       // Motors
       motorOn: "Motor [PORT] Leistung [POWER]",
+      motorStartPower: "Motor [PORT] mit [POWER] % Leistung starten",
       motorRunDegrees: "Motor [PORT] Leistung [POWER] für [DEGREES]°",
       motorRunRotations:
         "Motor [PORT] Leistung [POWER] für [ROTATIONS] Umdrehungen",
@@ -2396,6 +2398,17 @@
         const power = this.getInputValue(block, "POWER", blocks);
         this.addLine(`OnFwd(OUT_${p}, ${power});`);
       } else if (
+        opcode === "legonxt_motorStartPower" ||
+        opcode === "motorStartPower"
+      ) {
+        // NXC's OnFwd is the unregulated output (OnFwdReg regulates).
+        let p = this.getInputValue(block, "PORT", blocks).replace(/"/g, "");
+        if (p === "0") p = "A";
+        else if (p === "1") p = "B";
+        else if (p === "2") p = "C";
+        const power = this.getInputValue(block, "POWER", blocks);
+        this.addLine(`OnFwd(OUT_${p}, ${power});`);
+      } else if (
         opcode === "legonxt_motorRunDegrees" ||
         opcode === "motorRunDegrees"
       ) {
@@ -4357,6 +4370,35 @@
       this.motorState[port].power = clampedPower;
     }
 
+    /**
+     * Unregulated: SETOUTPUTSTATE with MOTORON | BRAKE and regulation IDLE
+     * (NXT Bluetooth Developer Kit, Appendix 2): the power is a duty cycle,
+     * the voltage held between the pulses. No speed regulation: the motor
+     * slows under load and stalls at a hard stop.
+     */
+    async setMotorPowerUnregulated(port, power) {
+      logger.log(`Setting motor ${port} to unregulated power ${power}`);
+      const portNum = PORT[port];
+      const clampedPower = Math.round(MathUtil.clamp(power, -100, 100));
+      await this.sendTelegram(
+        NXT_OPCODE.SET_OUT_STATE,
+        [
+          portNum,
+          clampedPower,
+          MOTOR_MODE.ON_BRAKE,
+          REGULATION_MODE.IDLE,
+          0,
+          RUN_STATE.RUNNING,
+          0,
+          0,
+          0,
+          0,
+        ],
+        false
+      );
+      this.motorState[port].power = clampedPower;
+    }
+
     async motorRunForDegrees(port, power, degrees) {
       logger.log(`Running motor ${port} for ${degrees}° at power ${power}`);
       const portNum = PORT[port];
@@ -5278,6 +5320,21 @@
             opcode: "motorOn",
             blockType: Scratch.BlockType.COMMAND,
             text: t("motorOn"),
+            arguments: {
+              PORT: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "MOTOR_PORT",
+                defaultValue: "A",
+              },
+              POWER: { type: Scratch.ArgumentType.NUMBER, defaultValue: 75 },
+            },
+          },
+          {
+            // An unregulated duty cycle, not a speed (see
+            // setMotorPowerUnregulated).
+            opcode: "motorStartPower",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("motorStartPower"),
             arguments: {
               PORT: {
                 type: Scratch.ArgumentType.STRING,
@@ -6682,6 +6739,10 @@
     motorOn(args) {
       const power = Cast.toNumber(args.POWER);
       return this.peripheral.setMotorPower(args.PORT, power, true);
+    }
+    motorStartPower(args) {
+      const power = Cast.toNumber(args.POWER);
+      return this.peripheral.setMotorPowerUnregulated(args.PORT, power);
     }
     motorRunDegrees(args) {
       const power = Cast.toNumber(args.POWER);
