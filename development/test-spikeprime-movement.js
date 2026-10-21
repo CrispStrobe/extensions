@@ -417,6 +417,11 @@ test("start motor at % power sends each firmware's documented duty-cycle call", 
   assert.deepEqual(sent, [
     "import motor; from hub import port; motor.set_duty_cycle(port.B, 5000)",
   ]);
+  sent.length = 0;
+  await ext.motorStartPower({ PORT: "B", POWER: 12.34 });
+  assert.deepEqual(sent, [
+    "import motor; from hub import port; motor.set_duty_cycle(port.B, 1234)",
+  ]);
   // 2.x hub module: motor.pwm(-100..100), clamped, one call per port.
   sent.length = 0;
   ext._peripheral._activeProtocol = "repl";

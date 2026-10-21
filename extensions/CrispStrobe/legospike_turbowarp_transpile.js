@@ -7421,15 +7421,14 @@ continuous_sensor_loop()
      */
     motorStartPower(args) {
       const ports = this._validatePorts(Cast.toString(args.PORT));
-      const power = Math.round(
-        MathUtil.clamp(Cast.toNumber(args.POWER), -100, 100)
-      );
+      // SPIKE 3 resolves a hundredth of a percent; the 2.x pwm a whole one.
+      const power = MathUtil.clamp(Cast.toNumber(args.POWER), -100, 100);
       const spike3 = this._peripheral.protocol === "spike3";
       const promises = ports.map((port) =>
         this._peripheral.sendPythonCommand(
           spike3
-            ? `import motor; from hub import port; motor.set_duty_cycle(port.${port}, ${power * 100})`
-            : `import hub; hub.port.${port}.motor.pwm(${power})`
+            ? `import motor; from hub import port; motor.set_duty_cycle(port.${port}, ${Math.round(power * 100)})`
+            : `import hub; hub.port.${port}.motor.pwm(${Math.round(power)})`
         )
       );
       return Promise.all(promises).then(() => {});
