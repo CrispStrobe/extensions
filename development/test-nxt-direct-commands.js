@@ -286,12 +286,13 @@ function strictPeer(answer) {
   const f = setup();
   const calls = [];
   const sleeps = [];
-  f.extension.peripheral.sendTelegram = async (op, data, ack, system) => {
+  f.extension.peripheral.sendTelegram = (op, data, ack, system) => {
     calls.push({ op, data: Array.from(data), ack, system: system === true });
-    return answer(op, Array.from(data), calls.length);
+    return Promise.resolve(answer(op, Array.from(data), calls.length));
   };
-  f.extension.peripheral.sleep = async (ms) => {
+  f.extension.peripheral.sleep = (ms) => {
     sleeps.push(ms);
+    return Promise.resolve();
   };
   return { ...f, calls, sleeps };
 }
@@ -459,7 +460,8 @@ test("nxt button blocks read the stock Button state/release offsets and reject u
   const before = f.calls.length;
   await assert.rejects(f.extension.buttonPressed({ BUTTON: "constructor" }));
   assert.equal(f.calls.length, before);
-  f.extension.peripheral.sendTelegram = async () => mapReply(0x40001, 0);
+  f.extension.peripheral.sendTelegram = () =>
+    Promise.resolve(mapReply(0x40001, 0));
   await assert.rejects(
     f.extension.buttonPressed({ BUTTON: "enter" }),
     /Incomplete/
