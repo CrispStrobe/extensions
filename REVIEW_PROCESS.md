@@ -1,55 +1,42 @@
-# Extension review
+# Review and merging in this fork
 
-The status quo of having GarboMuffin review everything is an abject failure. The goal in this document is to define the expectations for approving and merging changes.
+This policy governs `CrispStrobe/extensions`. The repository owner directs work
+in this independently maintained fork.
 
-The requirements for merging a pull request are:
+## Authorization
 
- - Pass the automated checks
- - Get two reviewers to approve it
+The owner's instructions authorize implementation, testing, commits, normal
+pushes, pull requests, repairs and qualified merges within the requested scope.
+Agents should carry that work through completion without asking for another
+approval for each already-authorized step.
 
-**That's it. If GitHub will let you merge it, go ahead and do it.** The rest of this document will try to define what it means to approve a pull request.
+There is no standing requirement for two external reviewer approvals. The
+owner may explicitly request additional review for a particular change. Record
+actual reviews accurately; never invent approvals or represent automated
+checks as human reviews.
 
-I'm not expecting you to review things to the same standard I tried to. That would be hopeless. Just do your best and make a good effort. If you miss things, that's fine. I missed a lot too.
+## Qualification
 
-Having to copy and paste templates might seem a bit silly, but this way it's clear to everyone what the expectations are. No one reads CONTRIBUTING.md, but people do read review comments. You can add additional stuff if you want, but don't remove anything. I'll make a bot to enforce using the templates if people often don't use them.
+- Preserve existing owners' work and use isolated branches or worktrees.
+- Explain the problem, resulting behavior, relevant validation and remaining
+  limits in the pull request.
+- Pass every enabled check on the exact proposed head. Only explicitly declared
+  conditional skips are allowed.
+- Qualify affected behavior with appropriate protocol, guest or consumer tests.
+  Documentation changes require the applicable documentation and policy checks.
+- Preserve original failures. Repair their cause without weakening assertions,
+  thresholds, baselines or evidence requirements to obtain a passing result.
+- Merge normally against the reviewed head, and verify the landed tree and
+  parents. Do not force-push, rewrite shared history or enable automatic merge.
+- When another owned repository consumes the change, land the supplier first,
+  then update the exact dependency pin and its reproducible derived evidence.
 
-## New extensions
+## Repository boundary
 
-The principle goal is to ensure that the extension works well and will be maintainable forever, even if the person who wrote the extension vanishes tomorrow.
+Owner authorization applies to the requested work in owned repositories.
+Upstream submissions, pushes, maintainer contact and support requests require
+an explicit instruction from the owner. This fork's workflow does not direct
+contributors to contact upstream reviewers.
 
-When you review a new extension, copy and paste this into the review comment box. Only approve the pull request if every box is checked based on the current state of the pull request and you have no additional concerns.
-
-```
- - [ ] I verified that the extension follows all acceptance criteria and guidelines in CONTRIBUTING.md.
- - [ ] I believe the block list is well-designed and intuitive.
- - [ ] I tested all functionality and found no bugs, security flaws, or unintuitive behavior.
- - [ ] I reviewed the code and believe it is well-written and easy to maintain or extend in the future, even without help from the original author.
- - [ ] I have no additional concerns.
-```
-
-## Changing an existing extension
-
-The principle goal is to not break projects without a very good reason.
-
-When you review an extension change, copy and paste this into the review comment box. Only approve the pull request if every box is checked based on the current state of the pull request and you have no additional concerns.
-
-```
- - [ ] I tested all modified functionality and found no bugs or unintuitive behavior.
- - [ ] I believe a well-formed project using an older version of this extension will not be broken by this new version.
- - [ ] I have no additional concerns.
-```
-
-## Trivial no-code changes
-
-For trivial changes such as new extension images or fixing a typo that don't require any testing:
-
-```
- - [ ] This is a trivial change that doesn't require testing.
- - [ ] I have no additional concerns.
-```
-
-Any logic change inside a JavaScript file, even the most trivial one, means that you shouldn't use this template.
-
-## Other things
-
-Ping GarboMuffin early and often.
+The previous reviewer-count and maintainer-contact instructions were inherited
+from the upstream project. This fork-specific policy replaces them here.
