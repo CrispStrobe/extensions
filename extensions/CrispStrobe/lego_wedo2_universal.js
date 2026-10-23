@@ -1340,7 +1340,11 @@
         return Promise.resolve();
       }
 
-      return this._connection.send(characteristic, data);
+      const pending = this._connection.send(characteristic, data);
+      // Motor commands and PROJECT_STOP_ALL may intentionally fire and forget.
+      // Report failed writes without changing the promise received by awaiters.
+      pending.catch((error) => logger.error("Command send failed:", error));
+      return pending;
     }
 
     async setLED(rgb) {

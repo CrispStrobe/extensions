@@ -15,6 +15,7 @@ async function setup() {
     "utf8"
   );
   const writes = [];
+  const errors = [];
   const runtime = {
     registerPeripheralExtension(id, instance) {
       hub = instance;
@@ -27,7 +28,9 @@ async function setup() {
       info() {},
       debug() {},
       warn() {},
-      error() {},
+      error(...args) {
+        errors.push(args);
+      },
       group() {},
       groupEnd() {},
     },
@@ -67,7 +70,7 @@ async function setup() {
     },
   };
   extension._hub = hub;
-  return { extension, hub, writes, pending };
+  return { extension, hub, writes, pending, errors };
 }
 
 const packets = (writes) => writes.map((w) => w.bytes);
@@ -229,4 +232,77 @@ test("reversed BOTH clamps brightness and Stop All switches off every light", as
     [2, 1, 1, 0],
     [2, 1, 1, 0],
   ]);
+});
+
+test("send preserves successful provider promise and exact command bytes", async () => {
+  const { hub, errors } = await setup();
+  const before = errors.length;
+  const value = { written: true };
+  const pending = Promise.resolve(value);
+  const bytes = Uint8Array.from([1, 1, 1, 127]);
+  let calls = 0;
+  hub._connection.send = (characteristic, data) => {
+    calls++;
+    assert.equal(characteristic, "output");
+    assert.equal(data, bytes);
+    return pending;
+  };
+  assert.equal(hub.send("output", bytes, false), pending);
+  assert.equal(await pending, value);
+  assert.equal(calls, 1);
+  assert.equal(errors.length, before);
+});
+
+test("awaited rejected send retains original promise and error and reports failure", async () => {
+  const { hub, errors } = await setup();
+  const failure = new Error("closed transport");
+  const pending = Promise.reject(failure);
+  hub._connection.send = () => pending;
+  const result = hub.send("output", Uint8Array.from([1, 1, 1, 127]), false);
+  assert.equal(result, pending);
+  await assert.rejects(result, (error) => error === failure);
+  assert.ok(errors.some((args) => args.includes(failure)));
+});
+
+test("fire-and-forget stop reports both brake and float failures without unhandled rejection", async () => {
+  const { hub, errors } = await setup();
+  const motor = hub.getMotor(1);
+  const failure = new Error("retired radio connection");
+  const packets = [];
+  hub._connection.send = (_characteristic, bytes) => {
+    packets.push(Array.from(bytes));
+    return Promise.reject(failure);
+  };
+  void hub.stopAll();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(packets, [
+    [1, 1, 1, 127],
+    [1, 1, 1, 0],
+  ]);
+  assert.equal(errors.filter((args) => args.includes(failure)).length, 2);
+  assert.ok(motor);
+});
+
+test("throttled command stays dropped while stop bypass still reaches the provider", async () => {
+  const { hub, writes } = await setup();
+  hub._rateLimiter.okayToSend = () => false;
+  await hub.send("output", Uint8Array.from([1, 1, 1, 100]));
+  assert.equal(writes.length, 0);
+  await hub.send("output", Uint8Array.from([1, 1, 1, 127]), false);
+  assert.deepEqual(
+    writes.map((entry) => entry.bytes),
+    [[1, 1, 1, 127]]
+  );
+});
+
+test("synchronous provider failure keeps its original thrown error", async () => {
+  const { hub } = await setup();
+  const failure = new Error("synchronous send failure");
+  hub._connection.send = () => {
+    throw failure;
+  };
+  assert.throws(
+    () => hub.send("output", new Uint8Array(), false),
+    (error) => error === failure
+  );
 });
