@@ -2173,6 +2173,7 @@
       // the motor after it.
       const isOutput = data[2] === Message.OUTPUT;
       const key = isOutput ? `${data[3]}:${data[5]}` : null;
+      let pending;
 
       if (!useLimiter) {
         if (isOutput) {
@@ -2185,12 +2186,18 @@
           );
         }
         this._rateLimiter.noteSent();
-        return this._connection.send(characteristic, data);
+        pending = this._connection.send(characteristic, data);
+      } else {
+        pending = this._rateLimiter.enqueue(key, () =>
+          this._connection.send(characteristic, data)
+        );
       }
 
-      return this._rateLimiter.enqueue(key, () =>
-        this._connection.send(characteristic, data)
-      );
+      // Motor commands and PROJECT_STOP_ALL can intentionally fire and forget.
+      // Report their write failures without replacing the rejecting promise
+      // that an awaiting caller receives.
+      pending.catch((error) => logger.error("Command send failed:", error));
+      return pending;
     }
 
     generateOutputCommand(portID, execution, subCommand, payload) {
