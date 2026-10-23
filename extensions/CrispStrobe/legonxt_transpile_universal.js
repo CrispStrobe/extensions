@@ -25,6 +25,12 @@
       disconnect: "disconnect from NXT",
       isConnected: "connected to NXT?",
 
+      motorSync:
+        "run motors [FIRST] and [SECOND] synchronized at [POWER] % turn [TURN] %",
+      buttonPressed: "[BUTTON] button pressed?",
+      buttonReleaseCount: "[BUTTON] button releases",
+      setUltrasonicMode: "set ultrasonic [PORT] mode to [MODE]",
+      getUltrasonicEventByte: "ultrasonic raw event byte on [PORT]",
       // Motors
       motorOn: "motor [PORT] power [POWER]",
       motorStartPower: "start motor [PORT] at [POWER] % power",
@@ -139,6 +145,7 @@
 
       // Section Labels
       connection: "🔌 CONNECTION",
+      buttons: "Brick buttons",
       motors: "⚙️ MOTORS",
       advancedMotors: "⚙️ ADVANCED MOTORS",
       touchSensor: "🔘 TOUCH SENSOR",
@@ -174,6 +181,12 @@
       disconnect: "Von NXT trennen",
       isConnected: "Mit NXT verbunden?",
 
+      motorSync:
+        "Motoren [FIRST] und [SECOND] synchron mit [POWER] % Drehverhältnis [TURN] %",
+      buttonPressed: "Taste [BUTTON] gedrückt?",
+      buttonReleaseCount: "Taste [BUTTON] losgelassen (Anzahl)",
+      setUltrasonicMode: "Ultraschall [PORT] Modus auf [MODE] setzen",
+      getUltrasonicEventByte: "Ultraschall-Ereignisbyte an [PORT]",
       // Motors
       motorOn: "Motor [PORT] Leistung [POWER]",
       motorStartPower: "Motor [PORT] mit [POWER] % Leistung starten",
@@ -290,6 +303,7 @@
 
       // Section Labels
       connection: "🔌 VERBINDUNG",
+      buttons: "Tasten am Stein",
       motors: "⚙️ MOTOREN",
       advancedMotors: "⚙️ ERWEITERTE MOTOREN",
       touchSensor: "🔘 BERÜHRUNGSSENSOR",
@@ -3418,6 +3432,28 @@
           throw new Error("No targets found in project");
         }
 
+        // These blocks expose live brick telegrams. Do not silently emit 0 or
+        // comments for them in NXC, or upload an older cached program instead.
+        const liveOnly = new Set([
+          "motorSync",
+          "buttonPressed",
+          "buttonReleaseCount",
+          "setUltrasonicMode",
+          "getUltrasonicEventByte",
+        ]);
+        for (const target of targets) {
+          for (const block of Object.values(target.blocks?._blocks || {})) {
+            const opcode = String(block.opcode || "").replace(/^legonxt_/, "");
+            if (liveOnly.has(opcode)) {
+              const error = new Error(
+                `NXT ${opcode} is live streaming only; NXC export is unsupported`
+              );
+              error.code = "NXT_LIVE_ONLY";
+              throw error;
+            }
+          }
+        }
+
         this.logger.log(`\n📊 Project contains ${targets.length} target(s)`);
 
         // ==================== STEP 1: COLLECT SPRITE STATES ====================
@@ -4939,7 +4975,182 @@
 
     // ==================== ADVANCED METHODS ====================
 
+    // Standard NXT replies have no message counter: validate the operation and
+    // every byte before a result can acquire meaning. Pending is allowed only
+    // while explicitly polling the low-speed bus.
+    _checkedReply(reply, opcode, minimum, pending = false) {
+      if (
+        (!Array.isArray(reply) && !ArrayBuffer.isView(reply)) ||
+        reply.length < minimum ||
+        reply[0] !== NXT_OPCODE.REPLY ||
+        reply[1] !== opcode ||
+        !Array.from(reply).every(
+          (v) => Number.isInteger(v) && v >= 0 && v <= 255
+        )
+      ) {
+        throw new Error(`Invalid NXT reply for opcode ${opcode}`);
+      }
+      if (reply[2] !== 0 && !(pending && reply[2] === 0x20)) {
+        throw new Error(
+          `NXT opcode ${opcode} failed: ${NXT_ERROR[reply[2]] || reply[2]}`
+        );
+      }
+      return reply;
+    }
+
+    _ioMapRequest(module, offset, size) {
+      if (
+        !Number.isSafeInteger(module) ||
+        module < 0 ||
+        module > 0xffffffff ||
+        !Number.isInteger(offset) ||
+        offset < 0 ||
+        offset > 65535 ||
+        !Number.isInteger(size) ||
+        size < 0 ||
+        size > 65535
+      ) {
+        throw new RangeError("Invalid NXT IOMap request");
+      }
+    }
+
+    async runSynchronized(first, second, power, turn) {
+      first = String(first).toUpperCase();
+      second = String(second).toUpperCase();
+      power = Number(power);
+      turn = Number(turn);
+      if (
+        !/^[ABC]$/.test(first) ||
+        !/^[ABC]$/.test(second) ||
+        first === second ||
+        !Number.isFinite(power) ||
+        Math.abs(power) > 100 ||
+        !Number.isFinite(turn) ||
+        Math.abs(turn) > 100
+      ) {
+        throw new RangeError(
+          "Invalid synchronized motor pair, power or turn ratio"
+        );
+      }
+      power = Math.round(power);
+      turn = Math.round(turn);
+      // Two acknowledged configurations, not an atomic simultaneous start.
+      try {
+        for (const port of [first, second]) {
+          const reply = await this.sendTelegram(
+            NXT_OPCODE.SET_OUT_STATE,
+            [PORT[port], power & 255, 7, 2, turn & 255, 0x20, 0, 0, 0, 0],
+            true
+          );
+          this._checkedReply(reply, NXT_OPCODE.SET_OUT_STATE, 3);
+          if (reply.length !== 3)
+            throw new Error("Invalid synchronized motor acknowledgement");
+          this.motorState[port].power = power;
+        }
+      } catch (cause) {
+        const cleanup = [];
+        for (const port of [first, second]) {
+          try {
+            await this.motorStop(port, true);
+          } catch (error) {
+            cleanup.push(`${port}: ${error.message}`);
+          }
+        }
+        throw new Error(
+          `NXT sync failed: ${cause.message}${cleanup.length ? `; stop failed: ${cleanup.join(", ")}` : ""}`,
+          { cause }
+        );
+      }
+    }
+
+    async readButtonByte(button, held) {
+      const index = { exit: 0, right: 1, left: 2, enter: 3 }[
+        String(button).toLowerCase()
+      ];
+      if (!Number.isInteger(index)) throw new RangeError("Unknown NXT button");
+      // Stock 1.29 Button module; state held bit 0x80, total release counter.
+      const result = await this.read_io_map(
+        0x00040001,
+        held ? 32 + index : 8 * index + 4,
+        1
+      );
+      if (result.data.length !== 1)
+        throw new Error("Incomplete NXT button reply");
+      return held ? Boolean(result.data[0] & 0x80) : result.data[0];
+    }
+
+    _sensorIndex(port) {
+      const label = String(port).toUpperCase();
+      if (!/^S[1-4]$/.test(label))
+        throw new RangeError("Unknown NXT ultrasonic port");
+      return PORT[label];
+    }
+
+    async _waitLowSpeed(port, count) {
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const reply = await this.sendTelegram(
+          NXT_OPCODE.LS_GET_STATUS,
+          [port],
+          true
+        );
+        this._checkedReply(reply, NXT_OPCODE.LS_GET_STATUS, 4, true);
+        if (reply[2] === 0) {
+          if (reply[3] !== count)
+            throw new Error("Unexpected NXT I2C result length");
+          return;
+        }
+        if (attempt < 9) await this.sleep(10);
+      }
+      throw new Error("NXT I2C transaction remained pending");
+    }
+
+    async setUltrasonicMode(port, mode) {
+      const index = this._sensorIndex(port);
+      const command = { off: 0, single: 1, continuous: 2, listen: 3, reset: 4 }[
+        String(mode).toLowerCase()
+      ];
+      if (!Number.isInteger(command))
+        throw new RangeError("Unknown NXT ultrasonic mode");
+      this._checkedReply(
+        await this.sendTelegram(NXT_OPCODE.SET_IN_MODE, [index, 11, 0], true),
+        NXT_OPCODE.SET_IN_MODE,
+        3
+      );
+      this._checkedReply(
+        await this.sendTelegram(
+          NXT_OPCODE.LS_WRITE,
+          [index, 3, 0, 2, 0x41, command],
+          true
+        ),
+        NXT_OPCODE.LS_WRITE,
+        3
+      );
+      await this._waitLowSpeed(index, 0);
+    }
+
+    async readUltrasonicEventByte(port) {
+      const index = this._sensorIndex(port);
+      // Set listen mode explicitly first. This reads raw register 0x42; the
+      // Lab's 0/1 event interpretation is estimated, not a hardware claim.
+      this._checkedReply(
+        await this.sendTelegram(
+          NXT_OPCODE.LS_WRITE,
+          [index, 2, 1, 2, 0x42],
+          true
+        ),
+        NXT_OPCODE.LS_WRITE,
+        3
+      );
+      await this._waitLowSpeed(index, 1);
+      const reply = await this.sendTelegram(NXT_OPCODE.LS_READ, [index], true);
+      this._checkedReply(reply, NXT_OPCODE.LS_READ, 20);
+      if (reply[3] !== 1)
+        throw new Error("Unexpected NXT ultrasonic byte count");
+      return reply[4];
+    }
+
     async read_io_map(mod_id, offset, size) {
+      this._ioMapRequest(mod_id, offset, size);
       logger.debug(
         `Reading IO map: module=0x${mod_id.toString(16)}, offset=${offset}, size=${size}`
       );
@@ -4960,20 +5171,18 @@
         true
       );
 
-      if (!reply || reply.length < 6) {
-        throw new Error("Invalid read_io_map response");
-      }
-
-      const status = reply[2];
-      if (status !== 0x00) {
-        throw new Error(
-          `read_io_map failed: ${NXT_ERROR[status] || "Unknown error"}`
-        );
-      }
-
+      this._checkedReply(reply, NXT_OPCODE.READ_IO_MAP, 9);
       const ret_mod_id =
-        reply[3] | (reply[4] << 8) | (reply[5] << 16) | (reply[6] << 24);
+        (reply[3] | (reply[4] << 8) | (reply[5] << 16) | (reply[6] << 24)) >>>
+        0;
       const ret_size = reply[7] | (reply[8] << 8);
+      if (
+        ret_mod_id !== mod_id ||
+        ret_size > size ||
+        reply.length < 9 + ret_size
+      ) {
+        throw new Error("Mismatched or incomplete NXT IOMap read");
+      }
       const data = reply.slice(9, 9 + ret_size);
 
       logger.debug(
@@ -4984,6 +5193,15 @@
     }
 
     async write_io_map(mod_id, offset, data) {
+      if (
+        (!Array.isArray(data) && !ArrayBuffer.isView(data)) ||
+        !Array.from(data).every(
+          (v) => Number.isInteger(v) && v >= 0 && v <= 255
+        )
+      ) {
+        throw new RangeError("Invalid NXT IOMap data");
+      }
+      this._ioMapRequest(mod_id, offset, data.length);
       logger.debug(
         `Writing IO map: module=0x${mod_id.toString(16)}, offset=${offset}, size=${data.length}`
       );
@@ -5005,20 +5223,14 @@
         true
       );
 
-      if (!reply || reply.length < 6) {
-        throw new Error("Invalid write_io_map response");
-      }
-
-      const status = reply[2];
-      if (status !== 0x00) {
-        throw new Error(
-          `write_io_map failed: ${NXT_ERROR[status] || "Unknown error"}`
-        );
-      }
-
+      this._checkedReply(reply, NXT_OPCODE.WRITE_IO_MAP, 9);
       const ret_mod_id =
-        reply[3] | (reply[4] << 8) | (reply[5] << 16) | (reply[6] << 24);
+        (reply[3] | (reply[4] << 8) | (reply[5] << 16) | (reply[6] << 24)) >>>
+        0;
       const ret_size = reply[7] | (reply[8] << 8);
+      if (ret_mod_id !== mod_id || ret_size !== data.length) {
+        throw new Error("Mismatched or incomplete NXT IOMap write");
+      }
 
       logger.debug(
         `Wrote ${ret_size} bytes to module 0x${ret_mod_id.toString(16)}`
@@ -5317,6 +5529,25 @@
           "---",
           t("motors"),
           {
+            opcode: "motorSync",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("motorSync"),
+            arguments: {
+              FIRST: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "MOTOR_PORT",
+                defaultValue: "B",
+              },
+              SECOND: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "MOTOR_PORT",
+                defaultValue: "C",
+              },
+              POWER: { type: Scratch.ArgumentType.NUMBER, defaultValue: 50 },
+              TURN: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
             opcode: "motorOn",
             blockType: Scratch.BlockType.COMMAND,
             text: t("motorOn"),
@@ -5526,6 +5757,32 @@
           },
 
           "---",
+          t("buttons"),
+          {
+            opcode: "buttonPressed",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: t("buttonPressed"),
+            arguments: {
+              BUTTON: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "BUTTON",
+                defaultValue: "enter",
+              },
+            },
+          },
+          {
+            opcode: "buttonReleaseCount",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("buttonReleaseCount"),
+            arguments: {
+              BUTTON: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "BUTTON",
+                defaultValue: "enter",
+              },
+            },
+          },
+          "---",
           t("touchSensor"),
           {
             opcode: "setupTouchSensorNXT",
@@ -5659,6 +5916,35 @@
                 type: Scratch.ArgumentType.STRING,
                 menu: "SENSOR_PORT",
                 defaultValue: "S1",
+              },
+            },
+          },
+          {
+            opcode: "setUltrasonicMode",
+            blockType: Scratch.BlockType.COMMAND,
+            text: t("setUltrasonicMode"),
+            arguments: {
+              PORT: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "SENSOR_PORT",
+                defaultValue: "S4",
+              },
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "ULTRASONIC_MODE",
+                defaultValue: "continuous",
+              },
+            },
+          },
+          {
+            opcode: "getUltrasonicEventByte",
+            blockType: Scratch.BlockType.REPORTER,
+            text: t("getUltrasonicEventByte"),
+            arguments: {
+              PORT: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "SENSOR_PORT",
+                defaultValue: "S4",
               },
             },
           },
@@ -6173,6 +6459,14 @@
               { text: "🔌 Direct Serial (USB/BTC)", value: "direct" },
               { text: "🌐 Bridge Server (WebSocket)", value: "bridge" },
             ],
+          },
+          BUTTON: {
+            acceptReporters: false,
+            items: ["exit", "right", "left", "enter"],
+          },
+          ULTRASONIC_MODE: {
+            acceptReporters: false,
+            items: ["off", "single", "continuous", "listen", "reset"],
           },
           MOTOR_PORT: { acceptReporters: true, items: ["A", "B", "C"] },
           SENSOR_PORT: {
@@ -6772,6 +7066,27 @@
       return this.peripheral.resetMotorPosition(args.PORT, false);
     }
 
+    motorSync(args) {
+      return this.peripheral.runSynchronized(
+        args.FIRST,
+        args.SECOND,
+        args.POWER,
+        args.TURN
+      );
+    }
+    buttonPressed(args) {
+      return this.peripheral.readButtonByte(args.BUTTON, true);
+    }
+    buttonReleaseCount(args) {
+      return this.peripheral.readButtonByte(args.BUTTON, false);
+    }
+    setUltrasonicMode(args) {
+      return this.peripheral.setUltrasonicMode(args.PORT, args.MODE);
+    }
+    getUltrasonicEventByte(args) {
+      return this.peripheral.readUltrasonicEventByte(args.PORT);
+    }
+
     // ==================== SENSORS ====================
     setupTouchSensorNXT(args) {
       return this.peripheral.setupTouchNXT(args.PORT);
@@ -6938,6 +7253,10 @@
         );
         alert("✅ Project transpiled to NXC!\n\nCheck console for details.");
       } catch (error) {
+        if (error.code === "NXT_LIVE_ONLY") {
+          this.nxcCode = "";
+          this.rxeBase64 = "";
+        }
         logger.error("Transpilation failed:", error);
         alert(
           `❌ Transpilation failed:\n\n${error.message}\n\nCheck console for details.`
@@ -7328,6 +7647,10 @@
         logger.log("\n[3/3] Uploading to NXT...");
         await this.uploadToNXT({ FILENAME: filename });
       } catch (error) {
+        if (error.code === "NXT_LIVE_ONLY") {
+          this.nxcCode = "";
+          this.rxeBase64 = "";
+        }
         logger.error("Workflow failed:", error);
         alert(`❌ Workflow failed:\n\n${error.message}`);
       }
