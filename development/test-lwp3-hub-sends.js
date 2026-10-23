@@ -38,6 +38,8 @@ const attached = (port, type) => [
 // systemType the System Type and Device Number byte of §2.1 / §3.5.
 function setup(source, { devices, fwVersion = 0x10000224, systemType = 0x80 }) {
   const writes = [];
+  const errors = [];
+  const handlers = new Map();
   let extension;
   let socket;
 
@@ -116,7 +118,10 @@ function setup(source, { devices, fwVersion = 0x10000224, systemType = 0x80 }) {
         "error",
         "group",
         "groupEnd",
-      ].map((key) => [key, quiet])
+      ].map((key) => [
+        key,
+        key === "error" ? (...args) => errors.push(args) : quiet,
+      ])
     ),
     window: { addEventListener: quiet },
     btoa,
@@ -132,7 +137,10 @@ function setup(source, { devices, fwVersion = 0x10000224, systemType = 0x80 }) {
     Scratch: {
       vm: {
         runtime: {
-          on: quiet,
+          on(event, fn) {
+            if (!handlers.has(event)) handlers.set(event, []);
+            handlers.get(event).push(fn);
+          },
           emit: quiet,
           registerPeripheralExtension: quiet,
         },
@@ -150,6 +158,10 @@ function setup(source, { devices, fwVersion = 0x10000224, systemType = 0x80 }) {
   return {
     extension,
     writes,
+    errors,
+    emit(event) {
+      for (const fn of handlers.get(event) || []) fn();
+    },
     get socket() {
       return socket;
     },
@@ -407,4 +419,103 @@ test("boost: start motor at % power is StartPower on each motor of the block", a
     [0x01, 0x00, 0xe2],
   ]);
   await f.extension.disconnect();
+});
+
+test("poweredup: immediate sends retain their original promise and rejection identity", async (t) => {
+  const f = setup(PUP, { devices: TECHNIC });
+  await connect(f);
+  const hub = f.extension._hub;
+  const originalSend = hub._connection.send;
+  t.after(() => {
+    hub._connection.send = originalSend;
+    return f.extension.disconnect();
+  });
+  const failure = new Error("bridge write refused");
+  const pending = Promise.reject(failure);
+  hub._connection.send = () => pending;
+  const returned = hub.send(
+    "characteristic",
+    Uint8Array.from([3, 0, 1]),
+    false
+  );
+  assert.equal(returned, pending);
+  await assert.rejects(returned, (error) => error === failure);
+  assert.ok(
+    f.errors.some((args) => args.includes(failure)),
+    "the failed send is reported"
+  );
+});
+
+test("poweredup: successful sends retain promise identity and add no failure report", async (t) => {
+  const f = setup(PUP, { devices: TECHNIC });
+  await connect(f);
+  const hub = f.extension._hub;
+  const originalSend = hub._connection.send;
+  t.after(() => {
+    hub._connection.send = originalSend;
+    return f.extension.disconnect();
+  });
+  const before = f.errors.length;
+  const value = { written: true };
+  const pending = Promise.resolve(value);
+  hub._connection.send = () => pending;
+  const returned = hub.send(
+    "characteristic",
+    Uint8Array.from([3, 0, 1]),
+    false
+  );
+  assert.equal(returned, pending);
+  assert.equal(await returned, value);
+  assert.equal(f.errors.length, before);
+});
+
+test("poweredup: PROJECT_STOP_ALL reports ignored stop-write failures without changing the stop bytes", async (t) => {
+  const f = setup(PUP, { devices: TECHNIC });
+  await connect(f);
+  const hub = f.extension._hub;
+  const originalSend = hub._connection.send;
+  t.after(() => {
+    hub._connection.send = originalSend;
+    return f.extension.disconnect();
+  });
+  const failure = new Error("closed bridge during stop");
+  const writes = [];
+  hub._connection.send = (characteristic, bytes) => {
+    writes.push([...bytes]);
+    return Promise.reject(failure);
+  };
+  f.emit("PROJECT_STOP_ALL");
+  await wait(0);
+  assert.deepEqual(writes, [
+    [8, 0, 0x81, 0, 0x11, 0x51, 0, 127],
+    [8, 0, 0x81, 1, 0x11, 0x51, 0, 127],
+  ]);
+  assert.equal(f.errors.filter((args) => args.includes(failure)).length, 2);
+});
+
+test("poweredup: queued send failures remain rejecting and are reported with rate limiting intact", async (t) => {
+  const f = setup(PUP, { devices: TECHNIC });
+  await connect(f);
+  const hub = f.extension._hub;
+  const originalSend = hub._connection.send;
+  t.after(() => {
+    hub._connection.send = originalSend;
+    return f.extension.disconnect();
+  });
+  const failure = new Error("queued bridge write refused");
+  hub._connection.send = () => Promise.reject(failure);
+  hub._rateLimiter.noteSent();
+  const before = Date.now();
+  const returned = hub.send("characteristic", Uint8Array.from([3, 0, 1]));
+  assert.equal(
+    hub._rateLimiter._queue.length,
+    1,
+    "the call still queues behind the send interval"
+  );
+  await assert.rejects(returned, (error) => error === failure);
+  assert.ok(
+    Date.now() - before >= 30,
+    "the existing send interval still applies"
+  );
+  assert.ok(f.errors.some((args) => args.includes(failure)));
 });
