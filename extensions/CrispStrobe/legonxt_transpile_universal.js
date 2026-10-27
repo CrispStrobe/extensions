@@ -4651,8 +4651,9 @@
         [portNum],
         true
       );
-      if (reply && reply.length >= 13) {
-        const rawValue = reply[10] | (reply[11] << 8);
+      // GETINPUTVALUES: raw ADC at 8-9; 10-11 is the normalized value.
+      if (reply && reply.length >= 10) {
+        const rawValue = reply[8] | (reply[9] << 8);
         this.sensorState[port].rawValue = rawValue;
         return rawValue;
       }
