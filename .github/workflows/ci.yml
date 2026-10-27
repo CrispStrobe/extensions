@@ -65,6 +65,8 @@ jobs:
       # minus directly before the most significant digit.
       - name: stc12 7-segment show number
         run: node development/test-stc12-sevenseg.js
+      - name: micro:bit+ pin pull block
+        run: node --test development/test-microbitplus-setpull.js
 
   validate:
     name: Gallery validate (informational)

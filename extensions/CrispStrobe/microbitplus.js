@@ -1418,10 +1418,12 @@
     setpull(args) {
       const board = this.board;
       if (!board) return;
+      // The block declares its menu argument as PULL.
+      const pull = String(args.PULL);
       const mode =
-        String(args.MODE) === "up"
+        pull === "up"
           ? "input-pullup"
-          : String(args.MODE) === "down"
+          : pull === "down"
             ? "input-pulldown"
             : "input";
       board.setPin(this._pinId(args.PIN), mode, mode === "input-pullup");

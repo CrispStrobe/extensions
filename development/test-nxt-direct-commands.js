@@ -215,6 +215,12 @@ test("nxt: GETINPUTVALUES fields come from their BDK offsets", async () => {
   assert.equal(values.calibrated_value, 612);
 });
 
+test("nxt: the raw sensor value block reads the raw ADC word, not the normalized one", async () => {
+  const f = setup();
+  await connect(f);
+  assert.equal(await f.extension.getRawSensorValue({ PORT: "S3" }), 1000);
+});
+
 test("nxt bridge: replies resolve as the telegram, and the bookkeeping reads RotationCount 21-24 and the scaled value", async () => {
   const f = setup();
   const peripheral = f.extension.peripheral;
