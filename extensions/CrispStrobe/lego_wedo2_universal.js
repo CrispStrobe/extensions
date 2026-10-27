@@ -1,0 +1,2256 @@
+// Name: LEGO WeDo 2.0 Universal
+// ID: wedo2unified
+// Description: Universal control for LEGO WeDo 2.0 sets (BLE/Scratch Link).
+// By: CrispStrobe <https://github.com/CrispStrobe>
+// License: MPL-2.0
+(function (Scratch) {
+  "use strict";
+
+  // ============================================================================
+  // INTERNATIONALIZATION (i18n)  __CRISPSTROBE_I18N_INJECTED__
+  //
+  // Module-level locale state pattern shared with planetemaths.js,
+  // ev3dev_py_transpile.js, arrays.js, etc. Detect once at gallery-load,
+  // listen for changes, resolve block text via the module-level t(key) at
+  // every getInfo() call.
+  // ============================================================================
+
+  const translations = {
+    en: {
+      "wedo2.name": "LEGO WeDo 2.0",
+      "wedo2.setConnection": "set connection to [TYPE]",
+      "wedo2.connect": "connect to WeDo 2.0",
+      "wedo2.disconnect": "disconnect from WeDo 2.0",
+      "wedo2.connected": "connected?",
+      "wedo2.setDebug": "set debug level to [LEVEL]",
+      "wedo2.motorOn": "turn motor [PORT] on",
+      "wedo2.motorOff": "turn motor [PORT] off",
+      "wedo2.motorPower": "set motor [PORT] power to [POWER]%",
+      "wedo2.motorDirection": "set motor [PORT] direction to [DIRECTION]",
+      "wedo2.distance": "distance",
+      "wedo2.tiltAngle": "tilt angle [DIRECTION]",
+      "wedo2.whenTilted": "when tilted [DIRECTION]",
+      "wedo2.isTilted": "tilted [DIRECTION]?",
+      "wedo2.lightColor": "set light color to [HUE]",
+      "wedo2.lightBrightness":
+        "set lights [PORT] brightness to [BRIGHTNESS]% polarity [POLARITY]",
+      "wedo2.lightOff": "turn lights [PORT] off",
+      "wedo2.lightNormal": "normal",
+      "wedo2.lightReversed": "reversed",
+      "wedo2.playNote": "play note [NOTE] for [DURATION] seconds",
+      "wedo2.whenButton": "when button pressed",
+      "wedo2.buttonPressed": "button pressed?",
+      "wedo2.battery": "battery level",
+    },
+    de: {
+      "wedo2.name": "LEGO WeDo 2.0",
+      "wedo2.setConnection": "Verbindung auf [TYPE] setzen",
+      "wedo2.connect": "mit WeDo 2.0 verbinden",
+      "wedo2.disconnect": "WeDo 2.0 trennen",
+      "wedo2.connected": "verbunden?",
+      "wedo2.setDebug": "Debug-Level auf [LEVEL] setzen",
+      "wedo2.motorOn": "Motor [PORT] einschalten",
+      "wedo2.motorOff": "Motor [PORT] ausschalten",
+      "wedo2.motorPower": "Motorleistung [PORT] auf [POWER]% setzen",
+      "wedo2.motorDirection": "Motorrichtung [PORT] auf [DIRECTION] setzen",
+      "wedo2.distance": "Abstand",
+      "wedo2.tiltAngle": "Neigungswinkel [DIRECTION]",
+      "wedo2.whenTilted": "wenn geneigt [DIRECTION]",
+      "wedo2.isTilted": "geneigt [DIRECTION]?",
+      "wedo2.lightColor": "Lichtfarbe auf [HUE] setzen",
+      "wedo2.lightBrightness":
+        "Lichter [PORT] auf [BRIGHTNESS]% mit Polung [POLARITY] setzen",
+      "wedo2.lightOff": "Lichter [PORT] ausschalten",
+      "wedo2.lightNormal": "normal",
+      "wedo2.lightReversed": "umgekehrt",
+      "wedo2.playNote": "Note [NOTE] für [DURATION] Sekunden spielen",
+      "wedo2.whenButton": "wenn Knopf gedrückt",
+      "wedo2.buttonPressed": "Knopf gedrückt?",
+      "wedo2.battery": "Batteriestand",
+    },
+    fr: {
+      "wedo2.name": "LEGO WeDo 2.0",
+      "wedo2.setConnection": "définir la connexion sur [TYPE]",
+      "wedo2.connect": "se connecter au WeDo 2.0",
+      "wedo2.disconnect": "déconnecter du WeDo 2.0",
+      "wedo2.connected": "connecté ?",
+      "wedo2.setDebug": "définir niveau de débogage sur [LEVEL]",
+      "wedo2.motorOn": "allumer moteur [PORT]",
+      "wedo2.motorOff": "éteindre moteur [PORT]",
+      "wedo2.motorPower": "régler puissance moteur [PORT] sur [POWER]%",
+      "wedo2.motorDirection": "régler direction moteur [PORT] sur [DIRECTION]",
+      "wedo2.distance": "distance",
+      "wedo2.tiltAngle": "angle d'inclinaison [DIRECTION]",
+      "wedo2.whenTilted": "quand incliné [DIRECTION]",
+      "wedo2.isTilted": "incliné [DIRECTION] ?",
+      "wedo2.lightColor": "définir couleur lumière sur [HUE]",
+      "wedo2.lightBrightness":
+        "régler les lumières [PORT] à [BRIGHTNESS]% polarité [POLARITY]",
+      "wedo2.lightOff": "éteindre les lumières [PORT]",
+      "wedo2.lightNormal": "normale",
+      "wedo2.lightReversed": "inversée",
+      "wedo2.playNote": "jouer note [NOTE] pendant [DURATION] secondes",
+      "wedo2.whenButton": "quand bouton appuyé",
+      "wedo2.buttonPressed": "bouton appuyé ?",
+      "wedo2.battery": "niveau de batterie",
+    },
+  };
+
+  function detectLanguage() {
+    const candidates = [];
+    try {
+      if (typeof window !== "undefined" && window.ReduxStore?.getState) {
+        candidates.push(window.ReduxStore.getState().locales?.locale);
+      }
+    } catch (e) {}
+    try {
+      candidates.push(localStorage.getItem("tw:language"));
+    } catch (e) {}
+    try {
+      if (typeof Scratch !== "undefined" && Scratch.vm?.runtime?.getLocale) {
+        candidates.push(Scratch.vm.runtime.getLocale());
+      }
+    } catch (e) {}
+    try {
+      candidates.push(document.documentElement.lang);
+    } catch (e) {}
+    try {
+      candidates.push(navigator.language);
+    } catch (e) {}
+    for (const c of candidates) {
+      if (typeof c !== "string" || !c) continue;
+      const lower = c.toLowerCase();
+      if (lower.startsWith("de")) return "de";
+      if (lower.startsWith("fr")) return "fr";
+      if (lower.startsWith("en")) return "en";
+    }
+    return "en";
+  }
+
+  let currentLang = detectLanguage();
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (e) => {
+      if (e.key === "tw:language") {
+        const newLang = detectLanguage();
+        if (newLang !== currentLang) currentLang = newLang;
+      }
+    });
+    let lastKnownLocale = null;
+    setInterval(() => {
+      try {
+        if (window.ReduxStore?.getState) {
+          const locale = window.ReduxStore.getState().locales?.locale;
+          if (locale && locale !== lastKnownLocale) {
+            lastKnownLocale = locale;
+            const lower = locale.toLowerCase();
+            const newLang = lower.startsWith("de")
+              ? "de"
+              : lower.startsWith("fr")
+                ? "fr"
+                : "en";
+            if (newLang !== currentLang) currentLang = newLang;
+          }
+        }
+      } catch (e) {}
+    }, 1000);
+  }
+
+  function t(key, defaultValue) {
+    const tr = translations[currentLang];
+    if (tr && tr[key]) return tr[key];
+    if (translations.en && translations.en[key]) return translations.en[key];
+    return defaultValue !== undefined ? defaultValue : key;
+  }
+
+  // ============================================================================
+  // DEBUG LOGGER
+  // ============================================================================
+
+  class DebugLogger {
+    constructor(prefix = "[LEGO WeDo 2.0]", enabled = true) {
+      this.prefix = prefix;
+      this.enabled = enabled;
+      this.logLevel = {
+        ERROR: 0,
+        WARN: 1,
+        INFO: 2,
+        DEBUG: 3,
+        TRACE: 4,
+      };
+      this.currentLevel = this.logLevel.DEBUG;
+    }
+
+    setLevel(level) {
+      this.currentLevel =
+        this.logLevel[level.toUpperCase()] || this.logLevel.DEBUG;
+    }
+
+    error(...args) {
+      if (this.enabled && this.currentLevel >= this.logLevel.ERROR) {
+        console.error(this.prefix, "[ERROR]", ...args);
+      }
+    }
+
+    warn(...args) {
+      if (this.enabled && this.currentLevel >= this.logLevel.WARN) {
+        console.warn(this.prefix, "[WARN]", ...args);
+      }
+    }
+
+    info(...args) {
+      if (this.enabled && this.currentLevel >= this.logLevel.INFO) {
+        console.info(this.prefix, "[INFO]", ...args);
+      }
+    }
+
+    debug(...args) {
+      if (this.enabled && this.currentLevel >= this.logLevel.DEBUG) {
+        console.log(this.prefix, "[DEBUG]", ...args);
+      }
+    }
+
+    trace(...args) {
+      if (this.enabled && this.currentLevel >= this.logLevel.TRACE) {
+        console.log(this.prefix, "[TRACE]", ...args);
+      }
+    }
+
+    group(label) {
+      if (this.enabled && this.currentLevel >= this.logLevel.DEBUG) {
+        console.group(this.prefix + " " + label);
+      }
+    }
+
+    groupEnd() {
+      if (this.enabled && this.currentLevel >= this.logLevel.DEBUG) {
+        console.groupEnd();
+      }
+    }
+  }
+
+  const logger = new DebugLogger();
+
+  // ============================================================================
+  // POLYFILLS AND UTILITIES
+  // ============================================================================
+
+  const ArgumentType = Scratch.ArgumentType;
+  const BlockType = Scratch.BlockType;
+  const Cast = Scratch.Cast;
+
+  const Base64Util = {
+    uint8ArrayToBase64: function (array) {
+      let binary = "";
+      for (let i = 0; i < array.length; i++) {
+        binary += String.fromCharCode(array[i]);
+      }
+      return btoa(binary);
+    },
+
+    base64ToUint8Array: function (base64) {
+      const binary = atob(base64);
+      const array = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        array[i] = binary.charCodeAt(i);
+      }
+      return array;
+    },
+  };
+
+  class RateLimiter {
+    constructor(maxRate) {
+      this._maxRate = maxRate;
+      this._lastSendTime = 0;
+      this._sendInterval = 1000 / maxRate;
+    }
+
+    okayToSend() {
+      const now = Date.now();
+      if (now - this._lastSendTime >= this._sendInterval) {
+        this._lastSendTime = now;
+        return true;
+      }
+      return false;
+    }
+  }
+
+  // ============================================================================
+  // CONSTANTS AND CONFIGURATION
+  // ============================================================================
+
+  const ConnectionType = {
+    BLE: "ble",
+    SCRATCH_LINK: "scratchlink",
+  };
+
+  const WeDo2BLE = {
+    advertisementService: "00001523-1212-efde-1523-785feabcd123",
+    ioService: "00004f0e-1212-efde-1523-785feabcd123",
+    batteryService: "0000180f-0000-1000-8000-00805f9b34fb",
+
+    attachedIO: "00001527-1212-efde-1523-785feabcd123",
+    inputValues: "00001560-1212-efde-1523-785feabcd123",
+    inputCommand: "00001563-1212-efde-1523-785feabcd123",
+    outputCommand: "00001565-1212-efde-1523-785feabcd123",
+    battery: "00002a19-0000-1000-8000-00805f9b34fb",
+    button: "00001526-1212-efde-1523-785feabcd123",
+    disconnect: "0000152e-1212-efde-1523-785feabcd123",
+
+    sendRateMax: 20,
+    sendInterval: 50,
+  };
+
+  // Which service owns each characteristic. This has to be a lookup, not a
+  // pattern: every WeDo 2.0 characteristic ends in the SAME
+  // "-1523-785feabcd123" suffix as the advertised service, so a substring
+  // test for "152" matches all of them -- including 1560/1563/1565, which
+  // live on the IO service. Scratch Link resolves a characteristic inside the
+  // service the request names, so a mislabelled write is a write that never
+  // lands.
+  const ServiceOf = {
+    // attachedIO is on the ADVERTISED service, not the IO service -- the hub's
+    // own GATT tree puts 1524-152e on 1523 and only 1560/1561/1563/1565 on
+    // 4f0e, and scratch-vm subscribes it on DEVICE_SERVICE for the same
+    // reason.
+    [WeDo2BLE.attachedIO]: WeDo2BLE.advertisementService,
+    [WeDo2BLE.inputValues]: WeDo2BLE.ioService,
+    [WeDo2BLE.inputCommand]: WeDo2BLE.ioService,
+    [WeDo2BLE.outputCommand]: WeDo2BLE.ioService,
+    [WeDo2BLE.button]: WeDo2BLE.advertisementService,
+    [WeDo2BLE.disconnect]: WeDo2BLE.advertisementService,
+    [WeDo2BLE.battery]: WeDo2BLE.batteryService,
+  };
+
+  const serviceFor = (characteristic) => {
+    const service = ServiceOf[String(characteristic).toLowerCase()];
+    if (!service) {
+      throw new Error(`No service known for characteristic ${characteristic}`);
+    }
+    return service;
+  };
+
+  const DeviceType = {
+    MOTOR: 1,
+    LIGHT: 8,
+    VOLTAGE_SENSOR: 20,
+    CURRENT_SENSOR: 21,
+    PIEZO: 22,
+    RGB_LED: 23,
+    TILT_SENSOR: 34,
+    MOTION_SENSOR: 35,
+  };
+
+  const DeviceTypeName = {
+    [DeviceType.MOTOR]: "WeDo 2.0 Motor",
+    [DeviceType.LIGHT]: "Powered Up Lights (88005)",
+    [DeviceType.VOLTAGE_SENSOR]: "Voltage Sensor",
+    [DeviceType.CURRENT_SENSOR]: "Current Sensor",
+    [DeviceType.PIEZO]: "Piezo Buzzer",
+    [DeviceType.RGB_LED]: "RGB LED",
+    [DeviceType.TILT_SENSOR]: "Tilt Sensor",
+    [DeviceType.MOTION_SENSOR]: "Motion Sensor",
+  };
+
+  const Port = {
+    A: 1,
+    B: 2,
+    PIEZO: 5,
+    LED: 6,
+  };
+
+  const InputMode = {
+    TILT: 0,
+    MOTION: 0,
+  };
+
+  // ============================================================================
+  // DEVICE CLASSES
+  // ============================================================================
+
+  class WeDo2Device {
+    constructor(parent, portId, deviceType) {
+      this._parent = parent;
+      this._portId = portId;
+      this._deviceType = deviceType;
+      this._deviceName = DeviceTypeName[deviceType] || "Unknown Device";
+      this._values = {};
+
+      logger.debug(`Device created: ${this._deviceName} on port ${portId}`);
+    }
+
+    get portId() {
+      return this._portId;
+    }
+
+    get deviceType() {
+      return this._deviceType;
+    }
+
+    get deviceName() {
+      return this._deviceName;
+    }
+
+    getValue(key = "default") {
+      return this._values[key];
+    }
+
+    setValue(key, value) {
+      this._values[key] = value;
+    }
+  }
+
+  class WeDo2Light extends WeDo2Device {
+    setBrightness(value, polarity = "normal") {
+      const number = Cast.toNumber(value);
+      const brightness = Number.isNaN(number)
+        ? 0
+        : Math.round(Math.max(0, Math.min(100, number)));
+      // 88005 uses raw 0–100 brightness, with no motor minimum or brake.
+      // Header = port, power command, payload length (one signed byte).
+      // A clone tested over CoreBluetooth needs negative power for its 88005;
+      // polarity is explicit because its identity does not distinguish wiring.
+      const power = polarity === "reversed" ? -brightness : brightness;
+      // Bypass the lossy limiter so BOTH and OFF always reach every light.
+      return this._parent.send(
+        WeDo2BLE.outputCommand,
+        new Uint8Array([this._portId, 1, 1, power & 0xff]),
+        false
+      );
+    }
+  }
+
+  class WeDo2Motor extends WeDo2Device {
+    constructor(parent, portId, deviceType) {
+      super(parent, portId, deviceType);
+
+      this._power = 100;
+      this._direction = 1;
+      this._brakeTimeout = null;
+
+      logger.debug(`Motor ${portId} initialized`);
+    }
+
+    get power() {
+      return this._power;
+    }
+
+    set power(value) {
+      const p = Math.max(0, Math.min(value, 100));
+      // WeDo 2.0 motors respond best in the 30-100 range
+      if (p === 0) {
+        this._power = 0;
+      } else {
+        // Use Scratch's official mapping formula
+        const delta = 100 / p;
+        this._power = 30 + 70 / delta;
+      }
+      logger.debug(`Motor ${this._portId} power set to ${this._power}`);
+    }
+
+    get direction() {
+      return this._direction;
+    }
+
+    set direction(value) {
+      this._direction = value < 0 ? -1 : 1;
+      logger.debug(`Motor ${this._portId} direction set to ${this._direction}`);
+    }
+
+    turnOn() {
+      this._clearBrake();
+
+      let effectivePower = 0;
+      if (this._power > 0) {
+        // this._power is ALREADY in the hub's effective 30-100 range -- the
+        // setter above maps 1-100 into it. Re-applying 30 + 0.7p here mapped
+        // it a second time and pushed every setting upwards: "power 1" left
+        // as 51 instead of 30 and "power 25" as 63 instead of 47.5, so the
+        // bottom of the dial was unreachable. scratch-vm's wedo2 sends
+        // `this._power * this._direction` unchanged; truncation to a byte is
+        // what Uint8Array does to the reference's float, so match it.
+        effectivePower = Math.trunc(this._power) * this._direction;
+      }
+
+      logger.debug(`Motor ${this._portId} turn on at ${effectivePower}`);
+
+      const cmd = [this._portId, 1, 1, effectivePower & 0xff];
+      this._parent.send(WeDo2BLE.outputCommand, new Uint8Array(cmd));
+    }
+
+    turnOff() {
+      this._clearBrake();
+
+      logger.debug(`Motor ${this._portId} turn off (brake then float)`);
+
+      // First brake
+      const brakeCmd = [this._portId, 1, 1, 127];
+      // A dropped brake is a motor that keeps running.
+      this._parent.send(
+        WeDo2BLE.outputCommand,
+        new Uint8Array(brakeCmd),
+        false
+      );
+
+      // Then float after 1 second
+      this._brakeTimeout = setTimeout(() => {
+        const floatCmd = [this._portId, 1, 1, 0];
+        this._parent.send(
+          WeDo2BLE.outputCommand,
+          new Uint8Array(floatCmd),
+          false
+        );
+        logger.trace(`Motor ${this._portId} floated after brake`);
+      }, 1000);
+    }
+
+    _clearBrake() {
+      if (this._brakeTimeout) {
+        clearTimeout(this._brakeTimeout);
+        this._brakeTimeout = null;
+      }
+    }
+  }
+
+  class WeDo2Sensor extends WeDo2Device {
+    constructor(parent, portId, deviceType) {
+      super(parent, portId, deviceType);
+      logger.debug(`Sensor ${portId} initialized: ${this._deviceName}`);
+    }
+  }
+
+  // ============================================================================
+  // CONNECTION ADAPTERS
+  // ============================================================================
+
+  class ConnectionAdapter {
+    constructor() {
+      this._connected = false;
+      this._onMessageCallback = null;
+    }
+
+    // eslint-disable-next-line require-await
+    async connect() {
+      throw new Error("connect() must be implemented by subclass");
+    }
+
+    // eslint-disable-next-line require-await
+    async disconnect() {
+      throw new Error("disconnect() must be implemented by subclass");
+    }
+
+    // eslint-disable-next-line require-await
+    async send(characteristic, data) {
+      throw new Error("send() must be implemented by subclass");
+    }
+
+    // eslint-disable-next-line require-await
+    async read(characteristic) {
+      throw new Error("read() must be implemented by subclass");
+    }
+
+    isConnected() {
+      return this._connected;
+    }
+
+    onMessage(callback) {
+      this._onMessageCallback = callback;
+    }
+  }
+
+  class BLEAdapter extends ConnectionAdapter {
+    constructor() {
+      super();
+      this._device = null;
+      this._server = null;
+      this._characteristics = new Map();
+      logger.info("BLE Adapter initialized");
+    }
+
+    async connect() {
+      logger.group("BLE Connection");
+      try {
+        logger.info("Requesting Bluetooth device...");
+
+        this._device = await navigator.bluetooth.requestDevice({
+          filters: [
+            {
+              services: [WeDo2BLE.advertisementService],
+            },
+          ],
+          optionalServices: [WeDo2BLE.ioService, WeDo2BLE.batteryService],
+        });
+
+        logger.info(`Device selected: ${this._device.name || "WeDo 2.0"}`);
+
+        this._device.addEventListener("gattserverdisconnected", () => {
+          logger.warn("Device disconnected");
+          this._connected = false;
+        });
+
+        logger.info("Connecting to GATT server...");
+        this._server = await this._device.gatt.connect();
+
+        // Get services and characteristics
+        logger.info("Getting services...");
+        const services = await this._server.getPrimaryServices();
+
+        for (const service of services) {
+          logger.debug(`Found service: ${service.uuid}`);
+          const characteristics = await service.getCharacteristics();
+
+          for (const char of characteristics) {
+            const uuid = char.uuid.toLowerCase();
+            this._characteristics.set(uuid, char);
+            logger.trace(`Registered characteristic: ${uuid}`);
+
+            // Start notifications for input characteristics
+            if (
+              uuid.includes("1527") || // Attached IO
+              uuid.includes("1560") || // Input Values
+              uuid.includes("1526") // Button
+            ) {
+              logger.debug(`Starting notifications for: ${uuid}`);
+              await char.startNotifications();
+
+              char.addEventListener("characteristicvaluechanged", (event) => {
+                const data = new Uint8Array(event.target.value.buffer);
+                logger.trace(
+                  `BLE notification from ${uuid}:`,
+                  Array.from(data)
+                );
+                if (this._onMessageCallback) {
+                  this._onMessageCallback(uuid, data);
+                }
+              });
+            }
+          }
+        }
+
+        this._connected = true;
+        logger.info("✓ BLE connection established");
+        return true;
+      } catch (error) {
+        logger.error("BLE connection failed:", error);
+        this._connected = false;
+        throw error;
+      } finally {
+        logger.groupEnd();
+      }
+    }
+
+    async disconnect() {
+      logger.info("Disconnecting BLE...");
+      if (this._device && this._device.gatt.connected) {
+        await this._device.gatt.disconnect();
+      }
+      this._connected = false;
+      this._device = null;
+      this._server = null;
+      this._characteristics.clear();
+      logger.info("✓ BLE disconnected");
+    }
+
+    async send(characteristic, data) {
+      if (!this._connected) {
+        logger.error("Cannot send: not connected");
+        throw new Error("Not connected");
+      }
+
+      const uuid = characteristic.toLowerCase();
+      const char = this._characteristics.get(uuid);
+
+      if (!char) {
+        logger.error(`Characteristic not found: ${uuid}`);
+        throw new Error(`Characteristic not found: ${uuid}`);
+      }
+
+      logger.trace(`Sending to ${uuid}:`, Array.from(data));
+      await char.writeValue(data);
+    }
+
+    async read(characteristic) {
+      if (!this._connected) {
+        logger.error("Cannot read: not connected");
+        throw new Error("Not connected");
+      }
+
+      const uuid = characteristic.toLowerCase();
+      const char = this._characteristics.get(uuid);
+
+      if (!char) {
+        logger.error(`Characteristic not found: ${uuid}`);
+        throw new Error(`Characteristic not found: ${uuid}`);
+      }
+
+      const value = await char.readValue();
+      const data = new Uint8Array(value.buffer);
+      logger.trace(`Read from ${uuid}:`, Array.from(data));
+      return data;
+    }
+  }
+
+  class ScratchLinkAdapter extends ConnectionAdapter {
+    constructor(runtime, extensionId) {
+      super();
+      this._runtime = runtime;
+      this._extensionId = extensionId;
+      this._socket = null;
+      this._requestId = 0;
+      this._requests = new Map();
+      this._connectResolve = null;
+      this._connectReject = null;
+      this._discoverPromise = null;
+      this._onPeripheralFound = null;
+      this._onDiscoverFailed = null;
+      this._connectPromise = null;
+      this._connectionTimer = null;
+      logger.info("Scratch Link Adapter initialized");
+    }
+
+    connect() {
+      if (this._connected) return Promise.resolve(true);
+      if (this._connectPromise) return this._connectPromise;
+      // Install the resolvers BEFORE opening: native sockets may open inline.
+      const pending = new Promise((resolve, reject) => {
+        this._connectResolve = resolve;
+        this._connectReject = reject;
+      });
+      this._connectPromise = pending;
+      const clearPending = () => {
+        if (this._connectPromise === pending) this._connectPromise = null;
+      };
+      pending.then(clearPending, clearPending);
+      logger.group("Scratch Link Connection");
+      try {
+        logger.info("Getting Scratch Link socket from runtime...");
+
+        if (this._runtime && this._runtime.getScratchLinkSocket) {
+          this._socket = this._runtime.getScratchLinkSocket("BLE");
+          logger.info("✓ Got socket from runtime");
+
+          const socket = this._socket;
+          // Late callbacks from a closed socket must not affect a new attempt.
+          const current =
+            (handler) =>
+            (...args) => {
+              if (this._socket === socket) handler.apply(this, args);
+            };
+          socket.setOnOpen(current(this._onOpen));
+          socket.setOnClose(current(this._onClose));
+          socket.setOnError(current(this._onError));
+          socket.setHandleMessage(current(this._handleMessage));
+
+          logger.info("Opening socket...");
+          this._armConnectionTimeout(10000, "opening Scratch Link");
+          this._socket.open();
+        } else {
+          throw new Error("Runtime does not support Scratch Link");
+        }
+      } catch (error) {
+        logger.error("Scratch Link connection failed:", error);
+        this._abort(error);
+      } finally {
+        logger.groupEnd();
+      }
+      return pending;
+    }
+
+    _armConnectionTimeout(ms, stage) {
+      clearTimeout(this._connectionTimer);
+      this._connectionTimer = setTimeout(() => {
+        this._abort(new Error(`WeDo connection timed out: ${stage}`));
+      }, ms);
+    }
+
+    _abort(error) {
+      const socket = this._socket;
+      this._socket = null;
+      this._connected = false;
+      clearTimeout(this._connectionTimer);
+      this._connectionTimer = null;
+      const rejectConnect = this._connectReject;
+      const rejectDiscovery = this._onDiscoverFailed;
+      this._connectResolve = null;
+      this._connectReject = null;
+      this._onPeripheralFound = null;
+      this._onDiscoverFailed = null;
+      this._discoverPromise = null;
+      if (rejectConnect) rejectConnect(error);
+      if (rejectDiscovery) rejectDiscovery(error);
+      for (const request of this._requests.values()) request.reject(error);
+      this._requests.clear();
+      // Cancel CONNECTING sockets too. isOpen() alone leaves failed sessions alive.
+      if (socket) {
+        try {
+          socket.close();
+        } catch (closeError) {
+          logger.warn("Could not close Scratch Link:", closeError);
+        }
+      }
+    }
+
+    _onOpen() {
+      logger.info("✓ Socket opened, discovering devices...");
+      const socket = this._socket;
+      this._armConnectionTimeout(20000, "discovering a hub");
+      const ensureCurrent = () => {
+        if (this._socket !== socket)
+          throw new Error("WeDo connection cancelled");
+      };
+
+      // `discover` is answered IMMEDIATELY with null and the scan results
+      // arrive afterwards as `didDiscoverPeripheral` notifications -- that is
+      // the Scratch Link contract, and our own session states it outright
+      // ("Returns immediately; discovered devices stream back as
+      // notifications"). We were reading the discover REPLY as the device and
+      // taking .peripheralId off it, which is a TypeError on null before any
+      // hub is even considered. Wait for the first peripheral the scan
+      // actually reports instead.
+      this._discoverPromise = new Promise((resolve, reject) => {
+        this._onPeripheralFound = resolve;
+        this._onDiscoverFailed = reject;
+      });
+      const discovery = this._discoverPromise;
+
+      const discoverRequest = this._sendRequest("discover", {
+        filters: [
+          {
+            services: [WeDo2BLE.advertisementService],
+          },
+        ],
+        // A Scratch Link session's allowance is exactly the services named
+        // here: the filters plus optionalServices, replaced (not grown) by
+        // each discover. WeDo 2.0 is the one LEGO hub whose IO does NOT live
+        // on the service it advertises -- attachedIO, inputValues,
+        // inputCommand and outputCommand are all on 4f0e, and the heartbeat
+        // reads battery from 180f. Omitting them left the allowance at the
+        // advertised service alone, so every read, write and
+        // startNotifications against the IO service came back "attempt to
+        // access unexpected service" and the hub was reachable only over Web
+        // Bluetooth, which carries its own optionalServices below.
+        optionalServices: [WeDo2BLE.ioService, WeDo2BLE.batteryService],
+      });
+      // Observe both promises immediately, including a discovery failure that
+      // arrives before the discover RPC reply.
+      Promise.all([discoverRequest, discovery])
+        .then(([, device]) => {
+          ensureCurrent();
+          logger.info(`Device discovered: ${device.name || "WeDo 2.0"}`);
+
+          if (this._runtime) {
+            this._runtime.emit(
+              this._runtime.constructor.PERIPHERAL_LIST_UPDATE,
+              { [device.peripheralId]: device }
+            );
+          }
+
+          this._armConnectionTimeout(15000, "connecting to the hub");
+          return this._sendRequest(
+            "connect",
+            {
+              peripheralId: device.peripheralId,
+            },
+            15000
+          );
+        })
+        .then(() => {
+          ensureCurrent();
+          logger.info("✓ Connected to device");
+          this._armConnectionTimeout(10000, "enabling hub notifications");
+
+          // Start notifications for all input characteristics
+          const notifications = [
+            WeDo2BLE.attachedIO,
+            WeDo2BLE.inputValues,
+            WeDo2BLE.button,
+          ].map((characteristicId) => ({
+            serviceId: serviceFor(characteristicId),
+            characteristicId,
+          }));
+
+          return Promise.all(
+            notifications.map((n) => this._sendRequest("startNotifications", n))
+          );
+        })
+        .then(() => {
+          ensureCurrent();
+          logger.info("✓ Notifications started");
+          this._connected = true;
+          clearTimeout(this._connectionTimer);
+          this._connectionTimer = null;
+
+          if (this._connectResolve) {
+            this._connectResolve(true);
+            this._connectResolve = null;
+            this._connectReject = null;
+          }
+        })
+        .catch((error) => {
+          logger.error("Connection sequence failed:", error);
+          if (this._socket === socket) this._abort(error);
+        });
+    }
+
+    _onClose() {
+      logger.warn("Socket closed");
+      const wasConnected = this._connected;
+      this._abort(new Error("Scratch Link socket closed"));
+
+      if (this._runtime && wasConnected) {
+        this._runtime.emit(
+          this._runtime.constructor.PERIPHERAL_CONNECTION_LOST_ERROR,
+          {
+            message: "Scratch lost connection to LEGO WeDo 2.0",
+            extensionId: this._extensionId,
+          }
+        );
+      }
+    }
+
+    _onError(error) {
+      logger.error("Socket error:", error);
+
+      if (this._runtime) {
+        this._runtime.emit(this._runtime.constructor.PERIPHERAL_REQUEST_ERROR, {
+          message: "Scratch lost connection to LEGO WeDo 2.0",
+          extensionId: this._extensionId,
+        });
+      }
+
+      this._abort(
+        error instanceof Error ? error : new Error("Scratch Link socket error")
+      );
+    }
+
+    _handleMessage(message) {
+      try {
+        const json =
+          typeof message === "string" ? JSON.parse(message) : message;
+        logger.trace("Scratch Link message:", json);
+
+        if (json.jsonrpc === "2.0") {
+          if (json.method === "didDiscoverPeripheral") {
+            logger.info(
+              `Peripheral reported: ${json.params.name} (${json.params.peripheralId})`
+            );
+            if (this._onPeripheralFound) {
+              const resolve = this._onPeripheralFound;
+              this._onPeripheralFound = null;
+              this._onDiscoverFailed = null;
+              resolve(json.params);
+            }
+          } else if (
+            json.method === "discoverDidFail" ||
+            json.method === "userDidNotPickPeripheral"
+          ) {
+            // discoverDidFail carries a reason; userDidNotPickPeripheral is
+            // the stock frame and carries none. Either way the scan is over.
+            const why =
+              (json.params && json.params.message) || "no WeDo 2.0 hub found";
+            logger.warn(`Discovery failed: ${why}`);
+            if (this._onDiscoverFailed) {
+              const reject = this._onDiscoverFailed;
+              this._onPeripheralFound = null;
+              this._onDiscoverFailed = null;
+              reject(new Error(why));
+            }
+          } else if (json.method === "discoverDidFinish") {
+            // The scan window closed. If nothing matched, stop waiting.
+            if (this._onDiscoverFailed && !(json.params && json.params.count)) {
+              const reject = this._onDiscoverFailed;
+              this._onPeripheralFound = null;
+              this._onDiscoverFailed = null;
+              reject(new Error("no WeDo 2.0 hub found"));
+            }
+          } else if (json.method === "characteristicDidChange") {
+            const data = Base64Util.base64ToUint8Array(json.params.message);
+            const uuid = json.params.characteristicId.toLowerCase();
+            logger.trace(`Data received on ${uuid}:`, Array.from(data));
+            if (this._onMessageCallback) {
+              this._onMessageCallback(uuid, data);
+            }
+          } else if (json.id !== undefined) {
+            const request = this._requests.get(json.id);
+            if (request) {
+              this._requests.delete(json.id);
+              if (json.error) {
+                request.reject(new Error(json.error.message));
+              } else {
+                request.resolve(json.result);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        logger.error("Error handling message:", error);
+      }
+    }
+
+    disconnect() {
+      logger.info("Disconnecting Scratch Link...");
+      this._abort(new Error("WeDo connection cancelled"));
+      logger.info("✓ Scratch Link disconnected");
+    }
+
+    send(characteristic, data) {
+      if (!this._connected || !this._socket) {
+        logger.error("Cannot send: not connected");
+        throw new Error("Not connected");
+      }
+
+      logger.trace(`Sending to ${characteristic}:`, Array.from(data));
+
+      const base64 = Base64Util.uint8ArrayToBase64(data);
+
+      return this._sendRequest("write", {
+        serviceId: serviceFor(characteristic),
+        characteristicId: characteristic,
+        message: base64,
+        encoding: "base64",
+      });
+    }
+
+    async read(characteristic) {
+      if (!this._connected || !this._socket) {
+        logger.error("Cannot read: not connected");
+        throw new Error("Not connected");
+      }
+
+      logger.trace(`Reading from ${characteristic}`);
+
+      const result = await this._sendRequest("read", {
+        serviceId: serviceFor(characteristic),
+        characteristicId: characteristic,
+      });
+
+      const data = Base64Util.base64ToUint8Array(result.message);
+      logger.trace(`Read from ${characteristic}:`, Array.from(data));
+      return data;
+    }
+
+    _sendRequest(method, params, timeout = 10000) {
+      return new Promise((resolve, reject) => {
+        const id = ++this._requestId;
+        const settle = (callback) => (value) => {
+          clearTimeout(timer);
+          this._requests.delete(id);
+          callback(value);
+        };
+        const timer = setTimeout(() => {
+          this._abort(new Error(`Scratch Link ${method} timed out`));
+        }, timeout);
+        this._requests.set(id, {
+          resolve: settle(resolve),
+          reject: settle(reject),
+        });
+
+        const request = {
+          jsonrpc: "2.0",
+          id: id,
+          method: method,
+          params: params,
+        };
+
+        logger.trace("Sending request:", request);
+
+        try {
+          if (!this._socket || !this._socket.sendMessage) {
+            throw new Error("Socket not available");
+          }
+          this._socket.sendMessage(request);
+        } catch (error) {
+          this._abort(error);
+        }
+      });
+    }
+  }
+
+  // ============================================================================
+  // WEDO 2.0 HUB
+  // ============================================================================
+
+  class WeDo2Hub {
+    constructor(runtime, extensionId, connectionType) {
+      logger.info(
+        `Initializing WeDo 2.0 Hub with connection type: ${connectionType}`
+      );
+
+      this._runtime = runtime;
+      this._extensionId = extensionId;
+      this._connectionType = connectionType;
+
+      this._connection = null;
+      this._devices = {};
+      this._ports = {};
+      this._rateLimiter = new RateLimiter(WeDo2BLE.sendRateMax);
+      this._heartbeatInterval = null;
+      this._scanPromise = null;
+      this._initializing = false;
+
+      // Hub status
+      this.hubStatus = {
+        buttonPressed: false,
+        batteryLevel: 100,
+        lowVoltage: false,
+      };
+
+      // Sensor values (for quick access)
+      this.tiltX = 0;
+      this.tiltY = 0;
+      this.distance = 0;
+
+      // Bind methods. There is deliberately no _onConnect here: it was bound
+      // but never defined anywhere in this extension, so the line threw
+      // "Cannot read properties of undefined (reading 'bind')" inside the
+      // constructor -- before any transport was chosen, which is why the hub
+      // could not be created over Web Bluetooth either.
+      this.reset = this.reset.bind(this);
+
+      // Register as peripheral extension
+      if (this._runtime) {
+        try {
+          this._runtime.registerPeripheralExtension(extensionId, this);
+          this._runtime.on("PROJECT_STOP_ALL", this.stopAll.bind(this));
+          logger.info("✓ Registered as peripheral extension");
+        } catch (error) {
+          logger.warn("Could not register peripheral extension:", error);
+        }
+      }
+
+      logger.info("WeDo 2.0 Hub initialized (waiting for scan)");
+    }
+
+    scan() {
+      if (this._scanPromise) return this._scanPromise;
+      const pending = this._scan();
+      this._scanPromise = pending;
+      const clearPending = () => {
+        if (this._scanPromise === pending) this._scanPromise = null;
+      };
+      pending.then(clearPending, clearPending);
+      return pending;
+    }
+
+    async _scan() {
+      logger.info("============ SCAN CALLED ============");
+
+      if (this._connection) {
+        logger.info("Disconnecting existing connection");
+        await this._connection.disconnect();
+      }
+      this.reset();
+
+      switch (this._connectionType) {
+        case ConnectionType.BLE:
+          logger.info("Creating BLE adapter");
+          this._connection = new BLEAdapter();
+          break;
+
+        case ConnectionType.SCRATCH_LINK:
+          logger.info("Creating Scratch Link adapter");
+          this._connection = new ScratchLinkAdapter(
+            this._runtime,
+            this._extensionId
+          );
+          break;
+
+        default:
+          throw new Error(`Invalid connection type: ${this._connectionType}`);
+      }
+
+      this._connection.onMessage((uuid, data) => this._onMessage(uuid, data));
+
+      logger.info("Calling connection.connect()");
+      return this.connect();
+    }
+
+    async connect() {
+      logger.info("Connecting WeDo 2.0 Hub...");
+
+      if (!this._connection) {
+        throw new Error("No connection adapter - call scan() first");
+      }
+
+      const connection = this._connection;
+      this._initializing = true;
+      try {
+        await connection.connect();
+        await this._initialize();
+        if (this._connection !== connection || !connection.isConnected()) {
+          throw new Error("WeDo connection cancelled during initialization");
+        }
+        this._initializing = false;
+        if (this._runtime) {
+          this._runtime.emit(this._runtime.constructor.PERIPHERAL_CONNECTED);
+        }
+      } catch (error) {
+        this.reset();
+        await connection.disconnect();
+        throw error;
+      } finally {
+        this._initializing = false;
+      }
+      logger.info("✓ WeDo 2.0 Hub connected and initialized");
+    }
+
+    async _initialize() {
+      logger.group("Initializing Hub");
+      try {
+        // Set LED to RGB mode FIRST
+        logger.info("Setting LED to RGB mode...");
+        const ledCmd = new Uint8Array([
+          1, // Command type
+          2, // Setup single
+          Port.LED, // Port 6
+          DeviceType.RGB_LED, // Type 23 (0x17)
+          1, // Mode 1 = RGB
+          0,
+          0,
+          0,
+          0, // Delta
+          0, // Units
+          0, // Notifications disabled for LED
+        ]);
+        await this.send(WeDo2BLE.inputCommand, ledCmd, false);
+        await this._delay(100);
+
+        // Set LED to blue to indicate connected
+        logger.info("Setting LED to blue...");
+        await this.setLED(0x0000ff);
+        await this._delay(100);
+
+        // Start heartbeat for battery monitoring
+        logger.info("Starting heartbeat...");
+        this._startHeartbeat();
+
+        logger.info("✓ Hub initialization complete");
+      } catch (error) {
+        logger.error("Hub initialization failed:", error);
+        throw error;
+      } finally {
+        logger.groupEnd();
+      }
+    }
+
+    async disconnect() {
+      logger.info("Disconnecting WeDo 2.0 Hub...");
+
+      if (this._heartbeatInterval) {
+        clearInterval(this._heartbeatInterval);
+        this._heartbeatInterval = null;
+      }
+
+      // While connecting, cancel immediately rather than waiting for another
+      // GATT write on the same unresponsive connection.
+      try {
+        if (!this._initializing && this.isConnected()) {
+          const cmd = new Uint8Array([1]);
+          await this.send(WeDo2BLE.disconnect, cmd, false);
+        }
+      } catch (error) {
+        logger.warn("Could not send disconnect command:", error);
+      }
+
+      if (this._connection) {
+        await this._connection.disconnect();
+      }
+
+      this._devices = {};
+      this._ports = {};
+
+      logger.info("✓ WeDo 2.0 Hub disconnected");
+    }
+
+    isConnected() {
+      return (
+        !this._initializing &&
+        this._connection &&
+        this._connection.isConnected()
+      );
+    }
+
+    getDevice(portId) {
+      return this._devices[portId];
+    }
+
+    getMotor(portId) {
+      const device = this._devices[portId];
+      if (device instanceof WeDo2Motor) return device;
+      if (device && Object.prototype.hasOwnProperty.call(this._ports, portId)) {
+        return null;
+      }
+      // Not announced. A motor is addressed by PORT NUMBER -- the output
+      // command carries the port and the hub routes it -- so an attachedIO
+      // announcement is not required to drive one, and some WeDo 2.0 hubs
+      // never send one for the external ports. Measured on an LPF2 Smart Hub
+      // clone (LEGO System A/S, fw 1.0.09.0000): it reports ports 3-6, its
+      // own internal devices, and announces NOTHING for ports 1 and 2 even
+      // with a motor physically attached and turning under our commands.
+      // Gating output on the announcement made every motor block a silent
+      // no-op on that hardware.
+      //
+      // Only the two external ports, and only while nothing is known to be
+      // there: a later announcement wins, so a port that turns out to hold a
+      // tilt or motion sensor stops answering getMotor as soon as the hub
+      // says so.
+      if (portId !== Port.A && portId !== Port.B) {
+        return null;
+      }
+      logger.info(
+        `Port ${portId} was never announced; addressing it as a motor ` +
+          `(this hub does not report its external ports)`
+      );
+      const motor = new WeDo2Motor(this, portId, DeviceType.MOTOR);
+      this._devices[portId] = motor;
+      return motor;
+    }
+
+    getLight(portId) {
+      if (portId !== Port.A && portId !== Port.B) return null;
+      const device = this._devices[portId];
+      if (device instanceof WeDo2Light) return device;
+      if (device && Object.prototype.hasOwnProperty.call(this._ports, portId))
+        return null;
+      // An inferred motor is not an attachment announcement. Explicit light
+      // commands may replace that guess; actual motors/sensors stay protected.
+      if (device instanceof WeDo2Motor) device._clearBrake();
+      const light = new WeDo2Light(this, portId, DeviceType.LIGHT);
+      this._devices[portId] = light;
+      return light;
+    }
+
+    getSensor(portId) {
+      const device = this._devices[portId];
+      return device instanceof WeDo2Sensor ? device : null;
+    }
+
+    /**
+     * @param {boolean} useLimiter pass false for a command that must not be
+     *   dropped. The limiter exists so that a slider dragged across the stage
+     *   cannot outrun the hub's 20 Hz link; it must never eat a STOP.
+     */
+    send(characteristic, data, useLimiter = true) {
+      // This used to compute okayToSend(), log "message queued", and then send
+      // anyway -- the verdict was discarded and nothing was ever queued or
+      // dropped, so the limiter was decorative. scratch-vm's wedo2 returns
+      // early here, and now so do we.
+      if (useLimiter && !this._rateLimiter.okayToSend()) {
+        logger.trace("Rate limiter: dropped a throttled message");
+        return Promise.resolve();
+      }
+
+      const pending = this._connection.send(characteristic, data);
+      // Motor commands and PROJECT_STOP_ALL may intentionally fire and forget.
+      // Report failed writes without changing the promise received by awaiters.
+      pending.catch((error) => logger.error("Command send failed:", error));
+      return pending;
+    }
+
+    async setLED(rgb) {
+      const r = (rgb >> 16) & 0xff;
+      const g = (rgb >> 8) & 0xff;
+      const b = rgb & 0xff;
+
+      logger.debug(`Setting LED to RGB(${r}, ${g}, ${b})`);
+
+      const cmd = new Uint8Array([Port.LED, 4, 3, r, g, b]);
+      await this.send(WeDo2BLE.outputCommand, cmd);
+    }
+
+    async playTone(frequency, duration) {
+      // The piezo supports at most 1500 Hz and uint16 milliseconds.
+      // Clamp before encoding; Uint16Array silently wrapped long durations.
+      const hz = Math.round(Math.max(0, Math.min(1500, frequency)));
+      const ms = Math.round(Math.max(0, Math.min(65535, duration)));
+      const cmd = new Uint8Array([
+        Port.PIEZO,
+        2,
+        4,
+        hz & 0xff,
+        (hz >> 8) & 0xff,
+        ms & 0xff,
+        (ms >> 8) & 0xff,
+      ]);
+      // Notes are discrete commands: dropping one changes the melody.
+      await this.send(WeDo2BLE.outputCommand, cmd, false);
+    }
+
+    async stopAll() {
+      if (!this.isConnected()) return;
+      logger.info("Stopping all motors");
+
+      for (const device of Object.values(this._devices)) {
+        if (device instanceof WeDo2Motor) {
+          device.turnOff();
+        } else if (device instanceof WeDo2Light) {
+          await device.setBrightness(0);
+        }
+      }
+    }
+
+    getPeripheralIsConnected() {
+      return this.isConnected();
+    }
+
+    reset() {
+      logger.info("Resetting hub state");
+      this._devices = {};
+      this._ports = {};
+
+      if (this._heartbeatInterval) {
+        clearInterval(this._heartbeatInterval);
+        this._heartbeatInterval = null;
+      }
+
+      this.hubStatus = {
+        buttonPressed: false,
+        batteryLevel: 100,
+      };
+      this.tiltX = 0;
+      this.tiltY = 0;
+      this.distance = 0;
+    }
+
+    _startHeartbeat() {
+      // Use 5 seconds like official Scratch extension
+      this._heartbeatInterval = setInterval(async () => {
+        if (this.isConnected()) {
+          try {
+            const batteryData = await this._connection.read(WeDo2BLE.battery);
+            if (batteryData && batteryData.length > 0) {
+              this.hubStatus.batteryLevel = batteryData[0];
+              logger.trace(`Battery level: ${this.hubStatus.batteryLevel}%`);
+            }
+          } catch (error) {
+            // Don't spam logs with heartbeat errors, just log once
+            if (!this._heartbeatErrorLogged) {
+              logger.warn("Heartbeat failed, will retry silently:", error);
+              this._heartbeatErrorLogged = true;
+            }
+          }
+        }
+      }, 5000); // 5 seconds instead of 10
+
+      logger.debug("Heartbeat started (5s interval)");
+    }
+
+    _onMessage(uuid, data) {
+      logger.trace(`Processing message from ${uuid}:`, Array.from(data));
+
+      const uuidLower = uuid.toLowerCase();
+
+      // Attached IO - device connection/disconnection
+      if (uuidLower.includes("1527")) {
+        this._handleAttachedIO(data);
+      }
+      // Input Values - sensor data
+      else if (uuidLower.includes("1560")) {
+        this._handleInputValues(data);
+      }
+      // Button
+      else if (uuidLower.includes("1526")) {
+        this.hubStatus.buttonPressed = data[0] === 1;
+        logger.debug(`Button pressed: ${this.hubStatus.buttonPressed}`);
+      }
+      // Low Voltage Alert - ADD THIS
+      else if (uuidLower.includes("1528")) {
+        this.hubStatus.lowVoltage = data[0] !== 0;
+        if (this.hubStatus.lowVoltage) {
+          logger.warn("Low voltage alert!");
+        }
+      }
+    }
+
+    _handleAttachedIO(data) {
+      const portId = data[0];
+      const event = data[1]; // 0 = detached, 1 = attached
+      const deviceType = event === 0 ? null : data[3];
+
+      logger.group(`Device event on port ${portId}`);
+      logger.debug(
+        `Event: ${event === 0 ? "detached" : "attached"}, Device type: ${deviceType}`
+      );
+
+      if (event === 1) {
+        // Device attached
+        this._ports[portId] = deviceType;
+
+        if (deviceType === DeviceType.MOTOR) {
+          logger.info(`Motor attached on port ${portId}`);
+          this._devices[portId] = new WeDo2Motor(this, portId, deviceType);
+        } else if (deviceType === DeviceType.LIGHT) {
+          this._devices[portId] = new WeDo2Light(this, portId, deviceType);
+        } else if (deviceType === DeviceType.TILT_SENSOR) {
+          logger.info(`Tilt sensor attached on port ${portId}`);
+          this._devices[portId] = new WeDo2Sensor(this, portId, deviceType);
+          this._setupSensor(portId, deviceType);
+        } else if (deviceType === DeviceType.MOTION_SENSOR) {
+          logger.info(`Motion sensor attached on port ${portId}`);
+          this._devices[portId] = new WeDo2Sensor(this, portId, deviceType);
+          this._setupSensor(portId, deviceType);
+        } else if (deviceType === DeviceType.RGB_LED) {
+          logger.info(`RGB LED attached on port ${portId}`);
+          this._devices[portId] = new WeDo2Device(this, portId, deviceType);
+        } else {
+          logger.debug(`Unknown device type: ${deviceType}`);
+          this._devices[portId] = new WeDo2Device(this, portId, deviceType);
+        }
+      } else {
+        // Device detached
+        logger.info(`Device detached from port ${portId}`);
+        delete this._devices[portId];
+        delete this._ports[portId];
+      }
+
+      logger.groupEnd();
+    }
+
+    _handleInputValues(data) {
+      const portId = data[1];
+      const deviceType = this._ports[portId];
+
+      if (!deviceType) {
+        return;
+      }
+
+      const device = this._devices[portId];
+
+      if (deviceType === DeviceType.TILT_SENSOR) {
+        // WeDo 2.0 tilt sensor reports angles in range -45 to 45 (as 0-255)
+        // Values > 45 are negative angles (256 - value)
+        const rawX = data[2];
+        const rawY = data[3];
+
+        this.tiltX = rawX > 45 ? rawX - 256 : rawX;
+        this.tiltY = rawY > 45 ? rawY - 256 : rawY;
+
+        logger.trace(`Tilt: X=${this.tiltX}, Y=${this.tiltY}`);
+
+        if (device) {
+          device.setValue("tiltX", this.tiltX);
+          device.setValue("tiltY", this.tiltY);
+        }
+      } else if (deviceType === DeviceType.MOTION_SENSOR) {
+        // Enhanced distance with sub-unit precision
+        let distance = data[2];
+
+        // Check if there's a partial distance byte (for more precision)
+        if (data.length > 3 && data[3] > 0) {
+          distance += 1.0 / data[3];
+        }
+
+        this.distance = distance;
+        logger.trace(`Distance: ${this.distance}`);
+
+        if (device) {
+          device.setValue("distance", this.distance);
+        }
+      }
+    }
+
+    async _setupSensor(portId, deviceType) {
+      logger.debug(`Setting up sensor on port ${portId}, type ${deviceType}`);
+
+      // Input format setup command
+      // [length, command, port, type, mode, delta(4 bytes), units, notifications]
+      const cmd = new Uint8Array([
+        1, // Command type
+        2, // Setup single
+        portId, // Port
+        deviceType, // Device type
+        InputMode.TILT, // Mode (0 for both tilt and motion)
+        1,
+        0,
+        0,
+        0, // Delta (1 = report all changes)
+        0, // Units
+        1, // Enable notifications
+      ]);
+
+      await this.send(WeDo2BLE.inputCommand, cmd, false);
+      await this._delay(100);
+    }
+
+    _delay(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+  }
+
+  // ============================================================================
+  // EXTENSION CLASS
+  // ============================================================================
+
+  class LEGOWeDo2Extension {
+    constructor(runtime) {
+      logger.info("=".repeat(60));
+      logger.info("LEGO WeDo 2.0 Unified Extension");
+      logger.info("=".repeat(60));
+
+      // Get runtime
+      this._runtime = runtime;
+
+      if (!this._runtime && typeof Scratch !== "undefined" && Scratch.vm) {
+        this._runtime = Scratch.vm.runtime;
+        logger.info("Got runtime from Scratch.vm.runtime");
+      }
+
+      if (!this._runtime && typeof globalThis.vm !== "undefined") {
+        this._runtime = globalThis.vm.runtime;
+        logger.info("Got runtime from vm.runtime");
+      }
+
+      logger.info("Runtime available:", !!this._runtime);
+
+      this._hub = null;
+      this._connectPromise = null;
+      this._connectionType = ConnectionType.SCRATCH_LINK;
+
+      logger.info("Extension initialized");
+    }
+
+    whenBatteryLow() {
+      if (!this._ensureConnected()) return false;
+      return (
+        this._hub.hubStatus.lowVoltage || this._hub.hubStatus.batteryLevel < 10
+      );
+    }
+
+    getInfo() {
+      return {
+        id: "wedo2unified",
+        name: t("wedo2.name"),
+        color1: "#005595",
+        color2: "#004577",
+        color3: "#003559",
+        showStatusButton: true,
+        blocks: [
+          // Connection blocks
+          {
+            opcode: "setConnectionType",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.setConnection"),
+            arguments: {
+              TYPE: {
+                type: ArgumentType.STRING,
+                menu: "connectionType",
+                defaultValue: ConnectionType.SCRATCH_LINK,
+              },
+            },
+          },
+          {
+            opcode: "connect",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.connect"),
+          },
+          {
+            opcode: "disconnect",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.disconnect"),
+          },
+          {
+            opcode: "isConnected",
+            blockType: BlockType.BOOLEAN,
+            text: t("wedo2.connected"),
+          },
+
+          "---",
+
+          // Debug blocks
+          {
+            opcode: "setDebugLevel",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.setDebug"),
+            arguments: {
+              LEVEL: {
+                type: ArgumentType.STRING,
+                menu: "debugLevel",
+                defaultValue: "DEBUG",
+              },
+            },
+          },
+
+          "---",
+
+          // Motor blocks
+          {
+            opcode: "motorOn",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.motorOn"),
+            arguments: {
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "motorPort",
+                defaultValue: "A",
+              },
+            },
+          },
+          {
+            opcode: "motorOff",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.motorOff"),
+            arguments: {
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "motorPort",
+                defaultValue: "A",
+              },
+            },
+          },
+          {
+            opcode: "setMotorPower",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.motorPower"),
+            arguments: {
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "motorPort",
+                defaultValue: "A",
+              },
+              POWER: {
+                type: ArgumentType.NUMBER,
+                defaultValue: 100,
+              },
+            },
+          },
+          {
+            opcode: "setMotorDirection",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.motorDirection"),
+            arguments: {
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "motorPort",
+                defaultValue: "A",
+              },
+              DIRECTION: {
+                type: ArgumentType.STRING,
+                menu: "direction",
+                defaultValue: "forward",
+              },
+            },
+          },
+
+          "---",
+
+          // Sensor blocks
+          {
+            opcode: "getDistance",
+            blockType: BlockType.REPORTER,
+            text: t("wedo2.distance"),
+          },
+          {
+            opcode: "getTiltAngle",
+            blockType: BlockType.REPORTER,
+            text: t("wedo2.tiltAngle"),
+            arguments: {
+              DIRECTION: {
+                type: ArgumentType.STRING,
+                menu: "tiltDirection",
+                defaultValue: "up",
+              },
+            },
+          },
+          {
+            opcode: "whenTilted",
+            blockType: BlockType.HAT,
+            text: t("wedo2.whenTilted"),
+            arguments: {
+              DIRECTION: {
+                type: ArgumentType.STRING,
+                menu: "tiltDirectionAny",
+                defaultValue: "any",
+              },
+            },
+          },
+          {
+            opcode: "isTilted",
+            blockType: BlockType.BOOLEAN,
+            text: t("wedo2.isTilted"),
+            arguments: {
+              DIRECTION: {
+                type: ArgumentType.STRING,
+                menu: "tiltDirectionAny",
+                defaultValue: "any",
+              },
+            },
+          },
+
+          "---",
+
+          // External Powered Up 88005 lights (separate from the hub RGB LED).
+          {
+            opcode: "setLightBrightness",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.lightBrightness"),
+            arguments: {
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "motorPort",
+                defaultValue: "A",
+              },
+              BRIGHTNESS: { type: ArgumentType.NUMBER, defaultValue: 100 },
+              POLARITY: {
+                type: ArgumentType.STRING,
+                menu: "lightPolarity",
+                defaultValue: "normal",
+              },
+            },
+          },
+          {
+            opcode: "lightOff",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.lightOff"),
+            arguments: {
+              PORT: {
+                type: ArgumentType.STRING,
+                menu: "motorPort",
+                defaultValue: "A",
+              },
+            },
+          },
+
+          // LED and Sound blocks
+          {
+            opcode: "setLED",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.lightColor"),
+            arguments: {
+              HUE: {
+                type: ArgumentType.NUMBER,
+                defaultValue: 50,
+              },
+            },
+          },
+          {
+            opcode: "playNote",
+            blockType: BlockType.COMMAND,
+            text: t("wedo2.playNote"),
+            arguments: {
+              NOTE: {
+                type: ArgumentType.NUMBER,
+                defaultValue: 60,
+              },
+              DURATION: {
+                type: ArgumentType.NUMBER,
+                defaultValue: 0.5,
+              },
+            },
+          },
+
+          "---",
+
+          // Status blocks
+          {
+            opcode: "whenButtonPressed",
+            blockType: BlockType.HAT,
+            text: t("wedo2.whenButton"),
+          },
+          {
+            opcode: "isButtonPressed",
+            blockType: BlockType.BOOLEAN,
+            text: t("wedo2.buttonPressed"),
+          },
+          {
+            opcode: "getBatteryLevel",
+            blockType: BlockType.REPORTER,
+            text: t("wedo2.battery"),
+          },
+        ],
+        menus: {
+          connectionType: {
+            acceptReporters: false,
+            items: [
+              { text: "Web Bluetooth (Direct)", value: ConnectionType.BLE },
+              { text: "Scratch Link", value: ConnectionType.SCRATCH_LINK },
+            ],
+          },
+          debugLevel: {
+            acceptReporters: false,
+            items: ["ERROR", "WARN", "INFO", "DEBUG", "TRACE"],
+          },
+          motorPort: {
+            acceptReporters: false,
+            items: [
+              { text: "A", value: "A" },
+              { text: "B", value: "B" },
+              { text: "Both", value: "ALL" },
+            ],
+          },
+          lightPolarity: {
+            acceptReporters: false,
+            items: [
+              { text: t("wedo2.lightNormal"), value: "normal" },
+              { text: t("wedo2.lightReversed"), value: "reversed" },
+            ],
+          },
+          direction: {
+            acceptReporters: false,
+            items: ["forward", "backward", "reverse"],
+          },
+          tiltDirection: {
+            acceptReporters: false,
+            items: ["up", "down", "left", "right"],
+          },
+          tiltDirectionAny: {
+            acceptReporters: false,
+            items: ["any", "up", "down", "left", "right"],
+          },
+        },
+      };
+    }
+
+    // ========================================================================
+    // CONNECTION BLOCKS
+    // ========================================================================
+
+    setConnectionType(args) {
+      this._connectionType = args.TYPE;
+      logger.info(`Connection type set to: ${this._connectionType}`);
+    }
+
+    connect() {
+      if (this._connectPromise) return this._connectPromise;
+      const pending = this._connect();
+      this._connectPromise = pending;
+      const clearPending = () => {
+        if (this._connectPromise === pending) this._connectPromise = null;
+      };
+      pending.then(clearPending, clearPending);
+      return pending;
+    }
+
+    async _connect() {
+      logger.group("=== CONNECT ===");
+      try {
+        if (!this._hub) {
+          logger.info(
+            `Creating hub with connection type: ${this._connectionType}`
+          );
+          this._hub = new WeDo2Hub(
+            this._runtime,
+            "wedo2unified",
+            this._connectionType
+          );
+        }
+
+        if (!this._hub.isConnected()) {
+          this._hub._connectionType = this._connectionType;
+          await this._hub.scan();
+        }
+
+        logger.info("✓ Successfully connected");
+      } catch (error) {
+        logger.error("Connection failed:", error);
+        // Keep the registered hub so retries do not accumulate runtime
+        // listeners. Hub.connect has already released a failed transport.
+        throw error;
+      } finally {
+        logger.groupEnd();
+      }
+    }
+
+    async disconnect() {
+      logger.group("=== DISCONNECT ===");
+      try {
+        if (!this._hub) {
+          logger.warn("Not connected");
+          return;
+        }
+
+        await this._hub.disconnect();
+        logger.info("✓ Disconnected");
+      } catch (error) {
+        logger.error("Disconnect failed:", error);
+        throw error;
+      } finally {
+        logger.groupEnd();
+      }
+    }
+
+    isConnected() {
+      const connected = this._hub && this._hub.isConnected();
+      logger.trace(`Connection status: ${connected}`);
+      return connected;
+    }
+
+    // ========================================================================
+    // DEBUG BLOCKS
+    // ========================================================================
+
+    setDebugLevel(args) {
+      logger.setLevel(args.LEVEL);
+      logger.info(`Debug level set to: ${args.LEVEL}`);
+    }
+
+    // ========================================================================
+    // MOTOR BLOCKS
+    // ========================================================================
+
+    motorOn(args) {
+      if (!this._ensureConnected()) return Promise.resolve();
+
+      this._forEachMotor(args.PORT, (motor) => {
+        motor.turnOn();
+      });
+
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(), WeDo2BLE.sendInterval);
+      });
+    }
+
+    motorOff(args) {
+      if (!this._ensureConnected()) return Promise.resolve();
+
+      this._forEachMotor(args.PORT, (motor) => {
+        motor.turnOff();
+      });
+
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(), WeDo2BLE.sendInterval);
+      });
+    }
+
+    setMotorPower(args) {
+      if (!this._ensureConnected()) return;
+
+      const power = Cast.toNumber(args.POWER);
+
+      this._forEachMotor(args.PORT, (motor) => {
+        motor.power = power;
+        motor.turnOn();
+      });
+
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(), WeDo2BLE.sendInterval);
+      });
+    }
+
+    setMotorDirection(args) {
+      if (!this._ensureConnected()) return;
+
+      this._forEachMotor(args.PORT, (motor) => {
+        switch (args.DIRECTION) {
+          case "forward":
+            motor.direction = 1;
+            break;
+          case "backward":
+            motor.direction = -1;
+            break;
+          case "reverse":
+            motor.direction = -motor.direction;
+            break;
+        }
+      });
+    }
+
+    // ========================================================================
+    // SENSOR BLOCKS
+    // ========================================================================
+
+    getDistance() {
+      if (!this._ensureConnected()) return 0;
+      return this._hub.distance;
+    }
+
+    getTiltAngle(args) {
+      if (!this._ensureConnected()) return 0;
+      return this._getTiltAngle(args.DIRECTION);
+    }
+
+    whenTilted(args) {
+      if (!this._ensureConnected()) return false;
+      return this._isTilted(args.DIRECTION);
+    }
+
+    isTilted(args) {
+      if (!this._ensureConnected()) return false;
+      return this._isTilted(args.DIRECTION);
+    }
+
+    // ========================================================================
+    // LED AND SOUND BLOCKS
+    // ========================================================================
+
+    async setLightBrightness(args) {
+      if (!this._ensureConnected()) return;
+      const ports =
+        args.PORT === "ALL"
+          ? [Port.A, Port.B]
+          : args.PORT === "A"
+            ? [Port.A]
+            : args.PORT === "B"
+              ? [Port.B]
+              : [];
+      // Sequential writes also respect Web Bluetooth's single GATT operation.
+      for (const port of ports) {
+        const light = this._hub.getLight(port);
+        if (light) await light.setBrightness(args.BRIGHTNESS, args.POLARITY);
+      }
+      if (ports.length) await this._hub._delay(WeDo2BLE.sendInterval);
+    }
+
+    lightOff(args) {
+      return this.setLightBrightness({ PORT: args.PORT, BRIGHTNESS: 0 });
+    }
+
+    setLED(args) {
+      if (!this._ensureConnected()) return;
+
+      const hue = Cast.toNumber(args.HUE);
+      const normalizedHue = ((hue % 100) + 100) % 100; // Wrap to 0-100
+      const hueAngle = (normalizedHue * 360) / 100;
+
+      // Convert HSV to RGB
+      const h = hueAngle;
+      const s = 1;
+      const v = 1;
+
+      const c = v * s;
+      const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+      const m = v - c;
+
+      let r, g, b;
+
+      if (h >= 0 && h < 60) {
+        r = c;
+        g = x;
+        b = 0;
+      } else if (h >= 60 && h < 120) {
+        r = x;
+        g = c;
+        b = 0;
+      } else if (h >= 120 && h < 180) {
+        r = 0;
+        g = c;
+        b = x;
+      } else if (h >= 180 && h < 240) {
+        r = 0;
+        g = x;
+        b = c;
+      } else if (h >= 240 && h < 300) {
+        r = x;
+        g = 0;
+        b = c;
+      } else {
+        r = c;
+        g = 0;
+        b = x;
+      }
+
+      const rgb =
+        (Math.round((r + m) * 255) << 16) |
+        (Math.round((g + m) * 255) << 8) |
+        Math.round((b + m) * 255);
+
+      this._hub.setLED(rgb);
+
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(), WeDo2BLE.sendInterval);
+      });
+    }
+
+    async playNote(args) {
+      if (!this._ensureConnected()) return;
+      const note = Math.max(0, Math.min(127, Cast.toNumber(args.NOTE)));
+      const duration = Math.round(
+        Math.max(0, Math.min(65535, Cast.toNumber(args.DURATION) * 1000))
+      );
+      if (!duration) return;
+      const frequency = Math.round(440 * Math.pow(2, (note - 69) / 12));
+      // Surface transport failures and begin the wait only after the write.
+      await this._hub.playTone(frequency, duration);
+      await this._hub._delay(duration + WeDo2BLE.sendInterval);
+    }
+
+    // ========================================================================
+    // STATUS BLOCKS
+    // ========================================================================
+
+    whenButtonPressed() {
+      if (!this._ensureConnected()) return false;
+      return this._hub.hubStatus.buttonPressed;
+    }
+
+    isButtonPressed() {
+      if (!this._ensureConnected()) return false;
+      return this._hub.hubStatus.buttonPressed;
+    }
+
+    getBatteryLevel() {
+      if (!this._ensureConnected()) return 0;
+      return this._hub.hubStatus.batteryLevel;
+    }
+
+    // ========================================================================
+    // HELPER METHODS
+    // ========================================================================
+
+    _ensureConnected() {
+      if (!this._hub || !this._hub.isConnected()) {
+        logger.warn("Operation attempted while not connected");
+        return false;
+      }
+      return true;
+    }
+
+    _forEachMotor(portLabel, callback) {
+      let ports = [];
+
+      switch (portLabel) {
+        case "A":
+          ports = [Port.A];
+          break;
+        case "B":
+          ports = [Port.B];
+          break;
+        case "ALL":
+          ports = [Port.A, Port.B];
+          break;
+        default:
+          logger.warn(`Invalid port label: ${portLabel}`);
+          return;
+      }
+
+      for (const portId of ports) {
+        const motor = this._hub.getMotor(portId);
+        if (motor) {
+          callback(motor);
+        }
+      }
+    }
+
+    _isTilted(direction) {
+      const TILT_THRESHOLD = 15;
+
+      switch (direction) {
+        case "any":
+          return (
+            Math.abs(this._hub.tiltX) >= TILT_THRESHOLD ||
+            Math.abs(this._hub.tiltY) >= TILT_THRESHOLD
+          );
+        default:
+          return Math.abs(this._getTiltAngle(direction)) >= TILT_THRESHOLD;
+      }
+    }
+
+    _getTiltAngle(direction) {
+      switch (direction) {
+        case "up":
+          return -this._hub.tiltY;
+        case "down":
+          return this._hub.tiltY;
+        case "left":
+          return -this._hub.tiltX;
+        case "right":
+          return this._hub.tiltX;
+        default:
+          return 0;
+      }
+    }
+  }
+
+  Scratch.extensions.register(new LEGOWeDo2Extension());
+
+  logger.info("🎉 LEGO WeDo 2.0 Unified Extension loaded successfully!");
+})(Scratch);

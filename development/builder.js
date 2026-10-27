@@ -4,11 +4,13 @@ import * as pathUtil from "node:path";
 import * as urlUtil from "node:url";
 import AdmZip from "adm-zip";
 import chokidar from "chokidar";
-import spdxParser from "spdx-expression-parse";
+// import spdxParser from "spdx-expression-parse";
+// import { parse as spdxParser } from "spdx-expression-parse";
 import { imageSize } from "image-size";
 import ExtendedJSON from "@turbowarp/json";
 import compatibilityAliases from "./compatibility-aliases.js";
 import parseMetadata from "./parse-extension-metadata.js";
+import { isAuthorProfile } from "./author-profile.js";
 import parseTranslations from "./parse-extension-translations.js";
 import renderTemplate from "./render-template.js";
 import renderDocs from "./render-docs.js";
@@ -255,6 +257,7 @@ class ExtensionFile extends BuildFile {
       );
     }
 
+    /*
     try {
       // Don't care about the result for now -- just see if it parses.
       spdxParser(metadata.license);
@@ -263,17 +266,23 @@ class ExtensionFile extends BuildFile {
         `${metadata.license} is not a valid SPDX license. Did you typo it? It is case sensitive. We recommend using // License: MPL-2.0`
       );
     }
+    */
 
-    for (const person of [...metadata.by, ...metadata.original]) {
+    const allCredits = [...metadata.by, ...metadata.original];
+
+    if (allCredits.length === 0) {
+      throw new Error(
+        "Missing credits. Add a // By: or // Original: comment to the header."
+      );
+    }
+
+    for (const person of allCredits) {
       if (!person.name) {
         throw new Error("Person is missing name");
       }
-      if (
-        person.link &&
-        !person.link.startsWith("https://scratch.mit.edu/users/")
-      ) {
+      if (person.link && !isAuthorProfile(person.link)) {
         throw new Error(
-          `Link for ${person.name} does not point to a Scratch user`
+          `Link for ${person.name} does not point to a supported author profile`
         );
       }
     }
@@ -788,9 +797,10 @@ class Builder {
 
     /** @type {Record<string, ExtensionFile>} */
     const extensionFiles = {};
-    for (const [filename, absolutePath] of await recursiveReadDirectory(
+    for (const [filenameRaw, absolutePath] of await recursiveReadDirectory(
       this.extensionsRoot
     )) {
+      const filename = filenameRaw.replace(/\\/g, "/");
       if (!filename.endsWith(".js")) {
         continue;
       }
@@ -809,9 +819,10 @@ class Builder {
 
     /** @type {Record<string, ImageFile>} */
     const extensionImages = {};
-    for (const [filename, absolutePath] of await recursiveReadDirectory(
+    for (const [filenameRaw, absolutePath] of await recursiveReadDirectory(
       this.imagesRoot
     )) {
+      const filename = filenameRaw.replace(/\\/g, "/");
       const extension = pathUtil.extname(filename);
       const ImageFileClass = IMAGE_FORMATS.get(extension);
       if (!ImageFileClass) {

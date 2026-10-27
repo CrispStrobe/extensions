@@ -3,7 +3,7 @@ name: Deploy
 on:
   workflow_dispatch:
   push:
-    branches: [master]
+    branches: [main]
 
 concurrency:
   group: "deploy"
@@ -13,25 +13,25 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # If you are forking and want to set up your own website, adjust the repository and branch
-    # below to match your repository or remove the condition entirely.
-    if: ${{ github.repository == 'TurboWarp/extensions' && github.ref == 'refs/heads/master' }}
+    if: ${{ github.repository == 'CrispStrobe/extensions' && github.ref == 'refs/heads/main' }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
       - name: Install dependencies
         run: npm ci
+      - name: Lint
+        run: npx eslint extensions/CrispStrobe --max-warnings=0
       - name: Build for production
         run: npm run build
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ./build/
 
@@ -47,4 +47,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

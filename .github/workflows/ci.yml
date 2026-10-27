@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: ESLint + format-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: ESLint (max-warnings=0)
+        run: npm run lint -- --max-warnings=0
+
+      # Scope to our extensions only — the gallery's check-format script
+      # would try to format the whole repo, including other authors' files
+      # that we have no business touching.
+      - name: Prettier (--check) on CrispStrobe extensions
+        run: npx prettier --check 'extensions/CrispStrobe/**/*.js'
+
+      - name: Author profile and owned image contracts
+        run: node --test development/test-author-profiles.js
+
+      # Movement blocks of the unified SPIKE extension, against a stub hub.
+      - name: SPIKE movement tests
+        run: node development/test-spikeprime-movement.js
+      - name: Native array reference kinds
+        run: node --test development/test-array-value-kinds.js
+      - name: Named array item, copy and numeric contracts
+        run: node --test development/test-array-item-values.js development/test-array-copy-values.js development/test-array-bitwise.js development/test-array-number-inputs.js development/test-array-host-operations.js development/test-array-number-value-ingress.js development/test-array-owned-plus.js
+
+      # Every confirm() in our extensions waits for the answer and goes ahead
+      # only on OK — through the host's Scratch.BWConfirm when it has one.
+      - name: Confirm sites wait for the answer
+        run: node development/test-confirm-sites.js
+      # Pure protocol encoders that can be checked without hardware.
+      - name: Circuit Cubes protocol tests
+        run: node development/test-circuitcubes.js
+      - name: WeDo light, tone and connection recovery contracts
+        run: node --test development/test-wedo-lights.js development/test-wedo-connection.js
+      # BOOST / Powered Up against an in-memory LWP3 hub (MaxPower, end
+      # states, port map by firmware, queued sends, stop actions, hub type by
+      # System Type ID); EV3 direct commands and replies over Scratch Link.
+      - name: LWP3 hub sends and EV3 direct commands
+        run: node --test development/test-lwp3-hub-sends.js development/test-ev3-direct-commands.js
+      # NXT GETOUTPUTSTATE / GETINPUTVALUES replies read at the BDK offsets,
+      # over Scratch Link and the bridge backend.
+      - name: NXT direct command replies
+        run: node --test development/test-nxt-direct-commands.js
+      # stc12 `show number` on the Prechin A2 7-segment: right-aligned, the
+      # minus directly before the most significant digit.
+      - name: stc12 7-segment show number
+        run: node development/test-stc12-sevenseg.js
+      - name: micro:bit+ pin pull block
+        run: node --test development/test-microbitplus-setpull.js
+
+  validate:
+    name: Gallery validate (informational)
+    runs-on: ubuntu-latest
+    # Pre-existing image / metadata errors in extensions/CrispStrobe/ — we
+    # don't want them to block PRs to other parts of the gallery, but we
+    # want to see the count in the run summary. Mark non-blocking.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Validate
+        run: npm run validate
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: Sanity-check generated metadata
+        run: |
+          test -s build/generated-metadata/extensions-v0.json
+          # Expect at least one CrispStrobe extension in the metadata
+          node -e '
+            const m = require("./build/generated-metadata/extensions-v0.json");
+            const ours = m.extensions.filter(e => (e.slug || "").startsWith("CrispStrobe/"));
+            if (ours.length < 10) throw new Error(`expected ≥10 CrispStrobe extensions, got ${ours.length}`);
+            console.log(`CrispStrobe extensions in metadata: ${ours.length}`);
+          '

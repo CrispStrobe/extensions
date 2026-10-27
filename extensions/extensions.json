@@ -1,7 +1,53 @@
 [
   // This file supports comments
+  "CrispStrobe/ev3dev_py_transpile",
+  "CrispStrobe/ev3_lms_transpile",
+  "CrispStrobe/legoboost_universal",
+  "CrispStrobe/legonxt_transpile_universal",
+  "CrispStrobe/legospike_turbowarp_transpile",
+  "CrispStrobe/lego_poweredup",
+  "CrispStrobe/lego_wedo2_universal",
+
+  // ─── SUPERSEDED, STILL LISTED ────────────────────────────────────────────
+  // These four became CrispStrobe/legospike_turbowarp_transpile on
+  // 2026-09-20. They are kept here so nobody's picker changes under them
+  // mid-project, and their files stay served either way — a project that
+  // loads one by URL is unaffected by this list.
+  //
+  // TO HIDE THEM: delete the four lines below. That is the whole change.
+  // Nothing else references them as a group, the files remain in the
+  // repository, and their URLs keep working. Each one's header already says
+  // what it carried and where it went.
+  "CrispStrobe/legospikeprime_btc_scratchlink",
+  "CrispStrobe/legospike_ble",
+  "CrispStrobe/legospike_bridge",
+  "CrispStrobe/legospikeprime_ble",
+  // ─────────────────────────────────────────────────────────────────────────
+  "CrispStrobe/ev3_universal",
+  "CrispStrobe/ev3_direct",
+  "CrispStrobe/circuitcubes",
+
+  "CrispStrobe/arrays",
+  "CrispStrobe/circuit",
+  "CrispStrobe/csp",
+  "CrispStrobe/ledcube",
+  "CrispStrobe/gamepad",
+  "CrispStrobe/planetemaths",
+  "CrispStrobe/stc12live",
+
+  // Written in brickwright-lite and moved here on 2026-09-20, so the gallery
+  // is their home rather than a copy of it. bitops and devices are contracts
+  // rather than conveniences: sb3-creator EMITS bitops_* and devices_*
+  // opcodes, and before these existed a generated project naming them fell
+  // through to the sandboxed loader and silently lost its blocks.
+  "CrispStrobe/bitops",
+  "CrispStrobe/devices",
+  "CrispStrobe/microbitplus",
+  "CrispStrobe/circuitplayground",
+  "CrispStrobe/brickwright_tts",
   "lab/text",
   "lab/face-sensing",
+  "lab/video-sprites",
   "stretch",
   "gamepad",
   "box2d",
@@ -16,7 +62,6 @@
   "bitwise",
   "Skyhigh173/bigint",
   "utilities",
-  "sound",
   "Lily/Video",
   "iframe",
   "Clay/htmlEncode",
@@ -31,6 +76,7 @@
   "Lily/ClonesPlus",
   "Lily/LooksPlus",
   "Lily/MoreEvents",
+  "SharkPool/Messages-Plus",
   "Lily/ListTools",
   "veggiecan/mobilekeyboard",
   "NexusKitten/moremotion",
@@ -48,6 +94,7 @@
   "XeroName/Deltatime",
   "ar",
   "encoding",
+  "SharkPool/Tune-Shark-V3",
   "Lily/SoundExpanded",
   "Lily/TempVariables2",
   "Lily/MoreTimers",
@@ -57,6 +104,7 @@
   "true-fantom/math",
   "true-fantom/regexp",
   "true-fantom/couplers",
+  "SamuelLouf/Geolocation",
   "DogeisCut/FormatNumbers",
   "Lily/AllMenus",
   "Lily/HackedBlocks",
@@ -91,10 +139,11 @@
   "vercte/dictionaries",
   "godslayerakp/http",
   "godslayerakp/ws",
+  "CubesterYT/Webhooks",
   "Lily/CommentBlocks",
   "veggiecan/LongmanDictionary",
-  "CubesterYT/TurboHook",
   "Alestore/nfcwarp",
+  "NishiOwO/dectalk",
   "steamworks",
   "itchio",
   "gamejolt",
