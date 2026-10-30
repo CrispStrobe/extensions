@@ -65,6 +65,9 @@ jobs:
       # minus directly before the most significant digit.
       - name: stc12 7-segment show number
         run: node development/test-stc12-sevenseg.js
+      # The five MakeCode ports against a mocked Scratch runtime.
+      - name: MakeCode ports
+        run: node --test development/test-makecode-ports.js
       - name: micro:bit+ pin pull block
         run: node --test development/test-microbitplus-setpull.js
 

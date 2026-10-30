@@ -45,6 +45,14 @@
   "CrispStrobe/microbitplus",
   "CrispStrobe/circuitplayground",
   "CrispStrobe/brickwright_tts",
+
+  // Scratch-native ports of MIT-licensed MakeCode extensions (upstream and
+  // commit named in each header; licences in licenses/makecode-extensions.MIT.txt).
+  "CrispStrobe/spriteutils",
+  "CrispStrobe/statusbars",
+  "CrispStrobe/carnival",
+  "CrispStrobe/settingsblocks",
+  "CrispStrobe/neopixel",
   "lab/text",
   "lab/face-sensing",
   "lab/video-sprites",

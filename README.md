@@ -1,7 +1,7 @@
 # CrispStrobe extension gallery
 
 A curated Scratch/TurboWarp extension gallery, served as static files from
-GitHub Pages. It began as an EV3dev bridge and now hosts **22 extensions**
+GitHub Pages. It began as an EV3dev bridge and now hosts **27 extensions**
 covering LEGO hardware, an 8051 microcontroller, a circuit simulator and some
 general-purpose block sets.
 
@@ -15,6 +15,7 @@ general-purpose block sets.
 | **Microcontroller** | `stc12` — compile Scratch blocks to C for an STC12C5A60S2 and flash it; `stc12live` — drive the same chip live over a serial link |
 | **Circuit** | `circuit` — read voltages, currents and net state from a simulated breadboard; `ledcube` — a 4x4x4 LED cube surface |
 | **General** | `arrays`, `csp` (constraint solving), `gamepad`, `planetemaths` |
+| **MakeCode ports** | `spriteutils`, `statusbars`, `carnival`, `settingsblocks`, `neopixel` — Scratch-native ports of MIT-licensed MakeCode extensions (credits and licences in each header and `licenses/makecode-extensions.MIT.txt`) |
 
 Two of these are consumed twice over, and the distinction matters:
 
