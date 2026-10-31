@@ -1643,7 +1643,7 @@
           {
             opcode: "setvolume",
             blockType: Scratch.BlockType.COMMAND,
-            text: "set volume to [VOL]",
+            text: "set speaker volume to [VOL]",
             arguments: {
               VOL: { type: Scratch.ArgumentType.NUMBER, defaultValue: 128 },
             },
@@ -1651,7 +1651,7 @@
           {
             opcode: "getvolume",
             blockType: Scratch.BlockType.REPORTER,
-            text: "volume",
+            text: "speaker volume",
           },
           {
             opcode: "soundplaying",
