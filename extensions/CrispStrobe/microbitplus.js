@@ -1243,8 +1243,245 @@
               },
             },
           },
+
+          // ── Buffers, radio packets, events, data logging ─────────
+          "---",
+          {
+            opcode: "createbuffer",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "create buffer [SIZE]",
+            arguments: {
+              SIZE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 8 },
+            },
+          },
+          {
+            opcode: "bufferlength",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "length of buffer [BUF]",
+            arguments: {
+              BUF: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "buffer",
+              },
+            },
+          },
+          {
+            opcode: "buffernum",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "buffer [BUF] get [FMT] at [OFFSET]",
+            arguments: {
+              BUF: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "buffer",
+              },
+              FMT: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "int32le",
+                menu: "numberFormat",
+              },
+              OFFSET: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "buffersetnum",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set buffer [BUF] [FMT] at [OFFSET] to [VALUE]",
+            arguments: {
+              BUF: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "buffer",
+              },
+              FMT: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "int32le",
+                menu: "numberFormat",
+              },
+              OFFSET: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "bufferfill",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "fill buffer [BUF] with [VALUE]",
+            arguments: {
+              BUF: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "buffer",
+              },
+              VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "bufferslice",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "slice of buffer [BUF] from [OFFSET] length [LENGTH]",
+            arguments: {
+              BUF: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "buffer",
+              },
+              OFFSET: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              LENGTH: { type: Scratch.ArgumentType.NUMBER, defaultValue: -1 },
+            },
+          },
+          {
+            opcode: "bufferhex",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "hex of buffer [BUF]",
+            arguments: {
+              BUF: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "buffer",
+              },
+            },
+          },
+          {
+            opcode: "radiosendbuf",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "radio send buffer [BUF]",
+            arguments: {
+              BUF: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "buffer",
+              },
+            },
+          },
+          {
+            opcode: "whenradiobuf",
+            blockType: Scratch.BlockType.HAT,
+            isEdgeActivated: true,
+            text: "when radio receives buffer",
+          },
+          {
+            opcode: "radiolastbuf",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "read last radio buffer",
+          },
+          {
+            opcode: "whenradiopacket",
+            blockType: Scratch.BlockType.HAT,
+            isEdgeActivated: true,
+            text: "when radio receives packet",
+          },
+          {
+            opcode: "radiolasttime",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "read last radio time",
+          },
+          {
+            opcode: "radiowritepkt",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "radio write received packet to serial",
+          },
+          {
+            opcode: "displaymode",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "display mode",
+          },
+          {
+            opcode: "charcode",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "char code of [TEXT] at [INDEX]",
+            arguments: {
+              TEXT: { type: Scratch.ArgumentType.STRING, defaultValue: "abc" },
+              INDEX: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "fromcharcode",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "char from code [CODE]",
+            arguments: {
+              CODE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 65 },
+            },
+          },
+          {
+            opcode: "showscore",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "show game score",
+          },
+          {
+            opcode: "whenevent",
+            blockType: Scratch.BlockType.HAT,
+            isEdgeActivated: true,
+            text: "when event [SOURCE] [VALUE]",
+            arguments: {
+              SOURCE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
+              VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "raiseevent",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "raise event [SOURCE] [VALUE]",
+            arguments: {
+              SOURCE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
+              VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "eventvalue",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "event value",
+          },
+          {
+            opcode: "datalog1",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "log data [K1] = [V1]",
+            arguments: {
+              K1: { type: Scratch.ArgumentType.STRING, defaultValue: "a" },
+              V1: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "datalog2",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "log data [K1] = [V1] and [K2] = [V2]",
+            arguments: {
+              K1: { type: Scratch.ArgumentType.STRING, defaultValue: "a" },
+              V1: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              K2: { type: Scratch.ArgumentType.STRING, defaultValue: "b" },
+              V2: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "datalog3",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "log data [K1] = [V1] and [K2] = [V2] and [K3] = [V3]",
+            arguments: {
+              K1: { type: Scratch.ArgumentType.STRING, defaultValue: "a" },
+              V1: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              K2: { type: Scratch.ArgumentType.STRING, defaultValue: "b" },
+              V2: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              K3: { type: Scratch.ArgumentType.STRING, defaultValue: "c" },
+              V3: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
         ],
         menus: {
+          // MakeCode's NumberFormat (Buffer.getNumber / setNumber).
+          numberFormat: {
+            acceptReporters: false,
+            items: [
+              "int8le",
+              "uint8le",
+              "int16le",
+              "uint16le",
+              "int32le",
+              "uint32le",
+              "float32le",
+              "float64le",
+              "int8be",
+              "uint8be",
+              "int16be",
+              "uint16be",
+              "int32be",
+              "uint32be",
+              "float32be",
+              "float64be",
+            ],
+          },
           onoff: { acceptReporters: true, items: ["on", "off"] },
           // MakeCode's Delimiters (serial.delimiters(Delimiters.X)).
           delimiter: {
@@ -1922,6 +2159,59 @@
     whenconn() {
       return false;
     }
+
+    // ── Buffers, radio packets, events, data logging ────────
+    createbuffer() {
+      return "";
+    }
+    bufferlength() {
+      return 0;
+    }
+    buffernum() {
+      return 0;
+    }
+    buffersetnum() {}
+    bufferfill() {}
+    bufferslice() {
+      return "";
+    }
+    bufferhex() {
+      return "";
+    }
+    radiosendbuf() {}
+    whenradiobuf() {
+      return false;
+    }
+    radiolastbuf() {
+      return "";
+    }
+    whenradiopacket() {
+      return false;
+    }
+    radiolasttime() {
+      return 0;
+    }
+    radiowritepkt() {}
+    displaymode() {
+      return 0;
+    }
+    charcode() {
+      return 0;
+    }
+    fromcharcode() {
+      return "";
+    }
+    showscore() {}
+    whenevent() {
+      return false;
+    }
+    raiseevent() {}
+    eventvalue() {
+      return 0;
+    }
+    datalog1() {}
+    datalog2() {}
+    datalog3() {}
   }
 
   Scratch.extensions.register(
