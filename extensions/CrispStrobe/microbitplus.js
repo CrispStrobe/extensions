@@ -1479,7 +1479,10 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "serial write buffer [BUF]",
             arguments: {
-              BUF: { type: Scratch.ArgumentType.STRING, defaultValue: "buffer" },
+              BUF: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "buffer",
+              },
             },
           },
           {
@@ -1500,7 +1503,11 @@
             blockType: Scratch.BlockType.REPORTER,
             text: "serial read until [DELIM]",
             arguments: {
-              DELIM: { type: Scratch.ArgumentType.STRING, defaultValue: "newline", menu: "delimiter" },
+              DELIM: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "newline",
+                menu: "delimiter",
+              },
             },
           },
           {
@@ -1517,7 +1524,10 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "i2c write buffer [BUF] to [ADDR]",
             arguments: {
-              BUF: { type: Scratch.ArgumentType.STRING, defaultValue: "buffer" },
+              BUF: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "buffer",
+              },
               ADDR: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
             },
           },
@@ -1526,7 +1536,11 @@
             blockType: Scratch.BlockType.REPORTER,
             text: "i2c read [FMT] at [ADDR]",
             arguments: {
-              FMT: { type: Scratch.ArgumentType.STRING, defaultValue: "int32le", menu: "numberFormat" },
+              FMT: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "int32le",
+                menu: "numberFormat",
+              },
               ADDR: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
             },
           },
@@ -1535,7 +1549,11 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "i2c write [FMT] [VALUE] to [ADDR]",
             arguments: {
-              FMT: { type: Scratch.ArgumentType.STRING, defaultValue: "int32le", menu: "numberFormat" },
+              FMT: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "int32le",
+                menu: "numberFormat",
+              },
               VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
               ADDR: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
             },
@@ -1553,8 +1571,14 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "spi transfer buffer [BUF] into [INTO]",
             arguments: {
-              BUF: { type: Scratch.ArgumentType.STRING, defaultValue: "buffer" },
-              INTO: { type: Scratch.ArgumentType.STRING, defaultValue: "buffer" },
+              BUF: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "buffer",
+              },
+              INTO: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "buffer",
+              },
             },
           },
           {
@@ -1579,9 +1603,21 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "spi pins mosi [MOSI] miso [MISO] sck [SCK]",
             arguments: {
-              MOSI: { type: Scratch.ArgumentType.STRING, defaultValue: "P15", menu: "spiPin" },
-              MISO: { type: Scratch.ArgumentType.STRING, defaultValue: "P14", menu: "spiPin" },
-              SCK: { type: Scratch.ArgumentType.STRING, defaultValue: "P13", menu: "spiPin" },
+              MOSI: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "P15",
+                menu: "spiPin",
+              },
+              MISO: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "P14",
+                menu: "spiPin",
+              },
+              SCK: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "P13",
+                menu: "spiPin",
+              },
             },
           },
           {
@@ -1589,7 +1625,11 @@
             blockType: Scratch.BlockType.REPORTER,
             text: "size of [FMT]",
             arguments: {
-              FMT: { type: Scratch.ArgumentType.STRING, defaultValue: "int32le", menu: "numberFormat" },
+              FMT: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "int32le",
+                menu: "numberFormat",
+              },
             },
           },
           {
@@ -1623,7 +1663,11 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "speaker [MODE]",
             arguments: {
-              MODE: { type: Scratch.ArgumentType.STRING, defaultValue: "on", menu: "onoff" },
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "on",
+                menu: "onoff",
+              },
             },
           },
           {
@@ -1668,7 +1712,11 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "log mirror [MODE]",
             arguments: {
-              MODE: { type: Scratch.ArgumentType.STRING, defaultValue: "on", menu: "onoff" },
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "on",
+                menu: "onoff",
+              },
             },
           },
           {
@@ -1676,7 +1724,11 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "log timestamp [UNIT]",
             arguments: {
-              UNIT: { type: Scratch.ArgumentType.STRING, defaultValue: "seconds", menu: "logUnit" },
+              UNIT: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "seconds",
+                menu: "logUnit",
+              },
             },
           },
         ],
@@ -1704,10 +1756,20 @@
             ],
           },
           onoff: { acceptReporters: true, items: ["on", "off"] },
-          spiPin: { acceptReporters: false, items: Array.from({ length: 21 }, (_, i) => `P${i}`) },
+          spiPin: {
+            acceptReporters: false,
+            items: Array.from({ length: 21 }, (_, i) => `P${i}`),
+          },
           logUnit: {
             acceptReporters: false,
-            items: ["none", "milliseconds", "seconds", "minutes", "hours", "days"],
+            items: [
+              "none",
+              "milliseconds",
+              "seconds",
+              "minutes",
+              "hours",
+              "days",
+            ],
           },
           // MakeCode's Delimiters (serial.delimiters(Delimiters.X)).
           delimiter: {
