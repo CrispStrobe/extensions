@@ -1458,6 +1458,227 @@
               V3: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
             },
           },
+          {
+            opcode: "serialwritetext",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "serial write text [TEXT]",
+            arguments: {
+              TEXT: { type: Scratch.ArgumentType.STRING, defaultValue: "ab" },
+            },
+          },
+          {
+            opcode: "serialwritenum",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "serial write number [NUM]",
+            arguments: {
+              NUM: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "serialwritebuf",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "serial write buffer [BUF]",
+            arguments: {
+              BUF: { type: Scratch.ArgumentType.STRING, defaultValue: "buffer" },
+            },
+          },
+          {
+            opcode: "serialreadbuf",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "serial read buffer [SIZE]",
+            arguments: {
+              SIZE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
+            },
+          },
+          {
+            opcode: "serialreadstr",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "serial read string",
+          },
+          {
+            opcode: "serialreaduntil",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "serial read until [DELIM]",
+            arguments: {
+              DELIM: { type: Scratch.ArgumentType.STRING, defaultValue: "newline", menu: "delimiter" },
+            },
+          },
+          {
+            opcode: "i2creadbuf",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "i2c read buffer at [ADDR] size [SIZE]",
+            arguments: {
+              ADDR: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              SIZE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
+            },
+          },
+          {
+            opcode: "i2cwritebuf",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "i2c write buffer [BUF] to [ADDR]",
+            arguments: {
+              BUF: { type: Scratch.ArgumentType.STRING, defaultValue: "buffer" },
+              ADDR: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "i2creadnum",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "i2c read [FMT] at [ADDR]",
+            arguments: {
+              FMT: { type: Scratch.ArgumentType.STRING, defaultValue: "int32le", menu: "numberFormat" },
+              ADDR: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "i2cwritenum",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "i2c write [FMT] [VALUE] to [ADDR]",
+            arguments: {
+              FMT: { type: Scratch.ArgumentType.STRING, defaultValue: "int32le", menu: "numberFormat" },
+              VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              ADDR: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "spixfer",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "spi transfer [VALUE]",
+            arguments: {
+              VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "spixferbuf",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "spi transfer buffer [BUF] into [INTO]",
+            arguments: {
+              BUF: { type: Scratch.ArgumentType.STRING, defaultValue: "buffer" },
+              INTO: { type: Scratch.ArgumentType.STRING, defaultValue: "buffer" },
+            },
+          },
+          {
+            opcode: "spifreq",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "spi frequency [HZ]",
+            arguments: {
+              HZ: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1000000 },
+            },
+          },
+          {
+            opcode: "spiformat",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "spi format [BITS] mode [MODE]",
+            arguments: {
+              BITS: { type: Scratch.ArgumentType.NUMBER, defaultValue: 8 },
+              MODE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "spipins",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "spi pins mosi [MOSI] miso [MISO] sck [SCK]",
+            arguments: {
+              MOSI: { type: Scratch.ArgumentType.STRING, defaultValue: "P15", menu: "spiPin" },
+              MISO: { type: Scratch.ArgumentType.STRING, defaultValue: "P14", menu: "spiPin" },
+              SCK: { type: Scratch.ArgumentType.STRING, defaultValue: "P13", menu: "spiPin" },
+            },
+          },
+          {
+            opcode: "sizeofformat",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "size of [FMT]",
+            arguments: {
+              FMT: { type: Scratch.ArgumentType.STRING, defaultValue: "int32le", menu: "numberFormat" },
+            },
+          },
+          {
+            opcode: "bufferfromtext",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "buffer from text [TEXT]",
+            arguments: {
+              TEXT: { type: Scratch.ArgumentType.STRING, defaultValue: "hi" },
+            },
+          },
+          {
+            opcode: "setvolume",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set volume to [VOL]",
+            arguments: {
+              VOL: { type: Scratch.ArgumentType.NUMBER, defaultValue: 128 },
+            },
+          },
+          {
+            opcode: "getvolume",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "volume",
+          },
+          {
+            opcode: "soundplaying",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "sound is playing",
+          },
+          {
+            opcode: "speaker",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "speaker [MODE]",
+            arguments: {
+              MODE: { type: Scratch.ArgumentType.STRING, defaultValue: "on", menu: "onoff" },
+            },
+          },
+          {
+            opcode: "logcols1",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set log columns [C1]",
+            arguments: {
+              C1: { type: Scratch.ArgumentType.STRING, defaultValue: "a" },
+            },
+          },
+          {
+            opcode: "logcols2",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set log columns [C1] and [C2]",
+            arguments: {
+              C1: { type: Scratch.ArgumentType.STRING, defaultValue: "a" },
+              C2: { type: Scratch.ArgumentType.STRING, defaultValue: "b" },
+            },
+          },
+          {
+            opcode: "logcols3",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set log columns [C1] and [C2] and [C3]",
+            arguments: {
+              C1: { type: Scratch.ArgumentType.STRING, defaultValue: "a" },
+              C2: { type: Scratch.ArgumentType.STRING, defaultValue: "b" },
+              C3: { type: Scratch.ArgumentType.STRING, defaultValue: "c" },
+            },
+          },
+          {
+            opcode: "logdelete",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "delete log",
+          },
+          {
+            opcode: "logdeletefull",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "delete log fully",
+          },
+          {
+            opcode: "logmirror",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "log mirror [MODE]",
+            arguments: {
+              MODE: { type: Scratch.ArgumentType.STRING, defaultValue: "on", menu: "onoff" },
+            },
+          },
+          {
+            opcode: "logstamp",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "log timestamp [UNIT]",
+            arguments: {
+              UNIT: { type: Scratch.ArgumentType.STRING, defaultValue: "seconds", menu: "logUnit" },
+            },
+          },
         ],
         menus: {
           // MakeCode's NumberFormat (Buffer.getNumber / setNumber).
@@ -1483,6 +1704,11 @@
             ],
           },
           onoff: { acceptReporters: true, items: ["on", "off"] },
+          spiPin: { acceptReporters: false, items: Array.from({ length: 21 }, (_, i) => `P${i}`) },
+          logUnit: {
+            acceptReporters: false,
+            items: ["none", "milliseconds", "seconds", "minutes", "hours", "days"],
+          },
           // MakeCode's Delimiters (serial.delimiters(Delimiters.X)).
           delimiter: {
             acceptReporters: false,
@@ -2192,6 +2418,54 @@
       return 0;
     }
     radiowritepkt() {}
+    serialwritetext() {}
+    serialwritenum() {}
+    serialwritebuf() {}
+    serialreadbuf() {
+      return "";
+    }
+    serialreadstr() {
+      return "";
+    }
+    serialreaduntil() {
+      return "";
+    }
+    i2creadbuf() {
+      return "";
+    }
+    i2cwritebuf() {}
+    i2creadnum() {
+      return 0;
+    }
+    i2cwritenum() {}
+    spixfer() {
+      return 0;
+    }
+    spixferbuf() {}
+    spifreq() {}
+    spiformat() {}
+    spipins() {}
+    sizeofformat() {
+      return 0;
+    }
+    bufferfromtext() {
+      return "";
+    }
+    setvolume() {}
+    getvolume() {
+      return 0;
+    }
+    soundplaying() {
+      return false;
+    }
+    speaker() {}
+    logcols1() {}
+    logcols2() {}
+    logcols3() {}
+    logdelete() {}
+    logdeletefull() {}
+    logmirror() {}
+    logstamp() {}
     displaymode() {
       return 0;
     }
