@@ -302,6 +302,43 @@
             text: "point x [X] y [Y]",
             arguments: { ...n("X", 0), ...n("Y", 0) },
           },
+          // MakeCode's led.pointBrightness, led.brightness, led.setDisplayMode
+          // and led.enable (brightness 0..255).
+          {
+            opcode: "pointbrightness",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "point brightness x [X] y [Y]",
+            arguments: { ...n("X", 0), ...n("Y", 0) },
+          },
+          {
+            opcode: "displaybrightness",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "display brightness",
+          },
+          {
+            opcode: "setdisplaymode",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set display mode to [MODE]",
+            arguments: {
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "greyscale",
+                menu: "displayMode",
+              },
+            },
+          },
+          {
+            opcode: "ledenable",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "led enable [STATE]",
+            arguments: {
+              STATE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "on",
+                menu: "onoff",
+              },
+            },
+          },
 
           // ── Images (MakeCode's Image) ─────────────────────────────
           // An image is a VALUE: kept in a variable or list, changed pixel
@@ -333,6 +370,23 @@
             opcode: "imagepixel",
             blockType: Scratch.BlockType.BOOLEAN,
             text: "pixel x [X] y [Y] of image [IMAGE]",
+            arguments: { ...n("X", 0), ...n("Y", 0), ...n("IMAGE", 1) },
+          },
+          {
+            opcode: "imagesetbrightness",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set pixel x [X] y [Y] of image [IMAGE] brightness [BRIGHTNESS]",
+            arguments: {
+              ...n("X", 0),
+              ...n("Y", 0),
+              ...n("IMAGE", 1),
+              ...n("BRIGHTNESS", 255),
+            },
+          },
+          {
+            opcode: "imagebrightness",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "pixel brightness x [X] y [Y] of image [IMAGE]",
             arguments: { ...n("X", 0), ...n("Y", 0), ...n("IMAGE", 1) },
           },
           {
@@ -1101,6 +1155,78 @@
             blockType: Scratch.BlockType.REPORTER,
             text: "last radio text",
           },
+          // MakeCode's radio.onReceivedValue((name, value) => ...); sendValue is
+          // "radio send [KEY] = [VALUE]" above (the name is cut to 8 characters).
+          {
+            opcode: "whenradiokv",
+            blockType: Scratch.BlockType.HAT,
+            isEdgeActivated: true,
+            text: "when radio receives name and value",
+          },
+          {
+            opcode: "radiolastname",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "last radio name",
+          },
+          {
+            opcode: "radiolastvalue",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "last radio value",
+          },
+
+          // ── Loops ────────────────────────────────────────────────
+          // MakeCode's loops.everyInterval(ms, body).
+          "---",
+          {
+            opcode: "everyinterval",
+            blockType: Scratch.BlockType.HAT,
+            isEdgeActivated: true,
+            text: "every [MS] ms",
+            arguments: n("MS", 500),
+          },
+
+          // ── Bluetooth ────────────────────────────────────────────
+          // MakeCode's bluetooth namespace. The simulator has no Bluetooth
+          // stack (nor has MakeCode's), so a call keeps its name and arguments
+          // and does nothing when run; the export writes the same call back.
+          "---",
+          {
+            opcode: "bluetooth",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "bluetooth [NAME] [A1] [A2] [A3] [A4]",
+            arguments: {
+              ...str("NAME", "startUartService"),
+              ...str("A1", ""),
+              ...str("A2", ""),
+              ...str("A3", ""),
+              ...str("A4", ""),
+            },
+          },
+          {
+            opcode: "btuartread",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "bluetooth uart read until [DELIM]",
+            arguments: {
+              DELIM: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "newline",
+                menu: "delimiter",
+              },
+            },
+          },
+          {
+            opcode: "whenuart",
+            blockType: Scratch.BlockType.HAT,
+            isEdgeActivated: true,
+            text: "when bluetooth uart receives [DELIM]",
+            arguments: {
+              DELIM: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "newline",
+                menu: "delimiter",
+              },
+            },
+          },
 
           // ── Connection ───────────────────────────────────────────
           "---",
@@ -1120,6 +1246,27 @@
         ],
         menus: {
           onoff: { acceptReporters: true, items: ["on", "off"] },
+          // MakeCode's Delimiters (serial.delimiters(Delimiters.X)).
+          delimiter: {
+            acceptReporters: false,
+            items: [
+              "newline",
+              "comma",
+              "dollar",
+              "colon",
+              "fullstop",
+              "hash",
+              "carriage return",
+              "space",
+              "tab",
+              "pipe",
+              "semicolon",
+            ],
+          },
+          displayMode: {
+            acceptReporters: false,
+            items: ["black and white", "greyscale"],
+          },
           // AB is MakeCode's Button.AB: both held at once.
           btn: { acceptReporters: false, items: ["A", "B", "AB", "any"] },
           btnEvent: { acceptReporters: false, items: ["pressed", "released"] },
@@ -1259,6 +1406,14 @@
     point() {
       return false;
     }
+    pointbrightness() {
+      return 0;
+    }
+    displaybrightness() {
+      return 255;
+    }
+    setdisplaymode() {}
+    ledenable() {}
 
     // ── Images: pixels are kept (so a program reads back what it set);
     // showing one is the simulator's, as the other display blocks are.
@@ -1281,6 +1436,36 @@
       if (img && x >= 0 && x < 5 && y >= 0 && y < 5) {
         img[y * 5 + x] = Scratch.Cast.toBoolean(args.VALUE);
       }
+    }
+    // MakeCode images hold 0..255 per pixel; the boolean array above is the
+    // lit/unlit view of it, and a brightness map keeps the exact value.
+    imagesetbrightness(args) {
+      const img = this._image(args.IMAGE);
+      const x = Math.round(Number(args.X));
+      const y = Math.round(Number(args.Y));
+      if (img && x >= 0 && x < 5 && y >= 0 && y < 5) {
+        const b = Math.max(
+          0,
+          Math.min(255, Math.round(Number(args.BRIGHTNESS)) || 0)
+        );
+        if (!img.bright) img.bright = {};
+        img.bright[y * 5 + x] = b;
+        img[y * 5 + x] = b > 0;
+      }
+    }
+    imagebrightness(args) {
+      const img = this._image(args.IMAGE);
+      const x = Math.round(Number(args.X));
+      const y = Math.round(Number(args.Y));
+      if (!img || x < 0 || x >= 5 || y < 0 || y >= 5) return 0;
+      const i = y * 5 + x;
+      if (
+        img.bright &&
+        img.bright[i] !== undefined &&
+        img.bright[i] > 0 === img[i]
+      )
+        return img.bright[i];
+      return img[i] ? 255 : 0;
     }
     imagepixel(args) {
       const img = this._image(args.IMAGE);
@@ -1698,6 +1883,25 @@
     }
     radiolaststr() {
       return "";
+    }
+    whenradiokv() {
+      return false;
+    }
+    radiolastname() {
+      return "";
+    }
+    radiolastvalue() {
+      return 0;
+    }
+    everyinterval() {
+      return false;
+    }
+    bluetooth() {}
+    btuartread() {
+      return "";
+    }
+    whenuart() {
+      return false;
     }
     radiorssi() {
       return 0;
