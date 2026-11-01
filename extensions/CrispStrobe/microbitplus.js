@@ -1933,6 +1933,45 @@
             blockType: Scratch.BlockType.COMMAND,
             text: "radio listen for events",
           },
+          {
+            opcode: "logrows",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "log rows from [FROM] count [N]",
+            arguments: {
+              FROM: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+              N: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
+            },
+          },
+          {
+            opcode: "lograwcount",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "log row count from [FROM]",
+            arguments: {
+              FROM: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "logwatchfull",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "log raise event when full",
+          },
+          {
+            opcode: "playnotes",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "play notes [TEXT] tempo [BPM] [MODE]",
+            arguments: {
+              TEXT: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "C_D_E",
+              },
+              BPM: { type: Scratch.ArgumentType.NUMBER, defaultValue: 120 },
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "until done",
+                menu: "noteMode",
+              },
+            },
+          },
         ],
         menus: {
           // MakeCode's NumberFormat (Buffer.getNumber / setNumber).
@@ -1961,6 +2000,15 @@
           touchMode: {
             acceptReporters: false,
             items: ["capacitive", "resistive"],
+          },
+          noteMode: {
+            acceptReporters: false,
+            items: [
+              "until done",
+              "in background",
+              "looping in background",
+              "forever",
+            ],
           },
           onoff: { acceptReporters: true, items: ["on", "off"] },
           spiPin: {
@@ -2687,6 +2735,14 @@
       return 0;
     }
     radiowritepkt() {}
+    logrows() {
+      return "";
+    }
+    lograwcount() {
+      return 0;
+    }
+    logwatchfull() {}
+    playnotes() {}
     radioraise() {}
     radiolisten() {}
     serialhas() {
