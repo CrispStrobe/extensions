@@ -1877,6 +1877,48 @@
               G: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
             },
           },
+          {
+            opcode: "serialhas",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "serial has data until [DELIM]",
+            arguments: {
+              DELIM: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "newline",
+                menu: "delimiter",
+              },
+            },
+          },
+          {
+            opcode: "bufferconcat",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "concat buffers [A] and [B]",
+            arguments: {
+              A: { type: Scratch.ArgumentType.STRING, defaultValue: "buffer" },
+              B: { type: Scratch.ArgumentType.STRING, defaultValue: "buffer" },
+            },
+          },
+          {
+            opcode: "radiosendraw",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "radio send raw packet [BUF]",
+            arguments: {
+              BUF: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "buffer",
+              },
+            },
+          },
+          {
+            opcode: "radiolastraw",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "read raw radio packet",
+          },
+          {
+            opcode: "btuartreadbuf",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "bluetooth uart read buffer",
+          },
         ],
         menus: {
           // MakeCode's NumberFormat (Buffer.getNumber / setNumber).
@@ -2631,6 +2673,19 @@
       return 0;
     }
     radiowritepkt() {}
+    serialhas() {
+      return false;
+    }
+    bufferconcat() {
+      return "";
+    }
+    radiosendraw() {}
+    radiolastraw() {
+      return "";
+    }
+    btuartreadbuf() {
+      return "";
+    }
     radiooff() {}
     radioband() {}
     serialredirect() {}
