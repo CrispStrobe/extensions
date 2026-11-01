@@ -1731,6 +1731,87 @@
               },
             },
           },
+          {
+            opcode: "analogperiod",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set analog period of pin [PIN] to [US] us",
+            arguments: {
+              PIN: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "P1",
+                menu: "spiPin",
+              },
+              US: { type: Scratch.ArgumentType.NUMBER, defaultValue: 20000 },
+            },
+          },
+          {
+            opcode: "servopulse",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "servo pulse of pin [PIN] [US] us",
+            arguments: {
+              PIN: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "P1",
+                menu: "spiPin",
+              },
+              US: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1500 },
+            },
+          },
+          {
+            opcode: "pulsein",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "pulse in pin [PIN] [LEVEL] timeout [US]",
+            arguments: {
+              PIN: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "P0",
+                menu: "spiPin",
+              },
+              LEVEL: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "high",
+                menu: "pulseLevel",
+              },
+              US: { type: Scratch.ArgumentType.NUMBER, defaultValue: 2000000 },
+            },
+          },
+          {
+            opcode: "touchmode",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "touch mode of pin [PIN] [MODE]",
+            arguments: {
+              PIN: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "P0",
+                menu: "spiPin",
+              },
+              MODE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "capacitive",
+                menu: "touchMode",
+              },
+            },
+          },
+          {
+            opcode: "gamelevel",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "game level",
+          },
+          {
+            opcode: "gamelevelup",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "game level up",
+          },
+          {
+            opcode: "gamestopwatch",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "game start stopwatch",
+          },
+          {
+            opcode: "gametime",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "game time",
+          },
         ],
         menus: {
           // MakeCode's NumberFormat (Buffer.getNumber / setNumber).
@@ -1754,6 +1835,11 @@
               "float32be",
               "float64be",
             ],
+          },
+          pulseLevel: { acceptReporters: false, items: ["high", "low"] },
+          touchMode: {
+            acceptReporters: false,
+            items: ["capacitive", "resistive"],
           },
           onoff: { acceptReporters: true, items: ["on", "off"] },
           spiPin: {
@@ -2480,6 +2566,20 @@
       return 0;
     }
     radiowritepkt() {}
+    analogperiod() {}
+    servopulse() {}
+    pulsein() {
+      return 0;
+    }
+    touchmode() {}
+    gamelevel() {
+      return 0;
+    }
+    gamelevelup() {}
+    gamestopwatch() {}
+    gametime() {
+      return 0;
+    }
     serialwritetext() {}
     serialwritenum() {}
     serialwritebuf() {}
