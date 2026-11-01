@@ -1919,6 +1919,20 @@
             blockType: Scratch.BlockType.REPORTER,
             text: "bluetooth uart read buffer",
           },
+          {
+            opcode: "radioraise",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "radio raise event [SOURCE] [VALUE]",
+            arguments: {
+              SOURCE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 2000 },
+              VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
+            },
+          },
+          {
+            opcode: "radiolisten",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "radio listen for events",
+          },
         ],
         menus: {
           // MakeCode's NumberFormat (Buffer.getNumber / setNumber).
@@ -2673,6 +2687,8 @@
       return 0;
     }
     radiowritepkt() {}
+    radioraise() {}
+    radiolisten() {}
     serialhas() {
       return false;
     }
