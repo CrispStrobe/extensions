@@ -1812,6 +1812,71 @@
             blockType: Scratch.BlockType.REPORTER,
             text: "game time",
           },
+          {
+            opcode: "radiooff",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "radio off",
+          },
+          {
+            opcode: "radioband",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "radio frequency band [BAND]",
+            arguments: {
+              BAND: { type: Scratch.ArgumentType.NUMBER, defaultValue: 7 },
+            },
+          },
+          {
+            opcode: "serialredirect",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "serial redirect tx [TX] rx [RX] baud [BAUD]",
+            arguments: {
+              TX: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "P0",
+                menu: "spiPin",
+              },
+              RX: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "P1",
+                menu: "spiPin",
+              },
+              BAUD: { type: Scratch.ArgumentType.NUMBER, defaultValue: 115200 },
+            },
+          },
+          {
+            opcode: "serialbaud",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "serial baud rate [BAUD]",
+            arguments: {
+              BAUD: { type: Scratch.ArgumentType.NUMBER, defaultValue: 115200 },
+            },
+          },
+          {
+            opcode: "resetboard",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "reset micro:bit",
+          },
+          {
+            opcode: "panicboard",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "panic with code [CODE]",
+            arguments: {
+              CODE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 7 },
+            },
+          },
+          {
+            opcode: "calibratecompass",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "calibrate compass",
+          },
+          {
+            opcode: "accelrange",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set accelerometer range [G]",
+            arguments: {
+              G: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
+            },
+          },
         ],
         menus: {
           // MakeCode's NumberFormat (Buffer.getNumber / setNumber).
@@ -2566,6 +2631,14 @@
       return 0;
     }
     radiowritepkt() {}
+    radiooff() {}
+    radioband() {}
+    serialredirect() {}
+    serialbaud() {}
+    resetboard() {}
+    panicboard() {}
+    calibratecompass() {}
+    accelrange() {}
     analogperiod() {}
     servopulse() {}
     pulsein() {
