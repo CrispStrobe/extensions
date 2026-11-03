@@ -129,6 +129,52 @@
     "-90": [-1, 0],
   };
 
+  // The rest of MakeCode's control, led, pins and serial, one line a block (this file loads with the
+  // editor): opcode, kind (c command, r reporter, b boolean, h hat), text; [NAME:default] or
+  // [NAME:default:menu] is an argument.
+  const MORE_BLOCKS = `waitevent c wait for event [SOURCE:4000] [VALUE:0]
+devicename r device name
+devicelongserial r device long serial number
+compareversion r compare version [A:1.0] with [B:1.1]
+screenshot r screenshot
+createbigimage r create big image [LEDS:0000000000:0000000000:0000000000:0000000000:0000000000]
+pitchpin c set analog pitch pin [PIN:P0:spiPin]
+pitchvolume c set analog pitch volume to [VOL:255]
+getpitchvolume r analog pitch volume
+analogpitch c analog pitch [FREQ:440] hz for [MS:500] ms
+i2cwritestatus r i2c write buffer [BUF:buffer] to [ADDR:0] status
+serialreadany r serial read until any of [CHARS:;]
+serialhasany b serial has data until any of [CHARS:;]
+btuartreadany r bluetooth uart read until any of [CHARS:;]
+whenuartany h when bluetooth uart receives any of [CHARS:;]`
+    .split("\n")
+    .map((line) => line.split(" "));
+  const moreBlock = ([opcode, kind, ...words]) => {
+    const args = {};
+    const text = words
+      .join(" ")
+      .replace(/\[(\w+):([^\]]*)\]/g, (_, name, rest) => {
+        const menu = /:(\w+Pin)$/.exec(rest);
+        const value = menu ? rest.slice(0, menu.index) : rest;
+        args[name] = {
+          type: Scratch.ArgumentType[/^\d+$/.test(value) ? "NUMBER" : "STRING"],
+          defaultValue: /^\d+$/.test(value) ? Number(value) : value,
+        };
+        if (menu) args[name].menu = menu[1];
+        return `[${name}]`;
+      });
+    return {
+      opcode,
+      text,
+      arguments: args,
+      isEdgeActivated: kind === "h",
+      blockType:
+        Scratch.BlockType[
+          { c: "COMMAND", r: "REPORTER", b: "BOOLEAN", h: "HAT" }[kind]
+        ],
+    };
+  };
+
   class MicrobitPlus {
     constructor(runtime) {
       this._runtime = runtime;
@@ -1972,6 +2018,7 @@
               },
             },
           },
+          ...MORE_BLOCKS.map(moreBlock),
         ],
         menus: {
           // MakeCode's NumberFormat (Buffer.getNumber / setNumber).
@@ -2850,6 +2897,11 @@
     datalog3() {}
   }
 
+  // The simulator runs the MicroPython these blocks become; here they are stubs.
+  for (const [opcode, kind] of MORE_BLOCKS) {
+    MicrobitPlus.prototype[opcode] = () =>
+      kind === "r" ? "" : kind === "c" ? undefined : false;
+  }
   Scratch.extensions.register(
     new MicrobitPlus(Scratch.vm && Scratch.vm.runtime)
   );
