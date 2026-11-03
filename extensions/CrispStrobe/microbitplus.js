@@ -1972,6 +1972,131 @@
               },
             },
           },
+          // ── The rest of MakeCode's control, led, pins and serial ──
+          {
+            opcode: "waitevent",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "wait for event [SOURCE] [VALUE]",
+            arguments: {
+              SOURCE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 4000 },
+              VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "devicename",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "device name",
+          },
+          {
+            opcode: "devicelongserial",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "device long serial number",
+          },
+          {
+            opcode: "compareversion",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "compare version [A] with [B]",
+            arguments: {
+              A: { type: Scratch.ArgumentType.STRING, defaultValue: "1.0" },
+              B: { type: Scratch.ArgumentType.STRING, defaultValue: "1.1" },
+            },
+          },
+          {
+            opcode: "screenshot",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "screenshot",
+          },
+          {
+            opcode: "createbigimage",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "create big image [LEDS]",
+            arguments: {
+              LEDS: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue:
+                  "0000000000:0000000000:0000000000:0000000000:0000000000",
+              },
+            },
+          },
+          {
+            opcode: "pitchpin",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set analog pitch pin [PIN]",
+            arguments: {
+              PIN: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "P0",
+                menu: "spiPin",
+              },
+            },
+          },
+          {
+            opcode: "pitchvolume",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "set analog pitch volume to [VOL]",
+            arguments: {
+              VOL: { type: Scratch.ArgumentType.NUMBER, defaultValue: 255 },
+            },
+          },
+          {
+            opcode: "getpitchvolume",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "analog pitch volume",
+          },
+          {
+            opcode: "analogpitch",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "analog pitch [FREQ] hz for [MS] ms",
+            arguments: {
+              FREQ: { type: Scratch.ArgumentType.NUMBER, defaultValue: 440 },
+              MS: { type: Scratch.ArgumentType.NUMBER, defaultValue: 500 },
+            },
+          },
+          {
+            opcode: "i2cwritestatus",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "i2c write buffer [BUF] to [ADDR] status",
+            arguments: {
+              BUF: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "buffer",
+              },
+              ADDR: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            },
+          },
+          {
+            opcode: "serialreadany",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "serial read until any of [CHARS]",
+            arguments: {
+              CHARS: { type: Scratch.ArgumentType.STRING, defaultValue: ";" },
+            },
+          },
+          {
+            opcode: "serialhasany",
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: "serial has data until any of [CHARS]",
+            arguments: {
+              CHARS: { type: Scratch.ArgumentType.STRING, defaultValue: ";" },
+            },
+          },
+          {
+            opcode: "btuartreadany",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "bluetooth uart read until any of [CHARS]",
+            arguments: {
+              CHARS: { type: Scratch.ArgumentType.STRING, defaultValue: ";" },
+            },
+          },
+          {
+            opcode: "whenuartany",
+            blockType: Scratch.BlockType.HAT,
+            isEdgeActivated: true,
+            text: "when bluetooth uart receives any of [CHARS]",
+            arguments: {
+              CHARS: { type: Scratch.ArgumentType.STRING, defaultValue: ";" },
+            },
+          },
         ],
         menus: {
           // MakeCode's NumberFormat (Buffer.getNumber / setNumber).
@@ -2743,6 +2868,43 @@
     }
     logwatchfull() {}
     playnotes() {}
+    waitevent() {}
+    devicename() {
+      return "";
+    }
+    devicelongserial() {
+      return "";
+    }
+    compareversion() {
+      return 0;
+    }
+    screenshot() {
+      return "";
+    }
+    createbigimage() {
+      return "";
+    }
+    pitchpin() {}
+    pitchvolume() {}
+    getpitchvolume() {
+      return 255;
+    }
+    analogpitch() {}
+    i2cwritestatus() {
+      return 0;
+    }
+    serialreadany() {
+      return "";
+    }
+    serialhasany() {
+      return false;
+    }
+    btuartreadany() {
+      return "";
+    }
+    whenuartany() {
+      return false;
+    }
     radioraise() {}
     radiolisten() {}
     serialhas() {
