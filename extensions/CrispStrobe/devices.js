@@ -749,20 +749,54 @@
         num(a.B),
       ]);
     }
+    _neopixelChain(board, ref) {
+      const parts = (board.parts || []).filter((part) => part.kind === "neopixel");
+      const ids = new Set(parts.map((part) => part.id));
+      const next = new Map();
+      const previous = new Set();
+      for (const net of board.getNets ? board.getNets() : []) {
+        const terminals = net.terminals.filter((port) => ids.has(port.part));
+        const outputs = terminals.filter((port) => port.terminal === "dout");
+        const inputs = terminals.filter((port) => port.terminal === "din");
+        if (outputs.length !== 1 || inputs.length !== 1) continue;
+        next.set(outputs[0].part, inputs[0].part);
+        previous.add(inputs[0].part);
+      }
+
+      // Keep saved projects that name a package. Ordinals address strips,
+      // including a strip assembled from multiple wired packages.
+      const lookup = String(ref);
+      const heads = parts.filter((part) => !previous.has(part.id));
+      const ordinal = Number(lookup);
+      const head = ids.has(lookup) ? lookup : heads[ordinal - 1]?.id;
+      const chain = [];
+      const seen = new Set();
+      for (let id = head; id && !seen.has(id); id = next.get(id)) {
+        seen.add(id);
+        chain.push(id);
+      }
+      return chain;
+    }
     setneopixel(a) {
       const b = this._board();
-      if (b && b.setDeviceControl)
-        b.setDeviceControl(a.STRIP, "neopixel", [
-          num(a.INDEX),
-          num(a.R),
-          num(a.G),
-          num(a.B),
-        ]);
+      if (!b || !b.setDeviceControl) return;
+      let pixel = num(a.INDEX) | 0;
+      if (pixel < 0) return;
+      for (const id of this._neopixelChain(b, a.STRIP)) {
+        const count = b.getDeviceState(id)?.pixels?.length || 0;
+        if (pixel < count) {
+          b.setDeviceControl(id, "neopixel", [pixel, num(a.R), num(a.G), num(a.B)]);
+          return;
+        }
+        pixel -= count;
+      }
     }
     clearneopixels(a) {
       const b = this._board();
-      if (b && b.setDeviceControl)
-        b.setDeviceControl(a.STRIP, "clearNeopixels", 1);
+      if (!b || !b.setDeviceControl) return;
+      for (const id of this._neopixelChain(b, a.STRIP)) {
+        b.setDeviceControl(id, "clearNeopixels", 1);
+      }
     }
     showimage(a) {
       const b = this._board();
