@@ -518,7 +518,7 @@
           },
           ports: { acceptReporters: false, items: "portNames" },
           parts: { acceptReporters: false, items: "partNames" },
-          printModes: { acceptReporters: false, items: ["text", "number"] },
+          printModes: { acceptReporters: false, items: ["text", "number", "auto"] },
           edges: { acceptReporters: false, items: ["pressed", "released"] },
           tables: { acceptReporters: false, items: "tableNames" },
           pixelStyles: {
@@ -834,11 +834,11 @@
 
     print(args) {
       // In the editor, print goes to the console. On hardware, it is the UART.
-      const val =
-        String(args.MODE) === "number"
-          ? Number(args.VALUE)
-          : String(args.VALUE);
-      if (typeof console !== "undefined") console.log(val);
+      const mode = String(args.MODE);
+      let value = args.VALUE;
+      if (mode === "number") value = Number(value);
+      else if (mode !== "auto") value = String(value);
+      if (typeof console !== "undefined") console.log(value);
     }
 
     whenpin(args) {
