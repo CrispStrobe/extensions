@@ -832,8 +832,22 @@
       return st ? (st.lux ?? 0) : 0;
     }
     distance(a) {
-      const st = this._state(a.SENSOR);
-      return st ? (st.distance ?? 0) : 0;
+      const board = this._board();
+      const name = String(a.SENSOR);
+      const part = this._runtime?.stc?.parts?.find(
+        (p) => p.type === "hcsr04" && p.name.toLowerCase() === name.toLowerCase()
+      );
+      const id = part?.name ?? this._device(name, /^ultrasonic$/);
+      if (board?.measureUltrasonic && (part || board.parts.some(
+        (p) => p.id === id && p.kind === "ultrasonic"
+      ))) {
+        const pin = (role) => role.where ?? `P${role.port}.${role.bit}`;
+        const pins = part && { trig: pin(part.trig), echo: pin(part.echo) };
+        const width = board.measureUltrasonic(id, pins);
+        return width === null ? 999 : Math.round(width / 58);
+      }
+      const state = this._state(name);
+      return state?.distance ?? 0;
     }
     flex(a) {
       const st = this._state(a.SENSOR);
