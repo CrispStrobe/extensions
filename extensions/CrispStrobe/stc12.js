@@ -629,7 +629,10 @@
           ? Math.max(0, Math.min(1023, Math.round((v / 5.0) * 1023)))
           : 0;
       }
-      return this._level(args.PIN);
+      // A wired declaration reads its logical state, like the C and simulator
+      // drivers. _level remains physical for toggle and edge detection.
+      const level = this._level(args.PIN);
+      return p && p.activeLow && p.direction !== "analog" ? 1 - level : level;
     }
 
     chiptemp() {
